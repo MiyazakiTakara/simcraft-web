@@ -8,7 +8,6 @@ router = APIRouter()
 
 
 async def _fetch_spec(client: httpx.AsyncClient, token: str, realm_slug: str, name: str) -> str:
-    """Pobiera active_spec dla postaci z dedykowanego endpointu."""
     try:
         resp = await client.get(
             f"https://eu.api.blizzard.com/profile/wow/character/{realm_slug}/{name.lower()}"
@@ -58,7 +57,6 @@ async def list_characters(session: str):
 
     chars.sort(key=lambda c: c["level"], reverse=True)
 
-    # Pobierz spec rownolegla dla max 20 najwyzszych postaci (rate limit)
     top_chars = chars[:20]
     async with httpx.AsyncClient() as client:
         specs = await asyncio.gather(*[
@@ -71,11 +69,10 @@ async def list_characters(session: str):
     return chars
 
 
-@router.get("/api/character/{session}/{realm_slug}/{name}")
-async def get_character(session: str, realm_slug: str, name: str):
+@router.get("/api/character-media")
+async def get_character_media(session: str, realm_slug: str, name: str):
     token = await get_blizzard_token()
     name_lower = name.lower()
-    print(f"Fetching: realm_slug={realm_slug} name={name_lower}", flush=True)
 
     async with httpx.AsyncClient() as client:
         media_resp = await client.get(
@@ -92,5 +89,9 @@ async def get_character(session: str, realm_slug: str, name: str):
                 if a.get("key") == "avatar":
                     avatar = a.get("value")
                     break
+
+    if avatar is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Avatar not found")
 
     return {"avatar": avatar}
