@@ -1,11 +1,13 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from auth import router as auth_router
 from characters import router as characters_router
@@ -34,6 +36,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    """Dodaje Cache-Control: no-cache dla plikow statycznych JS/CSS/HTML."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path.split("?")[0]
+        if path.endswith((".js", ".css", ".html")) or path == "/":
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
+
+app.add_middleware(NoCacheStaticMiddleware)
+
 app.include_router(auth_router)
 app.include_router(characters_router)
 app.include_router(sim_router)
@@ -45,12 +62,10 @@ def _restore_jobs():
     for fname in os.listdir(RESULTS_DIR):
         if not fname.endswith(".json") or fname == "history.json":
             continue
-        # Nowa struktura: wyniki sa w podfolderach job_id/output.json
         job_id = fname[:-5]
         fpath  = os.path.join(RESULTS_DIR, fname)
         jobs[job_id] = {"status": "done", "json_path": fpath, "error": None}
 
-    # Nowa struktura: job_id/output.json
     for entry in os.scandir(RESULTS_DIR):
         if entry.is_dir():
             out = os.path.join(entry.path, "output.json")
