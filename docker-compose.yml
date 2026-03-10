@@ -1,0 +1,16 @@
+services:
+  simcraft-web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - BLIZZARD_CLIENT_ID=${BLIZZARD_CLIENT_ID}
+      - BLIZZARD_CLIENT_SECRET=${BLIZZARD_CLIENT_SECRET}
+      - REDIRECT_URI=${REDIRECT_URI}
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+    volumes:
+      - ./results:/app/results  
+    restart: unless-stopped
+
+
