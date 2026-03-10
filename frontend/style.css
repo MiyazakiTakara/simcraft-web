@@ -13,7 +13,7 @@
 
 body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; min-height: 100vh; }
 
-.container { max-width: 1400px; margin: 0 auto; padding: 0 1rem 3rem; }
+.container { max-width: 1600px; margin: 0 auto; padding: 0 1rem 3rem; }
 
 /* Header */
 .header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
@@ -33,8 +33,8 @@ body { background: var(--bg); color: var(--text); font-family: "Segoe UI", syste
 .hero-title { font-size: 2rem; font-weight: 700; color: var(--accent); margin-bottom: .75rem; }
 .hero-sub   { color: var(--muted); margin-bottom: 2rem; }
 
-/* Grid */
-.grid { display: grid; grid-template-columns: 260px 2fr 300px; gap: 1.5rem; }
+/* Grid - srodkowa kolumna poszerzona do 3fr */
+.grid { display: grid; grid-template-columns: 260px 3fr 300px; gap: 1.5rem; }
 @media(max-width:1200px){ .grid { grid-template-columns: 260px 1fr; } }
 @media(max-width:720px){ .grid { grid-template-columns: 1fr; } }
 
@@ -70,7 +70,8 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
 .dps-value   { font-size: 3rem; font-weight: 800; color: var(--accent); }
 .dps-label   { color: var(--muted); font-size: .9rem; margin-top: .2rem; }
 
-.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+/* result-grid: statystyki 1/3, breakdown 2/3 */
+.result-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-top: 1rem; }
 @media(max-width:600px){ .result-grid { grid-template-columns: 1fr; } }
 
 .stat-list { display: flex; flex-direction: column; gap: .35rem; }
