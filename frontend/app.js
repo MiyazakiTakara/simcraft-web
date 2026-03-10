@@ -458,6 +458,27 @@ function app() {
       return Array.from(charMap.values()).sort((a, b) => b.created_at - a.created_at);
     },
 
+    getCharDps(charName) {
+      const charSims = this.history.filter(h => h.character_name === charName);
+      if (charSims.length === 0) return null;
+      const dpsList = charSims.sort((a, b) => a.created_at - b.created_at).map(h => h.dps);
+      const latest = dpsList[dpsList.length - 1];
+      const first = dpsList[0];
+      const diff = latest - first;
+      const trend = dpsList.length > 1 
+        ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
+        : '1 symulacja';
+      return {
+        latest,
+        first,
+        diff,
+        trend,
+        count: dpsList.length,
+        lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
+        dpsList,
+      };
+    },
+
     getCharAvatar(name) {
       const ch = this.characters.find(c => c.name === name);
       return ch ? ch.avatar : null;
