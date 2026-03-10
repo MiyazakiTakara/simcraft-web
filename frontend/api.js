@@ -20,7 +20,7 @@ const API = {
   },
 
   async startSim(payload) {
-    const r = await fetch("/api/simulate", {
+    const r = await fetch("/api/sim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -30,7 +30,7 @@ const API = {
   },
 
   async getJobStatus(jobId) {
-    const r = await fetch(`/api/job/${jobId}`);
+    const r = await fetch(`/api/sim/${jobId}/status`);
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   },
@@ -47,19 +47,19 @@ const API = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
     });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
+    if (!r.ok) console.warn("History save failed:", await r.text());
+    return {};
   },
 
   async getHistory() {
     const r = await fetch("/api/history");
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) return [];
     return r.json();
   },
 
   async getPublicHistory() {
-    const r = await fetch("/api/history/public");
-    if (!r.ok) throw new Error(await r.text());
+    const r = await fetch("/api/history");
+    if (!r.ok) return [];
     return r.json();
   },
 };
