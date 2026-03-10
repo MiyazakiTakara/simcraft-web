@@ -1,18 +1,15 @@
 import httpx
 from fastapi import APIRouter, HTTPException
 
-from auth import _sessions, get_blizzard_token
+from auth import get_session_token, get_blizzard_token
 
 router = APIRouter()
 
 
 @router.get("/api/characters")
 async def list_characters(session: str):
-    sess = _sessions.get(session)
-    if not sess:
-        raise HTTPException(401, "Nieprawidlowa sesja – zaloguj sie ponownie")
+    access_token = await get_session_token(session)
 
-    access_token = sess["access_token"]
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             "https://eu.api.blizzard.com/profile/user/wow"
