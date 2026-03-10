@@ -41,7 +41,7 @@ function app() {
     historyPerPage: 10,
 
     newsPage: 1,
-    newsPerPage: 6,
+    newsPerPage: 5,
 
     theme: localStorage.getItem("simcraft_theme") || "dark",
 
