@@ -392,10 +392,6 @@ function app() {
           this.loadingSim = false;
         }
       } catch (e) {
-          clearInterval(this._pollInterval);
-          this.loadingSim = false;
-        }
-      } catch (e) {
         clearInterval(this._pollInterval);
         this.loadingSim = false;
       }
