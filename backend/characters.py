@@ -204,19 +204,15 @@ async def get_character_statistics(session: str, realm_slug: str, name: str):
 async def get_character_talents(session: str, realm_slug: str, name: str):
     token = await get_blizzard_token()
     name_lower = name.lower()
-    url = f"https://eu.api.blizzard.com/profile/wow/character/{realm_slug}/{name_lower}/talents?namespace=profile-eu&locale=en_GB"
-    print(f"TALENTS API: {url}", flush=True)
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(
-            url,
+            f"https://eu.api.blizzard.com/profile/wow/character/{realm_slug}/{name_lower}/talents?namespace=profile-eu&locale=en_GB",
             headers={"Authorization": f"Bearer {token}"},
             timeout=15,
         )
-        print(f"TALENTS RESP: {resp.status_code} {resp.text[:500]}", flush=True)
         if resp.status_code == 404:
-            from fastapi import HTTPException
-            raise HTTPException(404, "Character not found")
+            return {"talents": [], "error": "Talents API currently unavailable (Blizzard API issue)"}
         if resp.status_code == 401:
             from fastapi import HTTPException
             raise HTTPException(401, "Character data is private")
