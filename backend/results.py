@@ -66,107 +66,101 @@ def parse_results(json_path: str):
         dps_std = safe_float(dps_data.get("mean_std_dev"))
 
         # -------------------------
-        # STATS (nowy format SimC)
+        # STATS (SimC JSON format)
+        # crit/haste/mastery/vers are under buffed_stats.stats, NOT buffed_stats.attribute
         # -------------------------
         bs = cd.get("buffed_stats", {})
         attr = bs.get("attribute", {})
+        stats_data = bs.get("stats", {})
+
+        def pct(val):
+            v = safe_float(val)
+            return round(v * 100 if v <= 1 else v, 2)
 
         stats = {
             "strength": safe_float(attr.get("strength")),
             "agility": safe_float(attr.get("agility")),
             "stamina": safe_float(attr.get("stamina")),
             "intellect": safe_float(attr.get("intellect")),
-
-            # kryty / haste / mastery / versatility
-            "crit_pct": round(
-                safe_float(attr.get("crit_pct", bs.get("crit_pct", 0))) * 100
-                if safe_float(attr.get("crit_pct", bs.get("crit_pct", 0))) <= 1
-                else safe_float(attr.get("crit_pct", bs.get("crit_pct", 0))),
-                2
-            ),
-            "haste_pct": round(
-                safe_float(attr.get("haste_pct", bs.get("haste_pct", 0))) * 100
-                if safe_float(attr.get("haste_pct", bs.get("haste_pct", 0))) <= 1
-                else safe_float(attr.get("haste_pct", bs.get("haste_pct", 0))),
-                2
-            ),
-            "mastery_pct": round(
-                safe_float(attr.get("mastery_pct", bs.get("mastery_value", 0))) * 100
-                if safe_float(attr.get("mastery_pct", bs.get("mastery_value", 0))) <= 1
-                else safe_float(attr.get("mastery_pct", bs.get("mastery_value", 0))),
-                2
-            ),
-            "versatility_pct": round(
-                safe_float(
-                    attr.get("versatility_pct", 0)
-                    + bs.get("damage_versatility", 0)
-                    + bs.get("heal_versatility", 0)
-                    + bs.get("mitigation_versatility", 0)
-                ) * 100
-                if safe_float(
-                    attr.get("versatility_pct", 0)
-                    + bs.get("damage_versatility", 0)
-                    + bs.get("heal_versatility", 0)
-                    + bs.get("mitigation_versatility", 0)
-                ) <= 1
-                else safe_float(
-                    attr.get("versatility_pct", 0)
-                    + bs.get("damage_versatility", 0)
-                    + bs.get("heal_versatility", 0)
-                    + bs.get("mitigation_versatility", 0)
-                ),
-                2
-            ),
+            "crit_pct": pct(stats_data.get("spell_crit", stats_data.get("attack_crit", 0))),
+            "haste_pct": pct(stats_data.get("spell_haste", stats_data.get("attack_haste", 0))),
+            "mastery_pct": pct(stats_data.get("mastery_value", 0)),
+            # damage_versatility only (not the sum of dmg+heal+mitigation)
+            "versatility_pct": pct(stats_data.get("damage_versatility", 0)),
         }
 
         # -------------------------
         # SPELLS
+        # player.stats may not exist in newer SimC JSON output.
+        # Fall back to aggregating unique spells from action_sequence.
         # -------------------------
         abilities = player.get("stats", [])
 
         spells = []
         total_spell_dps = 0.0
 
-        for ab in abilities:
-            name = ab.get("name", "?")
-            dps = ability_dps(ab)
-            if dps <= 0:
-                continue
-            crit = ability_crit(ab)
-            executes = 0
-            ne = ab.get("num_executes")
-            if isinstance(ne, dict):
-                executes = safe_float(ne.get("sum"))
+        if abilities:
+            for ab in abilities:
+                name = ab.get("name", "?")
+                dps = ability_dps(ab)
+                if dps <= 0:
+                    continue
+                crit = ability_crit(ab)
+                executes = 0
+                ne = ab.get("num_executes")
+                if isinstance(ne, dict):
+                    executes = safe_float(ne.get("sum"))
 
-            spells.append({
-                "name": name,
-                "dps": round(dps, 2),
-                "crit_pct": round(crit, 2),
-                "executes": int(executes)
-            })
+                spells.append({
+                    "name": name,
+                    "dps": round(dps, 2),
+                    "crit_pct": round(crit, 2),
+                    "executes": int(executes)
+                })
+                total_spell_dps += dps
+        else:
+            # Fallback: count executes per spell from action_sequence
+            action_seq = cd.get("action_sequence", [])
+            spell_counts: dict[str, dict] = {}
+            for action in action_seq:
+                spell_name = action.get("spell_name") or action.get("name", "?")
+                if spell_name not in spell_counts:
+                    spell_counts[spell_name] = {"executes": 0}
+                spell_counts[spell_name]["executes"] += 1
 
-            total_spell_dps += dps
+            for spell_name, data in spell_counts.items():
+                spells.append({
+                    "name": spell_name,
+                    "dps": 0.0,
+                    "crit_pct": 0.0,
+                    "executes": data["executes"],
+                    "percent": 0.0,
+                })
 
-        # sort spells by DPS
-        spells = sorted(spells, key=lambda x: x["dps"], reverse=True)
+        # sort spells by DPS (or executes if no DPS data)
+        if total_spell_dps > 0:
+            spells = sorted(spells, key=lambda x: x["dps"], reverse=True)
 
-        # add percent DPS
-        for s in spells:
-            s["percent"] = round((s["dps"] / total_spell_dps) * 100, 2) if total_spell_dps > 0 else 0
+            # add percent DPS
+            for s in spells:
+                s["percent"] = round((s["dps"] / total_spell_dps) * 100, 2)
 
-        # top 25
-        top_spells = spells[:25]
+            # top 25
+            top_spells = spells[:25]
 
-        # OTHER bucket
-        other_dps = sum(s["dps"] for s in spells[25:])
-        if other_dps > 0:
-            top_spells.append({
-                "name": "Other",
-                "dps": round(other_dps, 2),
-                "crit_pct": 0,
-                "executes": 0,
-                "percent": round((other_dps / total_spell_dps) * 100, 2)
-            })
+            # OTHER bucket
+            other_dps = sum(s["dps"] for s in spells[25:])
+            if other_dps > 0:
+                top_spells.append({
+                    "name": "Other",
+                    "dps": round(other_dps, 2),
+                    "crit_pct": 0,
+                    "executes": 0,
+                    "percent": round((other_dps / total_spell_dps) * 100, 2)
+                })
+        else:
+            # no DPS breakdown available — sort by executes, no top-25 cap
+            top_spells = sorted(spells, key=lambda x: x["executes"], reverse=True)
 
         return {
             "name": player.get("name", "?"),
