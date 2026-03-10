@@ -36,7 +36,7 @@ function app() {
     hoveredSpell: null,
 
     // Historia: sort + paginacja
-    historySort: "date",       // date | dps | name
+    historySort: "date",
     historyPage: 1,
     historyPerPage: 10,
 
@@ -71,7 +71,6 @@ function app() {
     },
 
     init() {
-      // Ustaw motyw
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
 
       const params = new URLSearchParams(window.location.search);
@@ -100,12 +99,11 @@ function app() {
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
     },
 
-    // ---- Historia: sort + paginacja ----
     get sortedHistory() {
       const arr = [...this.history];
       if (this.historySort === "dps")  arr.sort((a, b) => (b.dps ?? 0) - (a.dps ?? 0));
       else if (this.historySort === "name") arr.sort((a, b) => (a.character_name || "").localeCompare(b.character_name || ""));
-      else arr.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)); // date
+      else arr.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
       return arr;
     },
     get historyPageCount() {
@@ -122,7 +120,6 @@ function app() {
     historyPages() {
       return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
     },
-    // ------------------------------------
 
     async loadCharacters() {
       this.loadingChars = true;
@@ -156,18 +153,17 @@ function app() {
 
     async loadHistory() {
       try {
-        this.history = await API.getHistory();
+        // Zalogowany: pobierz tylko swoja historie
+        this.history = await API.getHistory(this.sessionId);
         this.historyPage = 1;
-      }
-      catch (e) { console.error("Failed to load history", e); }
+      } catch (e) { console.error("Failed to load history", e); }
     },
 
     async loadPublicHistory() {
       try {
         this.history = await API.getPublicHistory();
         this.historyPage = 1;
-      }
-      catch (e) { console.error("Failed to load public history", e); }
+      } catch (e) { console.error("Failed to load public history", e); }
     },
 
     async loadHistoryResult(jobId) {
@@ -246,6 +242,7 @@ function app() {
                 character_realm_slug: "",
                 dps:                  result.dps,
                 fight_style:          this.guestSimOptions.fight_style,
+                user_id:              null,  // guest
               });
               this.loadPublicHistory();
               this.guestLoadingSim = false;
@@ -354,6 +351,7 @@ function app() {
             character_realm_slug: this.selectedChar?.realm_slug || "",
             dps:                  this.simResult.dps,
             fight_style:          this.simOptions.fight_style,
+            user_id:              this.sessionId || null,  // przypisz do konta
           });
           this.loadHistory();
           this.loadingSim = false;

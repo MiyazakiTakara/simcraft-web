@@ -1,71 +1,63 @@
 const API = {
-  loginUrl() {
-    return "/auth/login";
+  base: "",
+
+  async _fetch(url, opts = {}) {
+    const res = await fetch(this.base + url, opts);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
   },
 
-  logoutUrl() {
-    return "/auth/logout";
+  logoutUrl() { return "/auth/logout"; },
+
+  async getCharacters(session) {
+    return this._fetch(`/api/characters?session=${encodeURIComponent(session)}`);
   },
 
-  async getCharacters(sessionId) {
-    const r = await fetch(`/api/characters?session=${sessionId}`);
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
-  },
-
-  async getCharacterMedia(sessionId, realmSlug, name) {
-    const r = await fetch(`/api/character/${sessionId}/${realmSlug}/${name}`);
-    if (!r.ok) return { avatar: null };
-    return r.json();
+  async getCharacterMedia(session, realmSlug, charName) {
+    return this._fetch(`/api/character-media?session=${encodeURIComponent(session)}&realm_slug=${encodeURIComponent(realmSlug)}&name=${encodeURIComponent(charName)}`);
   },
 
   async startSim(payload) {
-    const r = await fetch("/api/sim", {
+    return this._fetch("/api/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
   },
 
   async getJobStatus(jobId) {
-    const r = await fetch(`/api/sim/${jobId}/status`);
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
+    return this._fetch(`/api/job/${jobId}`);
   },
 
   async getResultJson(jobId) {
-    const r = await fetch(`/api/result/${jobId}/json`);
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
+    return this._fetch(`/api/result/${jobId}/json`);
   },
 
   async getResultMeta(jobId) {
-    const r = await fetch(`/api/result/${jobId}/meta`);
-    if (!r.ok) return null;
-    return r.json();
+    return this._fetch(`/api/result/${jobId}/meta`);
   },
 
-  async saveToHistory(entry) {
-    const r = await fetch("/api/history", {
+  // Historia zalogowanego uzytkownika
+  async getHistory(session) {
+    if (session) {
+      return this._fetch(`/api/history/mine?session=${encodeURIComponent(session)}`);
+    }
+    return this._fetch("/api/history");
+  },
+
+  // Publiczna historia (gosc)
+  async getPublicHistory() {
+    return this._fetch("/api/history");
+  },
+
+  async saveToHistory(payload) {
+    return this._fetch("/api/history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(entry),
+      body: JSON.stringify(payload),
     });
-    if (!r.ok) console.warn("History save failed:", await r.text());
-    return {};
-  },
-
-  async getHistory() {
-    const r = await fetch("/api/history");
-    if (!r.ok) return [];
-    return r.json();
-  },
-
-  async getPublicHistory() {
-    const r = await fetch("/api/history");
-    if (!r.ok) return [];
-    return r.json();
   },
 };

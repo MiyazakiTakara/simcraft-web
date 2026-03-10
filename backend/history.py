@@ -9,7 +9,7 @@ from typing import Optional
 
 router = APIRouter()
 
-RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
+RESULTS_DIR  = os.environ.get("RESULTS_DIR", "/app/results")
 HISTORY_FILE = os.path.join(RESULTS_DIR, "history.json")
 _lock = threading.Lock()
 
@@ -38,13 +38,26 @@ class HistoryEntry(BaseModel):
     character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
     fight_style: Optional[str] = "Patchwerk"
+    user_id: Optional[str] = None  # session_id z Battle.net OAuth (None = guest)
 
 
 @router.get("/api/history")
 async def get_history():
+    """Publiczna historia — ostatnie 50 wpisow wszystkich uzytkownikow."""
     with _lock:
         data = _load()
     return sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:50]
+
+
+@router.get("/api/history/mine")
+async def get_my_history(session: str):
+    """Historia zalogowanego uzytkownika — filtrowana po session_id."""
+    if not session:
+        raise HTTPException(400, "Brak session")
+    with _lock:
+        data = _load()
+    mine = [e for e in data if e.get("user_id") == session]
+    return sorted(mine, key=lambda x: x.get("created_at", 0), reverse=True)[:200]
 
 
 @router.get("/api/result/{job_id}/meta")
@@ -80,8 +93,9 @@ async def add_history(entry: HistoryEntry):
                 "character_realm_slug": entry.character_realm_slug or "",
                 "dps":                  entry.dps,
                 "fight_style":          entry.fight_style,
+                "user_id":              entry.user_id,  # None dla guestow
                 "created_at":           int(time.time()),
             })
-            data = sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:200]
+            data = sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:500]
             _save(data)
     return {"ok": True}
