@@ -69,6 +69,13 @@
         <template x-if="errorChars">
           <p style="color:#f66;font-size:.85rem" x-text="errorChars"></p>
         </template>
+        <template x-if="!loadingChars && !errorChars && characters.length === 0">
+          <div style="text-align:center;padding:1.5rem 1rem;color:var(--muted)">
+            <div style="font-size:2rem;margin-bottom:.5rem">👤</div>
+            <p style="font-size:.9rem;margin-bottom:.3rem">Brak postaci WoW na tym koncie.</p>
+            <p style="font-size:.8rem">Usuń minimum level 10 lub użyj trybu <strong>Addon Export</strong>.</p>
+          </div>
+        </template>
         <template x-if="!loadingChars && characters.length">
           <div>
             <input class="search" placeholder="Szukaj postaci..." x-model="charFilter"/>
@@ -111,8 +118,11 @@
                   <span x-show="selectedChar.class" :style="{color: classColor(selectedChar.class)}" x-text="' · ' + (selectedChar.spec ? selectedChar.spec + ' ' : '') + selectedChar.class"></span>
                 </p>
               </template>
-              <template x-if="!selectedChar">
+              <template x-if="!selectedChar && characters.length">
                 <p style="font-size:.88rem;color:var(--muted)">← Wybierz postać z listy po lewej</p>
+              </template>
+              <template x-if="!selectedChar && !characters.length">
+                <p style="font-size:.88rem;color:var(--muted)">Brak postaci — skorzystaj z trybu <strong>Addon Export</strong>.</p>
               </template>
             </div>
           </template>
