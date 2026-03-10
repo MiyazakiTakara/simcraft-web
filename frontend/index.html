@@ -9,9 +9,22 @@
   <meta property="og:title"       content="SimCraft Web — Symulator DPS dla WoW"/>
   <meta property="og:description" content="Darmowy symulator DPS dla World of Warcraft oparty na SimulationCraft."/>
   <meta property="og:type"        content="website"/>
-  <meta property="og:url"         content="https://twoja-domena.com"/>
-  <meta property="og:image"       content="https://twoja-domena.com/static/og-image.png"/>
+  <meta property="og:url"         content="https://sim.miyazakitakara.ovh"/>
+  <meta property="og:image"       content="https://sim.miyazakitakara.ovh/static/og-image.png"/>
   <meta name="twitter:card"       content="summary_large_image"/>
+
+  <!-- Zapisz session do localStorage NATYCHMIAST zanim Alpine sie zainicjalizuje -->
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var session = params.get('session');
+      if (session) {
+        localStorage.setItem('simcraft_session', session);
+        // Wyczysc URL bez przeladowania strony
+        history.replaceState({}, '', '/');
+      }
+    })();
+  </script>
 
   <link rel="stylesheet" href="/style.css"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -117,7 +130,6 @@
             </div>
           </div>
 
-          <!-- x-show zamiast x-if wewnątrz buttona — Alpine nie renderuje x-if w button poprawnie -->
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
             <span x-show="loadingSim" class="spinner"></span>
             <span x-show="!loadingSim">▶ Uruchom symulację</span>
@@ -135,7 +147,6 @@
             </div>
 
             <div class="result-grid">
-              <!-- Statystyki -->
               <div>
                 <h2 style="margin-bottom:.6rem">Statystyki</h2>
                 <div class="stat-list">
@@ -148,7 +159,6 @@
                 </div>
               </div>
 
-              <!-- Spelle -->
               <div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                   <h2>Breakdown spelli</h2>
@@ -198,7 +208,7 @@
         </template>
       </div>
 
-      <!-- Prawy panel: historia symulacji -->
+      <!-- Prawy panel: historia -->
       <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
         <h2>Historia Publiczna</h2>
         <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
