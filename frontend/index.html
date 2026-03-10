@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SimCraft Web</title>
+  <link rel="stylesheet" href="/style.css"/>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/api.js"></script>
+  <script src="/app.js"></script>
+</head>
+<body>
+<div x-data="app()" x-init="init()" class="container">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">⚔️ SimCraft Web</div>
+    <template x-if="sessionId">
+      <div class="header-user">
+        <span class="header-badge" x-text="characters.length + ' postaci'"></span>
+        <button class="btn btn-ghost" @click="logout()">Wyloguj</button>
+      </div>
+    </template>
+  </header>
+
+  <!-- Hero (niezalogowany) -->
+  <template x-if="!sessionId">
+    <div class="hero">
+      <p class="hero-title">Symulator DPS dla World of Warcraft</p>
+      <p class="hero-sub">Zaloguj się przez Battle.net, aby wybrać postać i uruchomić symulację.</p>
+      <a href="/auth/login" class="btn btn-login">🔑 Zaloguj przez Battle.net</a>
+    </div>
+  </template>
+
+  <!-- Główny layout -->
+  <template x-if="sessionId">
+    <div class="grid">
+
+      <!-- Lewy panel: lista postaci -->
+      <div class="panel">
+        <h2>Postacie</h2>
+        <template x-if="loadingChars">
+          <div style="text-align:center;padding:2rem"><span class="spinner"></span></div>
+        </template>
+        <template x-if="errorChars">
+          <p style="color:#f66;font-size:.85rem" x-text="errorChars"></p>
+        </template>
+        <template x-if="!loadingChars && characters.length">
+          <div>
+            <input class="search" placeholder="Szukaj postaci..." x-model="charFilter"/>
+            <div class="char-list">
+              <template x-for="ch in filteredChars" :key="ch.id">
+                <div class="char-item" :class="{active: selectedChar && selectedChar.id === ch.id}" @click="selectChar(ch)">
+                  <img class="char-avatar" :src="ch.avatar || '/static/default_avatar.png'" :alt="ch.name"/>
+                  <div>
+                    <div class="char-name" x-text="ch.name"></div>
+                    <div class="char-meta" x-text="ch.realm + ' · lv' + ch.level"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Prawy panel: symulacja + wyniki -->
+      <div>
+        <div class="panel" style="margin-bottom:1rem">
+          <h2>Symulacja</h2>
+
+          <div class="sim-tabs">
+            <button class="tab" :class="{active: simMode==='addon'}" @click="simMode='addon'">📋 Addon Export</button>
+            <button class="tab" :class="{active: simMode==='armory'}" @click="simMode='armory'">🌐 Armory</button>
+          </div>
+
+          <template x-if="simMode==='addon'">
+            <textarea class="addon-box" placeholder="Wklej tutaj output z addona SimulationCraft (/simc w grze)..." x-model="addonText"></textarea>
+          </template>
+
+          <template x-if="simMode==='armory'">
+            <div style="margin-bottom:.8rem">
+              <template x-if="selectedChar">
+                <p style="font-size:.9rem">Wybrana postać: <strong x-text="selectedChar.name + ' – ' + selectedChar.realm"></strong></p>
+              </template>
+              <template x-if="!selectedChar">
+                <p style="font-size:.88rem;color:var(--muted)">← Wybierz postać z listy po lewej</p>
+              </template>
+            </div>
+          </template>
+
+          <div class="sim-options">
+            <div class="sim-option">
+              <label>Styl walki</label>
+              <select x-model="simOptions.fight_style">
+                <option value="Patchwerk">Patchwerk</option>
+                <option value="HecticAddCleave">HecticAddCleave</option>
+                <option value="LightMovement">LightMovement</option>
+                <option value="HeavyMovement">HeavyMovement</option>
+              </select>
+            </div>
+            <div class="sim-option">
+              <label>Iteracje</label>
+              <input type="number" x-model.number="simOptions.iterations" min="100" max="100000" step="100"/>
+            </div>
+            <div class="sim-option">
+              <label>Target Error %</label>
+              <input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
+            <template x-if="loadingSim"><span class="spinner"></span></template>
+            <template x-if="!loadingSim">▶ Uruchom symulację</template>
+          </button>
+
+          <template x-if="job && job.status === 'running'">
+            <p style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku… (job: <span x-text="job.id?.slice(0,8)"></span>…)</p>
+          </template>
+        </div>
+
+        <!-- Wyniki -->
+        <template x-if="simResult">
+          <div class="panel">
+            <div class="result-hero">
+              <div class="dps-value" x-text="formatDps(simResult.dps)"></div>
+              <div class="dps-label">DPS (±<span x-text="formatDps(simResult.dps_std)"></span>) · <span x-text="simResult.name"></span></div>
+            </div>
+
+            <div class="result-grid">
+              <!-- Statystyki -->
+              <div>
+                <h2 style="margin-bottom:.6rem">Statystyki</h2>
+                <div class="stat-list">
+                  <template x-for="[key, val] in Object.entries(simResult.stats)" :key="key">
+                    <div class="stat-row">
+                      <span class="stat-name" x-text="formatStatName(key)"></span>
+                      <span class="stat-val"  x-text="formatStatValue(key, val)"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Spelle -->
+              <div>
+                <h2 style="margin-bottom:.6rem">Breakdown spelli</h2>
+                <template x-if="simResult.spells && simResult.spells.length">
+                  <div class="spell-list">
+                    <template x-for="sp in simResult.spells" :key="sp.name">
+                      <div class="spell-row">
+                        <div class="spell-head">
+                          <span x-text="sp.name"></span>
+                          <span><strong x-text="formatDps(sp.dps)"></strong> DPS · <span x-text="sp.crit_pct" style="color:var(--accent)"></span>% crit</span>
+                        </div>
+                        <div class="spell-bar-bg">
+                          <div class="spell-bar-fill" :style="{width: pctBarWidth(sp.dps, simResult.spells[0].dps)}"></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="!simResult.spells || !simResult.spells.length">
+                  <p style="color:var(--muted);font-size:.85rem">Brak danych o spellach (użyj trybu addon dla pełnych danych)</p>
+                </template>
+              </div>
+            </div>
+
+            <!-- Debug links -->
+            <div style="margin-top:1rem;font-size:.8rem;color:var(--muted)">
+              <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+            </div>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </template>
+
+</div>
+</body>
+</html>
