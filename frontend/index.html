@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SimCraft Web — Symulator DPS dla WoW</title>
 
-  <!-- SEO / Open Graph (ladne podglady na Discordzie, Twitterze itd.) -->
   <meta name="description" content="Darmowy symulator DPS dla World of Warcraft. Zaloguj się przez Battle.net i sprawdz DPS swojej postaci."/>
   <meta property="og:title"       content="SimCraft Web — Symulator DPS dla WoW"/>
   <meta property="og:description" content="Darmowy symulator DPS dla World of Warcraft oparty na SimulationCraft."/>
@@ -73,7 +72,7 @@
         </template>
       </div>
 
-      <!-- Prawy panel: symulacja + wyniki -->
+      <!-- Środkowy panel: symulacja + wyniki -->
       <div>
         <div class="panel" style="margin-bottom:1rem">
           <h2>Symulacja</h2>
@@ -118,14 +117,13 @@
             </div>
           </div>
 
+          <!-- x-show zamiast x-if wewnątrz buttona — Alpine nie renderuje x-if w button poprawnie -->
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
-            <template x-if="loadingSim"><span class="spinner"></span></template>
-            <template x-if="!loadingSim">▶ Uruchom symulację</template>
+            <span x-show="loadingSim" class="spinner"></span>
+            <span x-show="!loadingSim">▶ Uruchom symulację</span>
           </button>
 
-          <template x-if="job && job.status === 'running'">
-            <p style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku… (job: <span x-text="job.id?.slice(0,8)"></span>…)</p>
-          </template>
+          <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku… (job: <span x-text="job?.id?.slice(0,8)"></span>…)</p>
         </div>
 
         <!-- Wyniki -->
@@ -191,39 +189,32 @@
               </div>
             </div>
 
-            <!-- Debug links -->
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
-              <button class="btn" style="font-size: 0.75rem; padding: 0.35rem 0.8rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 0;" @click="copyToClipboard(getShareUrl(job.id))">
-                🔗 Udostępnij
-              </button>
+              <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(job.id))">🔗 Udostępnij</button>
             </div>
           </div>
         </template>
       </div>
 
       <!-- Prawy panel: historia symulacji -->
-      <div class="panel" style="max-height: 800px; display: flex; flex-direction: column;">
+      <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
         <h2>Historia Publiczna</h2>
-        <template x-if="history.length === 0">
-          <div style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
-        </template>
-        <template x-if="history.length > 0">
-          <div class="history-list">
-            <template x-for="entry in history.slice(0, 50)" :key="entry.job_id">
-              <div class="history-item" :class="{ active: selectedHistory === entry.job_id }" style="cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                <div style="flex: 1; min-width: 0;" @click="loadHistoryResult(entry.job_id)">
-                  <div class="history-char" x-text="entry.character_name || 'Addon Export'"></div>
-                  <div class="history-dps" x-text="formatDps(entry.dps)"></div>
-                  <div class="history-time" x-text="formatTime(entry.created_at)"></div>
-                  <div class="history-style" x-text="entry.fight_style"></div>
-                </div>
-                <button class="btn" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;" @click.stop="copyToClipboard(getShareUrl(entry.job_id))" title="Skopiuj link">🔗</button>
+        <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
+        <div x-show="history.length > 0" class="history-list">
+          <template x-for="entry in history.slice(0,50)" :key="entry.job_id">
+            <div class="history-item" :class="{active: selectedHistory === entry.job_id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+              <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
+                <div class="history-char" x-text="entry.character_name || 'Addon Export'"></div>
+                <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+                <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                <div class="history-style" x-text="entry.fight_style"></div>
               </div>
-            </template>
-          </div>
-        </template>
+              <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id))" title="Skopiuj link">🔗</button>
+            </div>
+          </template>
+        </div>
       </div>
 
     </div>
