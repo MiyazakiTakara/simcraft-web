@@ -1,12 +1,14 @@
 import os
-import asyncio
 import time
-import uuid
-import json
-import threading
+import collections
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from auth import router as auth_router
 from characters import router as characters_router
@@ -19,7 +21,22 @@ with open("/root/.simc_apikey", "w") as _f:
     _f.write(f"{_id}:{_sec}")
 print(f".simc_apikey written ({os.path.getsize('/root/.simc_apikey')} bytes)", flush=True)
 
+# Rate limiter (per IP)
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="SimCraft Web")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS — zezwol tylko na wlasna domene (lub * dla dev)
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router)
 app.include_router(characters_router)

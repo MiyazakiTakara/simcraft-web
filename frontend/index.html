@@ -3,7 +3,17 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SimCraft Web</title>
+  <title>SimCraft Web — Symulator DPS dla WoW</title>
+
+  <!-- SEO / Open Graph (ladne podglady na Discordzie, Twitterze itd.) -->
+  <meta name="description" content="Darmowy symulator DPS dla World of Warcraft. Zaloguj się przez Battle.net i sprawdz DPS swojej postaci."/>
+  <meta property="og:title"       content="SimCraft Web — Symulator DPS dla WoW"/>
+  <meta property="og:description" content="Darmowy symulator DPS dla World of Warcraft oparty na SimulationCraft."/>
+  <meta property="og:type"        content="website"/>
+  <meta property="og:url"         content="https://twoja-domena.com"/>
+  <meta property="og:image"       content="https://twoja-domena.com/static/og-image.png"/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+
   <link rel="stylesheet" href="/style.css"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js"></script>
@@ -100,7 +110,7 @@
             </div>
             <div class="sim-option">
               <label>Iteracje</label>
-              <input type="number" x-model.number="simOptions.iterations" min="100" max="100000" step="100"/>
+              <input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/>
             </div>
             <div class="sim-option">
               <label>Target Error %</label>
@@ -144,20 +154,9 @@
               <div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                   <h2>Breakdown spelli</h2>
-                  <!-- Przełącznik sortowania -->
                   <div style="display:flex;gap:.3rem">
-                    <button
-                      class="tab"
-                      :class="{active: spellSort==='total_dmg'}"
-                      @click="spellSort='total_dmg'"
-                      style="font-size:.75rem;padding:.25rem .6rem"
-                    >Total Dmg</button>
-                    <button
-                      class="tab"
-                      :class="{active: spellSort==='dps'}"
-                      @click="spellSort='dps'"
-                      style="font-size:.75rem;padding:.25rem .6rem"
-                    >DPS</button>
+                    <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                    <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                   </div>
                 </div>
 
@@ -196,11 +195,7 @@
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
-              <button
-                class="btn"
-                style="font-size: 0.75rem; padding: 0.35rem 0.8rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 0;"
-                @click="copyToClipboard(getShareUrl(job.id))"
-              >
+              <button class="btn" style="font-size: 0.75rem; padding: 0.35rem 0.8rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 0;" @click="copyToClipboard(getShareUrl(job.id))">
                 🔗 Udostępnij
               </button>
             </div>
@@ -212,9 +207,7 @@
       <div class="panel" style="max-height: 800px; display: flex; flex-direction: column;">
         <h2>Historia Publiczna</h2>
         <template x-if="history.length === 0">
-          <div style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">
-            Brak symulacji
-          </div>
+          <div style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
         </template>
         <template x-if="history.length > 0">
           <div class="history-list">
@@ -226,14 +219,7 @@
                   <div class="history-time" x-text="formatTime(entry.created_at)"></div>
                   <div class="history-style" x-text="entry.fight_style"></div>
                 </div>
-                <button
-                  class="btn"
-                  style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;"
-                  @click.stop="copyToClipboard(getShareUrl(entry.job_id))"
-                  title="Skopiuj link"
-                >
-                  🔗
-                </button>
+                <button class="btn" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;" @click.stop="copyToClipboard(getShareUrl(entry.job_id))" title="Skopiuj link">🔗</button>
               </div>
             </template>
           </div>
