@@ -20,6 +20,7 @@ function app() {
     history: [],
     loadingHistory: false,
     spellSort: "total_dmg",
+    copiedJobId: null,
 
     STAT_LABELS: {
       strength:    "Strength",
@@ -37,13 +38,11 @@ function app() {
       const sessionFromUrl = params.get("session");
       const resultId = params.get("result");
 
-      // Sesja z URL (zaraz po logowaniu) — zapisz w localStorage
       if (sessionFromUrl) {
         this.sessionId = sessionFromUrl;
         localStorage.setItem("simcraft_session", sessionFromUrl);
         history.replaceState({}, "", "/");
       } else {
-        // Przy odswiezeniu — odczytaj z localStorage
         const saved = localStorage.getItem("simcraft_session");
         if (saved) this.sessionId = saved;
       }
@@ -65,7 +64,6 @@ function app() {
       this.errorChars = null;
       try {
         const chars = await API.getCharacters(this.sessionId);
-        // Jesli backend zwroci 401/blad sesji — wyczysc i przekieruj do logowania
         this.characters = chars;
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
@@ -73,7 +71,6 @@ function app() {
             .catch(() => {});
         }
       } catch (e) {
-        // Sesja wygasla — wyczysc localStorage
         if (e.message.includes("401") || e.message.includes("403") || e.message.includes("Unauthorized")) {
           localStorage.removeItem("simcraft_session");
           this.sessionId = null;
@@ -243,12 +240,11 @@ function app() {
       return window.location.origin + "/?result=" + jobId;
     },
 
-    copyToClipboard(text) {
+    copyToClipboard(text, jobId) {
       navigator.clipboard.writeText(text).then(() => {
-        alert("Link skopiowany do schowka!");
-      }).catch(() => {
-        alert("Nie uda\u0142o si\u0119 skopiowa\u0107 linku");
-      });
+        this.copiedJobId = jobId || true;
+        setTimeout(() => { this.copiedJobId = null; }, 2000);
+      }).catch(() => {});
     },
   };
 }
