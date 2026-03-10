@@ -33,6 +33,7 @@ def _save(data: list):
 class HistoryEntry(BaseModel):
     job_id: str
     character_name: Optional[str] = "Unknown"
+    character_class: Optional[str] = ""
     dps: Optional[float] = 0.0
     fight_style: Optional[str] = "Patchwerk"
 
@@ -41,7 +42,6 @@ class HistoryEntry(BaseModel):
 async def get_history():
     with _lock:
         data = _load()
-    # Najnowsze pierwsze, max 50
     return sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:50]
 
 
@@ -49,16 +49,15 @@ async def get_history():
 async def add_history(entry: HistoryEntry):
     with _lock:
         data = _load()
-        # Nie duplikuj tego samego job_id
         if not any(e["job_id"] == entry.job_id for e in data):
             data.append({
-                "job_id":         entry.job_id,
-                "character_name": entry.character_name,
-                "dps":            entry.dps,
-                "fight_style":    entry.fight_style,
-                "created_at":     int(time.time()),
+                "job_id":           entry.job_id,
+                "character_name":   entry.character_name,
+                "character_class":  entry.character_class,
+                "dps":              entry.dps,
+                "fight_style":      entry.fight_style,
+                "created_at":       int(time.time()),
             })
-            # Trzymaj max 200 wpisow
             data = sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:200]
             _save(data)
     return {"ok": True}

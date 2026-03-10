@@ -33,6 +33,22 @@ function app() {
       versatility: "Versatility",
     },
 
+    CLASS_COLORS: {
+      "Death Knight":  "#C41E3A",
+      "Demon Hunter":  "#A330C9",
+      "Druid":         "#FF7C0A",
+      "Evoker":        "#33937F",
+      "Hunter":        "#AAD372",
+      "Mage":          "#3FC7EB",
+      "Monk":          "#00FF98",
+      "Paladin":       "#F48CBA",
+      "Priest":        "#FFFFFF",
+      "Rogue":         "#FFF468",
+      "Shaman":        "#0070DD",
+      "Warlock":       "#8788EE",
+      "Warrior":       "#C69B3A",
+    },
+
     init() {
       const params = new URLSearchParams(window.location.search);
       const sessionFromUrl = params.get("session");
@@ -64,10 +80,8 @@ function app() {
       this.errorChars = null;
       try {
         const chars = await API.getCharacters(this.sessionId);
-        // Sortuj malejaco po levelu
         this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
 
-        // Przywroc ostatnio wybrana postac z localStorage
         const lastCharName = localStorage.getItem("simcraft_last_char");
         if (lastCharName && !this.selectedChar) {
           this.selectedChar = this.characters.find(c => c.name === lastCharName) || this.characters[0];
@@ -126,11 +140,14 @@ function app() {
       return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
+    classColor(className) {
+      return this.CLASS_COLORS[className] || "var(--muted)";
+    },
+
     selectChar(ch) {
       this.selectedChar = ch;
       this.simResult = null;
       this.job = null;
-      // Zapamietaj ostatnio wybrana postac
       localStorage.setItem("simcraft_last_char", ch.name);
     },
 
@@ -182,10 +199,11 @@ function app() {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
           await API.saveToHistory({
-            job_id: this.job.id,
-            character_name: this.selectedChar?.name || "Addon Export",
-            dps: this.simResult.dps,
-            fight_style: this.simOptions.fight_style,
+            job_id:           this.job.id,
+            character_name:   this.selectedChar?.name || "Addon Export",
+            character_class:  this.selectedChar?.class || "",
+            dps:              this.simResult.dps,
+            fight_style:      this.simOptions.fight_style,
           });
           this.loadHistory();
           this.loadingSim = false;
