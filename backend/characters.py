@@ -129,8 +129,13 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
             "stats": [],
         }
         for stat in slot.get("stats", []):
+            stat_type = stat.get("type", {})
+            if isinstance(stat_type, dict):
+                stat_label = stat_type.get("display_type", stat_type.get("name", "?"))
+            else:
+                stat_label = str(stat_type)
             item["stats"].append({
-                "type": stat.get("type", ""),
+                "type": stat_label,
                 "value": stat.get("value", 0),
             })
         enchant = slot.get("enchant", {})
@@ -192,10 +197,15 @@ async def get_character_statistics(session: str, realm_slug: str, name: str):
         "block_percent": "Block %",
     }
 
+    def get_stat_val(v):
+        if isinstance(v, dict):
+            return v.get("value", v.get("base", "?"))
+        return v if v is not None else "?"
+
     for key, label in stat_map.items():
         val = data.get(key)
         if val is not None:
-            stats[label] = val
+            stats[label] = get_stat_val(val)
 
     return {"statistics": stats}
 
