@@ -57,8 +57,6 @@
     .char-card-meta { font-size: .82rem; color: var(--muted); }
     .char-card-dps { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
     .char-card-dps-small { font-size: .85rem; color: var(--muted); }
-    .trend-chart { width: 100%; height: 100px; margin-top: .5rem; }
-    .trend-bar { height: 4px; border-radius: 2px; background: var(--accent); display: inline-block; margin-right: 2px; }
   </style>
 </head>
 <body>
@@ -490,7 +488,7 @@
               <img class="char-card-avatar" :src="char.avatar || '/static/default_avatar.png'" :alt="char.name"/>
               <div class="char-card-info">
                 <div class="char-card-name" x-text="char.name"></div>
-                <div class="char-card-meta" :style="{color: classColor(char.class)}" x-text="char.realm + ' · lv' + char.level"></div>
+                <div class="char-card-meta" x-text="char.realm + ' · lv' + char.level"></div>
                 <div class="char-card-meta" :style="{color: classColor(char.class)}" x-text="(char.spec ? char.spec + ' ' : '') + (char.class || '')"></div>
               </div>
             </div>
@@ -499,11 +497,6 @@
                 <div class="char-card-dps" x-text="formatDps(getCharDps(char.name).latest)"></div>
                 <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
                 <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)" x-text="getCharDps(char.name).count + ' symulacji · ' + formatTime(getCharDps(char.name).lastSim)"></div>
-                <div class="trend-chart">
-                  <template x-for="(d, i) in getCharDps(char.name).dpsList.slice(-10)" :key="i">
-                    <span class="trend-bar" :style="{width: (100 / getCharDps(char.name).dpsList.slice(-10).length) + '%', height: (Math.max(...getCharDps(char.name).dpsList.slice(-10)) > 0 ? (d / Math.max(...getCharDps(char.name).dpsList.slice(-10)) * 80) : 10) + 'px', background: d >= getCharDps(char.name).dpsList.slice(-10)[0] ? 'var(--accent)' : '#f66'}"></span>
-                  </template>
-                </div>
               </div>
             </template>
             <template x-if="!getCharDps(char.name)">
