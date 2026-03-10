@@ -102,14 +102,16 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
     token = await get_blizzard_token()
     name_lower = name.lower()
 
+    url = f"https://eu.api.blizzard.com/profile/wow/character/{realm_slug}/{name_lower}/equipment?namespace=profile-eu&locale=en_GB"
+    print(f"EQUIPMENT API: {url}", flush=True)
+    
     async with httpx.AsyncClient() as client:
         resp = await client.get(
-            f"https://eu.api.blizzard.com/profile/wow/character"
-            f"/{realm_slug}/{name_lower}/equipment"
-            f"?namespace=profile-eu&locale=en_GB",
+            url,
             headers={"Authorization": f"Bearer {token}"},
             timeout=15,
         )
+        print(f"EQUIPMENT RESP: {resp.status_code} {resp.text[:200]}", flush=True)
         if resp.status_code == 404:
             from fastapi import HTTPException
             raise HTTPException(404, "Character not found")
