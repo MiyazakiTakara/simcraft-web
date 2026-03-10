@@ -267,7 +267,7 @@
               <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
                 <div class="history-char">
                   <span x-text="entry.character_name || 'Addon Export'"></span>
-                  <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="entry.character_class"></span>
+                  <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
                 </div>
                 <div class="history-dps" x-text="formatDps(entry.dps)"></div>
                 <div class="history-time" x-text="formatTime(entry.created_at)"></div>

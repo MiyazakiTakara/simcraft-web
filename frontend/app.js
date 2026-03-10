@@ -122,12 +122,11 @@ function app() {
         this.simResult = await API.getResultJson(jobId);
         this.selectedHistory = jobId;
 
-        // Uzupelnij dane postaci z wpisu historii jesli dostepne
         const entry = this.history.find(e => e.job_id === jobId);
         const charName = entry?.character_name || null;
         const charClass = entry?.character_class || null;
+        const charSpec = entry?.character_spec || null;
 
-        // Sprobuj znalezc realm_slug z listy postaci (jesli zalogowany)
         const charObj = charName
           ? this.characters.find(c => c.name === charName)
           : null;
@@ -137,7 +136,7 @@ function app() {
           charName:  charName !== 'Addon Export' ? charName : null,
           realmSlug: charObj?.realm_slug || null,
           charClass: charClass || null,
-          charSpec:  charObj?.spec || null,
+          charSpec:  charSpec || charObj?.spec || null,
         };
       } catch (e) {
         alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
@@ -236,6 +235,7 @@ function app() {
             job_id:           this.job.id,
             character_name:   this.selectedChar?.name || "Addon Export",
             character_class:  this.selectedChar?.class || "",
+            character_spec:   this.selectedChar?.spec || "",
             dps:              this.simResult.dps,
             fight_style:      this.simOptions.fight_style,
           });

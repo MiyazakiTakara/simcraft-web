@@ -34,6 +34,7 @@ class HistoryEntry(BaseModel):
     job_id: str
     character_name: Optional[str] = "Unknown"
     character_class: Optional[str] = ""
+    character_spec: Optional[str] = ""
     dps: Optional[float] = 0.0
     fight_style: Optional[str] = "Patchwerk"
 
@@ -54,6 +55,7 @@ async def add_history(entry: HistoryEntry):
                 "job_id":           entry.job_id,
                 "character_name":   entry.character_name,
                 "character_class":  entry.character_class,
+                "character_spec":   entry.character_spec,
                 "dps":              entry.dps,
                 "fight_style":      entry.fight_style,
                 "created_at":       int(time.time()),
