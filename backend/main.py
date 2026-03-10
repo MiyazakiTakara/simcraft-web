@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -42,7 +42,7 @@ class NoCacheStaticMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         path = request.url.path.split("?")[0]
-        if path.endswith((".js", ".css", ".html")) or path == "/":
+        if path.endswith((".js", ".css", ".html")) or path in ("/", ) or path.startswith("/result/"):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
@@ -56,6 +56,64 @@ app.include_router(characters_router)
 app.include_router(sim_router)
 app.include_router(results_router)
 app.include_router(history_router)
+
+
+BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")
+
+
+@app.get("/result/{job_id}", response_class=HTMLResponse)
+async def result_page(job_id: str):
+    """Serwuje result.html z dynamicznymi OG meta tagami."""
+    import json
+    from history import _load, _lock
+
+    # Pobierz meta z historii
+    with _lock:
+        data = _load()
+    entry = next((e for e in data if e.get("job_id") == job_id), {})
+
+    char_name   = entry.get("character_name") or "Addon Export"
+    char_class  = entry.get("character_class") or ""
+    char_spec   = entry.get("character_spec") or ""
+    dps         = entry.get("dps") or 0
+    fight_style = entry.get("fight_style") or "Patchwerk"
+
+    if dps >= 1_000_000:
+        dps_str = f"{dps / 1_000_000:.2f}M"
+    elif dps >= 1_000:
+        dps_str = f"{dps / 1_000:.1f}k"
+    else:
+        dps_str = str(int(dps))
+
+    spec_class = f"{char_spec} {char_class}".strip()
+    if spec_class:
+        og_title = f"{char_name} ({spec_class}) — {dps_str} DPS"
+    else:
+        og_title = f"{char_name} — {dps_str} DPS"
+
+    og_desc  = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
+    og_image = f"{BASE_URL}/api/result/{job_id}/dps-chart.png"
+    og_url   = f"{BASE_URL}/result/{job_id}"
+
+    html_path = "/app/frontend/result.html"
+    with open(html_path) as f:
+        html = f.read()
+
+    # Wstrzyknij OG tagi do <head>
+    og_tags = f"""
+    <meta property="og:title"       content="{og_title}"/>
+    <meta property="og:description" content="{og_desc}"/>
+    <meta property="og:image"       content="{og_image}"/>
+    <meta property="og:url"         content="{og_url}"/>
+    <meta property="og:type"        content="website"/>
+    <meta name="twitter:card"       content="summary_large_image"/>
+    <meta name="twitter:title"      content="{og_title}"/>
+    <meta name="twitter:description" content="{og_desc}"/>
+    <meta name="twitter:image"      content="{og_image}"/>
+    <title>{og_title} — SimCraft Web</title>
+"""
+    html = html.replace("<!-- OG_META_PLACEHOLDER -->", og_tags)
+    return HTMLResponse(content=html)
 
 
 def _restore_jobs():

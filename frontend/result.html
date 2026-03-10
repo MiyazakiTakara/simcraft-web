@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- OG_META_PLACEHOLDER -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <link rel="stylesheet" href="/style.css?v=4"/>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/api.js?v=2"></script>
+  <style>
+    .result-page { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .result-back { display:inline-flex; align-items:center; gap:.4rem; color:var(--muted); font-size:.85rem; text-decoration:none; margin-bottom:1.2rem; transition:color .15s; }
+    .result-back:hover { color: var(--text); }
+    .result-not-found { text-align:center; padding:4rem 1rem; color:var(--muted); }
+    .result-not-found .icon { font-size:3rem; margin-bottom:1rem; }
+    .chart-section { margin-top:1.2rem; }
+    .chart-section h2 { margin-bottom:.6rem; }
+    .dps-chart-img { width:100%; max-width:900px; border-radius:10px; border:1px solid var(--border); cursor:zoom-in; }
+    .chart-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex; align-items:center; justify-content:center; z-index:9999; cursor:zoom-out; }
+    .chart-modal-overlay img { max-width:95vw; max-height:90vh; border-radius:10px; box-shadow:0 8px 40px rgba(0,0,0,.7); }
+    .result-footer { margin-top:1.2rem; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; font-size:.82rem; color:var(--muted); }
+    .result-footer a { color:var(--muted); }
+    .spinner-wrap { display:flex; justify-content:center; align-items:center; padding:4rem; }
+  </style>
+</head>
+<body>
+<div x-data="resultPage()" x-init="init()">
+
+  <!-- Modal zoom -->
+  <div class="chart-modal-overlay" x-show="chartModal" x-cloak @click="chartModal=false" style="display:none">
+    <img :src="chartModal" alt="DPS Chart"/>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="header-logo" style="text-decoration:none">⚔️ SimCraft Web</a>
+    <a href="/" class="btn btn-ghost" style="font-size:.85rem">&#8592; Stróna główna</a>
+  </header>
+
+  <div class="result-page">
+
+    <!-- Ładowanie -->
+    <div class="spinner-wrap" x-show="loading">
+      <span class="spinner" style="width:2rem;height:2rem"></span>
+    </div>
+
+    <!-- Błąd -->
+    <div class="result-not-found" x-show="!loading && error">
+      <div class="icon">🔍</div>
+      <p x-text="error"></p>
+      <a href="/" class="btn btn-primary" style="margin-top:1rem">Wróć na stronę główną</a>
+    </div>
+
+    <!-- Wynik -->
+    <template x-if="!loading && result">
+      <div>
+        <div class="panel">
+
+          <!-- DPS Hero -->
+          <div class="result-hero">
+            <div class="dps-value" x-text="formatDps(result.dps)"></div>
+            <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
+              <span>DPS (±<span x-text="formatDps(result.dps_std)"></span>)</span>
+              <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export'">
+                <span
+                  :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem'}"
+                  x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"
+                ></span>
+              </template>
+              <template x-if="meta && meta.fight_style">
+                <span style="color:var(--muted);font-size:.82rem" x-text="meta.fight_style"></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Grid: stats + spelle -->
+          <div class="result-grid">
+            <div>
+              <h2 style="margin-bottom:.6rem">Statystyki</h2>
+              <div class="stat-list">
+                <template x-for="[key, val] in Object.entries(result.stats)" :key="key">
+                  <div class="stat-row">
+                    <span class="stat-name" x-text="formatStatName(key)"></span>
+                    <span class="stat-val"  x-text="val.toLocaleString()"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+                <h2>Breakdown spelli</h2>
+                <div style="display:flex;gap:.3rem">
+                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                  <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                </div>
+              </div>
+              <div class="spell-list">
+                <template x-for="sp in sortedSpells" :key="sp.name">
+                  <div class="spell-row">
+                    <div class="spell-head">
+                      <span x-text="sp.name"></span>
+                      <span style="display:flex;gap:.6rem;align-items:center">
+                        <span x-show="spellSort==='total_dmg'">
+                          <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                        </span>
+                        <span x-show="spellSort==='dps'">
+                          <strong x-text="formatDps(sp.dps)"></strong> DPS
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                        </span>
+                        <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                      </span>
+                    </div>
+                    <div class="spell-bar-bg">
+                      <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pie chart -->
+          <div class="chart-section">
+            <h2>🥧 DPS Pie Chart</h2>
+            <img
+              class="dps-chart-img"
+              :src="'/api/result/' + jobId + '/dps-chart.png?t=' + ts"
+              alt="DPS Chart"
+              @click="chartModal = $el.src"
+              loading="lazy"
+            />
+          </div>
+
+          <!-- Footer -->
+          <div class="result-footer">
+            <a :href="'/api/result/' + jobId + '/json'" target="_blank">Raw JSON</a>
+            <span style="color:var(--border)">·</span>
+            <a :href="'/api/result/' + jobId + '/dps-chart.png'" target="_blank">Chart PNG</a>
+            <span style="color:var(--border)">·</span>
+            <button
+              class="btn"
+              style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
+              @click="copyShare()"
+              x-text="copied ? '✓ Skopiowano link' : '🔗 Kopiuj link'"
+            ></button>
+            <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none">⚔️ Symuluj swoją postać</a>
+          </div>
+        </div>
+      </div>
+    </template>
+
+  </div>
+</div>
+
+<script>
+function resultPage() {
+  return {
+    jobId: null,
+    result: null,
+    meta: null,
+    loading: true,
+    error: null,
+    spellSort: 'total_dmg',
+    chartModal: null,
+    copied: false,
+    ts: Date.now(),
+
+    STAT_LABELS: {
+      strength: 'Strength', agility: 'Agility', stamina: 'Stamina',
+      intellect: 'Intellect', crit: 'Critical Strike', haste: 'Haste',
+      mastery: 'Mastery', versatility: 'Versatility',
+    },
+    CLASS_COLORS: {
+      'Death Knight':'#C41E3A','Demon Hunter':'#A330C9','Druid':'#FF7C0A',
+      'Evoker':'#33937F','Hunter':'#AAD372','Mage':'#3FC7EB','Monk':'#00FF98',
+      'Paladin':'#F48CBA','Priest':'#CCCCCC','Rogue':'#FFF468','Shaman':'#0070DD',
+      'Warlock':'#8788EE','Warrior':'#C69B3A',
+    },
+
+    async init() {
+      // jobId z URL: /result/<jobId>
+      this.jobId = window.location.pathname.split('/').filter(Boolean).pop();
+      if (!this.jobId) { this.error = 'Brak ID symulacji.'; this.loading = false; return; }
+      try {
+        const [result, meta] = await Promise.all([
+          API.getResultJson(this.jobId),
+          API.getResultMeta(this.jobId),
+        ]);
+        this.result = result;
+        this.meta   = meta;
+      } catch (e) {
+        this.error = 'Nie znaleziono symulacji. Link mógł wygaśnąć lub jest nieprawidłowy.';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    get sortedSpells() {
+      if (!this.result?.spells) return [];
+      return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
+    },
+
+    classColor(c)     { return this.CLASS_COLORS[c] || '#aaa'; },
+    classTextColor(c) { return ['Hunter','Mage','Monk','Rogue','Priest'].includes(c) ? '#111' : '#fff'; },
+
+    formatDps(v) {
+      if (!v && v !== 0) return '—';
+      if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+      if (v >= 1e3) return (v/1e3).toFixed(1)+'k';
+      return String(v);
+    },
+    formatDmg(v) {
+      if (!v && v !== 0) return '—';
+      if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+      if (v >= 1e3) return (v/1e3).toFixed(0)+'k';
+      return String(Math.round(v));
+    },
+    formatStatName(k) { return this.STAT_LABELS[k] || k; },
+    pctBarWidth(val, spells, key) {
+      const max = Math.max(...spells.map(s => s[key] ?? 0));
+      return max > 0 ? Math.round((val/max)*100)+'%' : '0%';
+    },
+    copyShare() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 2000);
+      });
+    },
+  };
+}
+</script>
+</body>
+</html>

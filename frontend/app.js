@@ -33,8 +33,6 @@ function app() {
     spellSort: "total_dmg",
     copiedJobId: null,
     chartModal: null,
-    sharedResultLoading: false,
-    sharedResultError: null,
 
     STAT_LABELS: {
       strength:    "Strength",
@@ -66,7 +64,6 @@ function app() {
     init() {
       const params = new URLSearchParams(window.location.search);
       const sessionFromUrl = params.get("session");
-      const resultId = params.get("result");
 
       if (sessionFromUrl) {
         this.sessionId = sessionFromUrl;
@@ -82,15 +79,6 @@ function app() {
         this.loadHistory();
       } else {
         this.loadPublicHistory();
-      }
-
-      // Jeśli jest ?result= w URL – ładuj od razu, niezależnie od historii i logowania
-      if (resultId) {
-        if (this.sessionId) {
-          this.loadHistoryResult(resultId);
-        } else {
-          this.loadPubResult(resultId);
-        }
       }
     },
 
@@ -138,14 +126,11 @@ function app() {
       try {
         this.simResult = await API.getResultJson(jobId);
         this.selectedHistory = jobId;
-        // Próbuj z lokalnej historii, fallback do /meta
         let entry = this.history.find(e => e.job_id === jobId);
-        if (!entry) {
-          entry = await API.getResultMeta(jobId);
-        }
+        if (!entry) entry = await API.getResultMeta(jobId);
         const charName  = entry?.character_name || null;
         const charClass = entry?.character_class || null;
-        const charSpec  = entry?.character_spec || null;
+        const charSpec  = entry?.character_spec  || null;
         const charObj   = charName ? this.characters.find(c => c.name === charName) : null;
         this.job = {
           id:        jobId,
@@ -155,15 +140,12 @@ function app() {
           charSpec:  charSpec || charObj?.spec || null,
         };
       } catch (e) {
-        alert("Nie udało się załadować wyniku: " + e.message);
+        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
       }
     },
 
     async loadPubResult(jobId) {
-      this.sharedResultLoading = true;
-      this.sharedResultError = null;
       try {
-        // Oba fetch równolegle – nie czekamy na historię
         const [result, meta] = await Promise.all([
           API.getResultJson(jobId),
           API.getResultMeta(jobId),
@@ -177,14 +159,8 @@ function app() {
           charClass: meta?.character_class || null,
           charSpec:  meta?.character_spec  || null,
         };
-        // Aktualizuj URL żeby link był bookmarkowalny
-        const url = new URL(window.location);
-        url.searchParams.set('result', jobId);
-        history.replaceState({}, '', url);
       } catch (e) {
-        this.sharedResultError = "Nie udało się załadować wyniku. Link może być nieprawidłowy lub wynik wygasł.";
-      } finally {
-        this.sharedResultLoading = false;
+        console.error("loadPubResult failed", e);
       }
     },
 
@@ -210,27 +186,19 @@ function app() {
             const status = await API.getJobStatus(guestJobId);
             if (status.status === "done") {
               clearInterval(this._guestPollInterval);
-              const result = await API.getResultJson(guestJobId);
-              result._source = 'addon';
-              this.pubResult = result;
-              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null };
               await API.saveToHistory({
                 job_id:          guestJobId,
                 character_name:  "Addon Export",
                 character_class: "",
                 character_spec:  "",
-                dps:             result.dps,
+                dps:             (await API.getResultJson(guestJobId)).dps,
                 fight_style:     this.guestSimOptions.fight_style,
               });
-              // Ustaw URL żeby można było skopiować link od razu
-              const url = new URL(window.location);
-              url.searchParams.set('result', guestJobId);
-              history.replaceState({}, '', url);
-              this.loadPublicHistory();
-              this.guestLoadingSim = false;
+              // Redirect na dedykowaną stronę wyniku
+              window.location.href = `/result/${guestJobId}`;
             } else if (status.status === "error") {
               clearInterval(this._guestPollInterval);
-              this.guestSimError = "Błąd symulacji: " + (status.error || "Nieznany błąd");
+              this.guestSimError = "B\u0142\u0105d symulacji: " + (status.error || "Nieznany b\u0142\u0105d");
               this.guestLoadingSim = false;
             }
           } catch (e) {
@@ -239,7 +207,7 @@ function app() {
           }
         }, 3000);
       } catch (e) {
-        this.guestSimError = "Błąd: " + e.message;
+        this.guestSimError = "B\u0142\u0105d: " + e.message;
         this.guestLoadingSim = false;
       }
     },
@@ -333,12 +301,8 @@ function app() {
             dps:              this.simResult.dps,
             fight_style:      this.simOptions.fight_style,
           });
-          // Ustaw URL żeby link był gotowy od razu po symulacji
-          const url = new URL(window.location);
-          url.searchParams.set('result', this.job.id);
-          history.replaceState({}, '', url);
-          this.loadHistory();
-          this.loadingSim = false;
+          // Redirect na dedykowaną stronę wyniku
+          window.location.href = `/result/${this.job.id}`;
         } else if (status.status === "error") {
           clearInterval(this._pollInterval);
           alert("Blad symulacji:\n" + (status.error || "Nieznany blad"));
@@ -391,7 +355,7 @@ function app() {
       if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
       return date.toLocaleDateString('pl-PL');
     },
-    getShareUrl(jobId) { return window.location.origin + "/?result=" + jobId; },
+    getShareUrl(jobId) { return window.location.origin + "/result/" + jobId; },
     copyToClipboard(text, jobId) {
       navigator.clipboard.writeText(text).then(() => {
         this.copiedJobId = jobId || true;
