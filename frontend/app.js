@@ -46,8 +46,7 @@ function app() {
 
     newsTeaser(body) {
       if (!body) return "";
-      const sentences = body.split(/[.!?]+/).filter(s => s.trim().length > 0);
-      return sentences.slice(0, 2).join(". ") + (sentences.length > 2 ? "." : "");
+      return body.length > 150 ? body.slice(0, 150) + "..." : body;
     },
 
     theme: localStorage.getItem("simcraft_theme") || "dark",
