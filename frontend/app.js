@@ -40,6 +40,9 @@ function app() {
     historyPage: 1,
     historyPerPage: 10,
 
+    newsPage: 1,
+    newsPerPage: 6,
+
     theme: localStorage.getItem("simcraft_theme") || "dark",
 
     STAT_LABELS: {
@@ -96,8 +99,22 @@ function app() {
     async loadNews() {
       try {
         const res = await fetch('/admin/api/news/public');
-        if (res.ok) this.news = await res.json();
+        if (res.ok) {
+          this.news = await res.json();
+          this.newsPage = 1;
+        }
       } catch (e) { console.error('Failed to load news', e); }
+    },
+
+    get newsPageCount() {
+      return Math.max(1, Math.ceil(this.news.length / this.newsPerPage));
+    },
+    get pagedNews() {
+      const start = (this.newsPage - 1) * this.newsPerPage;
+      return this.news.slice(start, start + this.newsPerPage);
+    },
+    newsPages() {
+      return Array.from({ length: this.newsPageCount }, (_, i) => i + 1);
     },
 
     toggleTheme() {

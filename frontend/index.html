@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/style.css?v=5"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=12"></script>
+  <script src="/app.js?v=13"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -41,20 +41,6 @@
     .dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
     .chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
     .chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
-
-    /* News */
-    .news-section { max-width: 760px; margin: 0 auto 2rem; width: 100%; }
-    .news-section h2 { font-size: 1rem; color: var(--text); margin-bottom: .8rem; }
-    .news-card-pub {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: .9rem 1.1rem;
-      margin-bottom: .6rem;
-    }
-    .news-card-pub h3 { font-size: .95rem; margin-bottom: .3rem; color: var(--text); }
-    .news-card-pub p { font-size: .85rem; color: var(--muted); white-space: pre-wrap; line-height: 1.5; }
-    .news-card-pub .news-date { font-size: .72rem; color: var(--border); margin-top: .4rem; }
   </style>
 </head>
 <body>
@@ -180,15 +166,27 @@
       </div>
 
       <!-- Newsy -->
-      <div class="news-section" x-show="news.length > 0">
-        <h2>📰 Aktualności</h2>
-        <template x-for="n in news" :key="n.id">
-          <div class="news-card-pub">
-            <h3 x-text="n.title"></h3>
-            <p x-text="n.body"></p>
-            <div class="news-date" x-text="formatTime(n.created_at)"></div>
-          </div>
-        </template>
+      <div class="landing-history-section" x-show="news.length > 0">
+        <div class="landing-history-header">
+          <h2>📰 Aktualności</h2>
+          <span x-text="news.length + ' wpisów'"></span>
+        </div>
+        <div class="landing-history-grid">
+          <template x-for="n in pagedNews" :key="n.id">
+            <div class="pub-history-card" style="cursor:default">
+              <div class="pub-card-name" x-text="n.title"></div>
+              <div style="font-size:.82rem;color:var(--muted);white-space:pre-wrap;line-height:1.5;margin-top:.3rem" x-text="n.body"></div>
+              <div class="pub-card-meta" style="margin-top:.4rem" x-text="formatTime(n.created_at)"></div>
+            </div>
+          </template>
+        </div>
+        <div class="pagination" x-show="newsPageCount > 1">
+          <button @click="newsPage > 1 && newsPage--" :disabled="newsPage === 1">&laquo;</button>
+          <template x-for="p in newsPages()" :key="p">
+            <button :class="{active: newsPage === p}" @click="newsPage = p" x-text="p"></button>
+          </template>
+          <button @click="newsPage < newsPageCount && newsPage++" :disabled="newsPage === newsPageCount">&raquo;</button>
+        </div>
       </div>
 
       <!-- Publiczna historia -->
