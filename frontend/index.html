@@ -174,10 +174,9 @@
                       gap: '.3rem',
                     }"
                   >
-                    <span x-text="(job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || job.charName)"></span>
+                    <span x-text="job.charName + (job.charSpec || job.charClass ? ' · ' + (job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || '') : '')"></span>
                     <span style="font-size:.75rem;opacity:.8">↗</span>
                   </a>
-                  <span style="font-size:.85rem" x-text="job.charName"></span>
                 </template>
                 <!-- Fallback dla addon / historii bez danych -->
                 <template x-if="!job.charName">
