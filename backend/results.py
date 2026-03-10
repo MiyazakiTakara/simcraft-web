@@ -1,5 +1,6 @@
 import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from simulation import jobs
 
 router = APIRouter()
@@ -19,39 +20,25 @@ def pct(val):
 
 
 def ability_dps(ab: dict) -> float:
-    """
-    Extract DPS from a SimC ability entry.
-    SimC JSON2: portionaps.mean = DPS contribution of this ability.
-    If portionaps is missing (parent entry without direct damage),
-    recursively sum children portionaps.
-    compoundamount.mean is total damage dealt (NOT DPS) — avoid for DPS.
-    """
     pa = ab.get("portionaps")
     if isinstance(pa, dict):
         v = safe_float(pa.get("mean"))
         if v > 0:
             return v
 
-    # Parent entry with no portionaps: sum children recursively
     children = ab.get("children", [])
     if children:
         total = sum(ability_dps(c) for c in children)
         if total > 0:
             return total
 
-    # Last resort flat fields (older SimC formats)
     if isinstance(ab.get("dps"), (int, float)):
         return safe_float(ab["dps"])
     return 0.0
 
 
 def ability_crit(ab: dict) -> float:
-    """
-    Extract crit % from ability.
-    Looks inside directresults and tickresults for crit/hit counts.
-    Falls back to children aggregate if parent has no results.
-    """
-    def _crit_from_results(results: dict) -> float | None:
+    def _crit_from_results(results: dict):
         if not isinstance(results, dict):
             return None
         crit_block = results.get("crit", {})
@@ -63,13 +50,11 @@ def ability_crit(ab: dict) -> float:
             return round((crit_count / total) * 100, 2)
         return None
 
-    # Try directresults first, then tickresults
     for key in ("directresults", "tickresults"):
         result = _crit_from_results(ab.get(key, {}))
         if result is not None:
             return result
 
-    # Try aggregating from children
     children = ab.get("children", [])
     if children:
         crits = [ability_crit(c) for c in children]
@@ -77,7 +62,6 @@ def ability_crit(ab: dict) -> float:
         if crits:
             return round(sum(crits) / len(crits), 2)
 
-    # Flat fallback
     if isinstance(ab.get("crit_pct"), (int, float)):
         v = safe_float(ab["crit_pct"])
         return v * 100 if v <= 1 else v
@@ -85,26 +69,18 @@ def ability_crit(ab: dict) -> float:
 
 
 def _get_abilities(player: dict) -> list:
-    """
-    Safely extract ability list from player dict.
-    In SimC JSON2 abilities live in player["stats"] as a list of dicts.
-    Guard against player["stats"] being a dict (buffed_stats confusion).
-    """
     raw = player.get("stats", [])
     if isinstance(raw, list):
-        # Verify first element looks like an ability (has spell_name or portionaps)
         if raw and isinstance(raw[0], dict):
             if "spell_name" in raw[0] or "portionaps" in raw[0] or "children" in raw[0]:
                 return raw
         elif not raw:
             return []
     if isinstance(raw, dict):
-        # Some SimC versions nest abilities under a sub-key
         for key in ("stats", "abilities", "actions"):
             sub = raw.get(key, [])
             if isinstance(sub, list) and sub:
                 return sub
-    # Fallback: try collected_data action_sequence (no DPS info, just counts)
     return []
 
 
@@ -122,19 +98,10 @@ def parse_results(json_path: str):
         player = players[0]
         cd = player.get("collected_data", {})
 
-        # -------------------------
-        # DPS
-        # -------------------------
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std = safe_float(dps_data.get("mean_std_dev"))
 
-        # -------------------------
-        # STATS
-        # SimC JSON2: buffed_stats.attribute = primary stats
-        #             buffed_stats.stats = secondary stats
-        # Fallback: try reading secondaries directly from buffed_stats root.
-        # -------------------------
         bs = cd.get("buffed_stats", {})
         attr = bs.get("attribute", {})
         stats_data = bs.get("stats", {})
@@ -159,9 +126,6 @@ def parse_results(json_path: str):
                                    stats_data.get("versatility_pct", 0))),
         }
 
-        # -------------------------
-        # SPELLS / ABILITIES
-        # -------------------------
         abilities = _get_abilities(player)
 
         spells = []
@@ -193,7 +157,6 @@ def parse_results(json_path: str):
             })
             total_spell_dps += dps
 
-        # Fallback: no abilities with DPS found — use action_sequence for counts only
         if not spells:
             action_seq = cd.get("action_sequence", [])
             spell_counts: dict = {}
@@ -247,3 +210,54 @@ async def get_result_json(job_id: str):
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     return parse_results(job["json_path"])
+
+
+@router.get("/api/result/{job_id}/debug")
+async def get_result_debug(job_id: str):
+    """
+    Debug endpoint - zwraca surowa strukture JSON2 z kluczowymi polami.
+    Uzyj do diagnostyki gdy spelle pokazuja 0 DPS.
+    """
+    job = jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        raise HTTPException(404, "Result not ready")
+
+    try:
+        with open(job["json_path"]) as f:
+            raw = json.load(f)
+
+        sim = raw.get("sim", {})
+        players = sim.get("players", [])
+        if not players:
+            return {"error": "no players"}
+
+        player = players[0]
+        stats_raw = player.get("stats", [])
+
+        # Pierwsze 3 ability z pelna struktura (bez danych timeseries)
+        def strip_timeseries(obj, depth=0):
+            if depth > 4:
+                return "..."
+            if isinstance(obj, dict):
+                return {
+                    k: strip_timeseries(v, depth + 1)
+                    for k, v in obj.items()
+                    if k not in ("data", "timeline", "distribution")
+                }
+            if isinstance(obj, list):
+                if len(obj) > 3:
+                    return [strip_timeseries(i, depth + 1) for i in obj[:3]] + [f"...+{len(obj)-3} more"]
+                return [strip_timeseries(i, depth + 1) for i in obj]
+            return obj
+
+        return {
+            "player_name": player.get("name"),
+            "player_keys": list(player.keys()),
+            "stats_type": type(stats_raw).__name__,
+            "stats_len": len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
+            "first_3_abilities": strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
+            "collected_data_keys": list(player.get("collected_data", {}).keys()),
+        }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
