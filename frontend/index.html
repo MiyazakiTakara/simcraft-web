@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="/style.css?v=2"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=7"></script>
+  <script src="/app.js?v=8"></script>
 </head>
 <body>
 <div x-data="app()" x-init="init()" class="container">
@@ -150,7 +150,34 @@
           <div class="panel">
             <div class="result-hero">
               <div class="dps-value" x-text="formatDps(simResult.dps)"></div>
-              <div class="dps-label">DPS (±<span x-text="formatDps(simResult.dps_std)"></span>) · <span x-text="simResult.name"></span></div>
+              <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
+                <span>DPS (±<span x-text="formatDps(simResult.dps_std)"></span>)</span>
+                <!-- Plakietka postaci -->
+                <template x-if="job.charName">
+                  <a
+                    :href="armoryUrl(job.realmSlug, job.charName)"
+                    target="_blank"
+                    rel="noopener"
+                    :style="{
+                      background: classColor(job.charClass),
+                      color: classTextColor(job.charClass),
+                      padding: '.2rem .7rem',
+                      borderRadius: '999px',
+                      fontWeight: '700',
+                      fontSize: '.85rem',
+                      textDecoration: 'none',
+                      letterSpacing: '.02em',
+                      whiteSpace: 'nowrap',
+                    }"
+                    x-text="(job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || job.charName)"
+                  ></a>
+                  <span style="font-size:.85rem" x-text="job.charName"></span>
+                </template>
+                <!-- Fallback dla addon / historii bez danych -->
+                <template x-if="!job.charName">
+                  <span x-text="simResult.name"></span>
+                </template>
+              </div>
             </div>
 
             <div class="result-grid">

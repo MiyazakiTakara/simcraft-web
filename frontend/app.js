@@ -42,7 +42,7 @@ function app() {
       "Mage":          "#3FC7EB",
       "Monk":          "#00FF98",
       "Paladin":       "#F48CBA",
-      "Priest":        "#FFFFFF",
+      "Priest":        "#CCCCCC",
       "Rogue":         "#FFF468",
       "Shaman":        "#0070DD",
       "Warlock":       "#8788EE",
@@ -141,7 +141,18 @@ function app() {
     },
 
     classColor(className) {
-      return this.CLASS_COLORS[className] || "var(--muted)";
+      return this.CLASS_COLORS[className] || "#aaa";
+    },
+
+    // Kolor tekstu kontrastowy do tla klasy
+    classTextColor(className) {
+      const light = ["Hunter", "Mage", "Monk", "Rogue", "Priest"];
+      return light.includes(className) ? "#111" : "#fff";
+    },
+
+    armoryUrl(realmSlug, name) {
+      if (!realmSlug || !name) return null;
+      return `https://worldofwarcraft.blizzard.com/en-gb/character/eu/${realmSlug}/${name.toLowerCase()}`;
     },
 
     selectChar(ch) {
@@ -182,7 +193,15 @@ function app() {
 
       try {
         const { job_id } = await API.startSim(payload);
-        this.job = { id: job_id, status: "running" };
+        // Zapisz dane postaci w job zeby miec je przy wyswietlaniu wynikow
+        this.job = {
+          id:         job_id,
+          status:     "running",
+          charName:   this.selectedChar?.name || null,
+          realmSlug:  this.selectedChar?.realm_slug || null,
+          charClass:  this.selectedChar?.class || null,
+          charSpec:   this.selectedChar?.spec || null,
+        };
         this._pollInterval = setInterval(() => this._pollJob(), 3000);
       } catch (e) {
         alert("Blad startu symulacji: " + e.message);
