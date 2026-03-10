@@ -364,6 +364,8 @@ function app() {
       this.selectedChar = ch;
       this.simResult = null;
       this.job = null;
+      this.currentView = "symulacje";
+      this.activeTab = "symulacje";
       localStorage.setItem("simcraft_last_char", ch.name);
     },
 
