@@ -48,8 +48,9 @@ def _build_simc_input(req: SimRequest, out_path: str) -> str:
     else:
         region = (req.region or "eu").lower()
         realm  = (req.realm_slug or "").lower()
-        name   = (req.name or "").lower()  # SimC wymaga lowercase
-        lines.append(f"{name}=armory,{region},{realm},{name}")
+        name   = (req.name or "").lower()
+        # Poprawny format SimC dla trybu armory
+        lines.append(f"armory={region},{realm},{name}")
 
     return "\n".join(lines)
 
