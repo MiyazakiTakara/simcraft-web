@@ -19,9 +19,10 @@ limiter = Limiter(key_func=get_remote_address)
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+SIMC_PATH = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
+
 jobs: dict = {}
 
-# Max rownoczesnych symulacji
 MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT_SIMS", "3"))
 _running_sims = 0
 _running_lock = threading.Lock()
@@ -69,7 +70,7 @@ def _run_sim(job_id: str, simc_input: str):
 
     try:
         result = subprocess.run(
-            ["/usr/local/bin/simc", inp_path],
+            [SIMC_PATH, inp_path],
             capture_output=True, text=True, timeout=300
         )
         if result.returncode != 0 or not os.path.exists(out_path):
@@ -94,7 +95,6 @@ def _run_sim(job_id: str, simc_input: str):
 async def start_sim(request: Request, req: SimRequest):
     global _running_sims
 
-    # Walidacja
     if not req.addon_text and not (req.name and req.realm_slug):
         raise HTTPException(400, "Podaj addon_text lub name+realm_slug")
 
