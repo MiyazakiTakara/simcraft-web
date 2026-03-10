@@ -87,9 +87,6 @@ function app() {
         this.currentView = "home";
       }
     },
-      if (!body) return "";
-      return body.length > 150 ? body.slice(0, 150) + "..." : body;
-    },
 
     theme: localStorage.getItem("simcraft_theme") || "dark",
 
