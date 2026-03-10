@@ -71,7 +71,7 @@
 
   <!-- Header -->
   <header class="header">
-    <div class="header-logo">⚔️ SimCraft Web</div>
+    <div class="header-logo" style="cursor:pointer" @click="currentView = 'home'">⚔️ SimCraft Web</div>
     <div style="display:flex;align-items:center;gap:.6rem">
       <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? 'Przełącz na jasny' : 'Przełącz na ciemny'">
         <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
