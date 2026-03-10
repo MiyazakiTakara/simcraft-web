@@ -34,7 +34,8 @@ body { background: var(--bg); color: var(--text); font-family: "Segoe UI", syste
 .hero-sub   { color: var(--muted); margin-bottom: 2rem; }
 
 /* Grid */
-.grid { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
+.grid { display: grid; grid-template-columns: 260px 1fr 300px; gap: 1.5rem; }
+@media(max-width:1200px){ .grid { grid-template-columns: 260px 1fr; } }
 @media(max-width:720px){ .grid { grid-template-columns: 1fr; } }
 
 /* Panel */
@@ -89,3 +90,12 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* History */
+.history-list { display: flex; flex-direction: column; gap: .6rem; max-height: 500px; overflow-y: auto; }
+.history-item { padding: .7rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: all .15s; font-size: .8rem; }
+.history-item:hover, .history-item.active { border-color: var(--accent); background: rgba(200,154,60,.08); }
+.history-char { font-weight: 600; color: var(--text); margin-bottom: .2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-dps { font-size: .75rem; color: var(--accent); font-weight: 700; margin-bottom: .15rem; }
+.history-time { font-size: .7rem; color: var(--muted); margin-bottom: .1rem; }
+.history-style { font-size: .7rem; color: var(--muted); }

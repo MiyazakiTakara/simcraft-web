@@ -21,7 +21,7 @@ RESULTS_DIR = "/app/results"
 SIMC_PATH = "/app/SimulationCraft/simc"
 MAX_CONCURRENT_JOBS = 5
 JOB_TIMEOUT_SECONDS = 3600  # 1 hour
-JOB_RETENTION_HOURS = 24  # Keep jobs for 24 hours
+JOB_RETENTION_HOURS = 168  # Keep jobs for 7 days (so shared links don't die)
 SIMC_TIMEOUT_SECONDS = 1800  # 30 minutes for SimC process
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -235,3 +235,83 @@ async def job_status(job_id: str):
         response["error"] = job["error"]
     
     return response
+
+
+# History tracking
+history_file = os.path.join(RESULTS_DIR, "history.json")
+history: list = []
+
+
+class HistoryEntry(BaseModel):
+    """History entry model"""
+    job_id: str
+    character_name: Optional[str] = None
+    dps: float
+    fight_style: str
+    created_at: float = None
+
+
+def _load_history():
+    """Load history from disk"""
+    global history
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, "r") as f:
+                history = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load history: {e}")
+            history = []
+    else:
+        history = []
+
+
+def _save_history():
+    """Save history to disk"""
+    try:
+        with open(history_file, "w") as f:
+            json.dump(history, f)
+    except Exception as e:
+        logger.error(f"Failed to save history: {e}")
+
+
+# Load history on startup
+_load_history()
+
+
+@router.post("/api/history")
+async def save_history(entry: HistoryEntry):
+    """Save simulation result to public history"""
+    if entry.created_at is None:
+        entry.created_at = time.time()
+    
+    history_entry = {
+        "job_id": entry.job_id,
+        "character_name": entry.character_name,
+        "dps": entry.dps,
+        "fight_style": entry.fight_style,
+        "created_at": entry.created_at,
+    }
+    
+    # Add to beginning of history (keep it latest first)
+    history.insert(0, history_entry)
+    
+    # Keep only last 1000 entries
+    if len(history) > 1000:
+        history.pop()
+    
+    _save_history()
+    logger.info(f"Added to history: {entry.character_name} - {entry.dps} DPS")
+    
+    return {"status": "saved"}
+
+
+@router.get("/api/history")
+async def get_history():
+    """Get personal/authenticated history (for now same as public)"""
+    return history[:100]  # Return last 100 entries
+
+
+@router.get("/api/history/public")
+async def get_public_history():
+    """Get public history (visible to all)"""
+    return history[:100]  # Return last 100 entries

@@ -40,4 +40,26 @@ const API = {
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   },
+
+  async saveToHistory(entry) {
+    const r = await fetch("/api/history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+
+  async getHistory() {
+    const r = await fetch("/api/history");
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+
+  async getPublicHistory() {
+    const r = await fetch("/api/history/public");
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
 };

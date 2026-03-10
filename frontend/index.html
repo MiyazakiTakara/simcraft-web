@@ -165,9 +165,49 @@
             </div>
 
             <!-- Debug links -->
-            <div style="margin-top:1rem;font-size:.8rem;color:var(--muted)">
+            <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+              <span style="color:var(--border)">·</span>
+              <button 
+                class="btn" 
+                style="font-size: 0.75rem; padding: 0.35rem 0.8rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 0;"
+                @click="copyToClipboard(getShareUrl(job.id))"
+              >
+                🔗 Udostępnij
+              </button>
             </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Prawy panel: historia symulacji -->
+      <div class="panel" style="max-height: 800px; display: flex; flex-direction: column;">
+        <h2>Historia Publiczna</h2>
+        <template x-if="history.length === 0">
+          <div style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">
+            Brak symulacji
+          </div>
+        </template>
+        <template x-if="history.length > 0">
+          <div class="history-list">
+            <template x-for="entry in history.slice(0, 50)" :key="entry.job_id">
+              <div class="history-item" :class="{ active: selectedHistory === entry.job_id }" style="cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                <div style="flex: 1; min-width: 0;" @click="loadHistoryResult(entry.job_id)">
+                  <div class="history-char" x-text="entry.character_name || 'Addon Export'"></div>
+                  <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+                  <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                  <div class="history-style" x-text="entry.fight_style"></div>
+                </div>
+                <button 
+                  class="btn" 
+                  style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;"
+                  @click.stop="copyToClipboard(getShareUrl(entry.job_id))"
+                  title="Skopiuj link"
+                >
+                  🔗
+                </button>
+              </div>
+            </template>
           </div>
         </template>
       </div>

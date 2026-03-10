@@ -17,14 +17,26 @@ function app() {
     loadingSim: false,
     errorChars: null,
     _pollInterval: null,
+    history: [],
+    loadingHistory: false,
 
     init() {
       const params = new URLSearchParams(window.location.search);
       const session = params.get("session");
+      const resultId = params.get("result");
+      
       if (session) {
         this.sessionId = session;
         history.replaceState({}, "", "/");
         this.loadCharacters();
+        this.loadHistory();
+      } else {
+        this.loadPublicHistory();
+      }
+      
+      // Load shared result if provided
+      if (resultId) {
+        this.loadHistoryResult(resultId);
       }
     },
 
@@ -44,6 +56,32 @@ function app() {
         this.errorChars = e.message;
       } finally {
         this.loadingChars = false;
+      }
+    },
+
+    async loadHistory() {
+      try {
+        this.history = await API.getHistory();
+      } catch (e) {
+        console.error("Failed to load history", e);
+      }
+    },
+
+    async loadPublicHistory() {
+      try {
+        this.history = await API.getPublicHistory();
+      } catch (e) {
+        console.error("Failed to load public history", e);
+      }
+    },
+
+    async loadHistoryResult(jobId) {
+      try {
+        this.simResult = await API.getResultJson(jobId);
+        this.job = { id: jobId };  // Set job so share button works
+        this.selectedHistory = jobId;
+      } catch (e) {
+        alert("Nie udało się załadować wyniku: " + e.message);
       }
     },
 
@@ -104,6 +142,14 @@ function app() {
         if (status.status === "done") {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
+          // Save to history
+          await API.saveToHistory({
+            job_id: this.job.id,
+            character_name: this.selectedChar?.name || "Addon Export",
+            dps: this.simResult.dps,
+            fight_style: this.simOptions.fight_style,
+          });
+          this.loadHistory();
           this.loadingSim = false;
         } else if (status.status === "error") {
           clearInterval(this._pollInterval);
@@ -142,6 +188,29 @@ function app() {
     formatStatValue(key, val) {
       if (typeof val === "number") return Math.round(val).toLocaleString();
       return val;
+    },
+
+    formatTime(timestamp) {
+      if (!timestamp) return "—";
+      const date = new Date(timestamp * 1000);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+      if (diff < 60) return "teraz";
+      if (diff < 3600) return Math.floor(diff / 60) + "m temu";
+      if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
+      return date.toLocaleDateString('pl-PL');
+    },
+
+    getShareUrl(jobId) {
+      return window.location.origin + "/?result=" + jobId;
+    },
+
+    copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Link skopiowany do schowka!");
+      }).catch(() => {
+        alert("Nie udało się skopiować linku");
+      });
     },
   };
 }
