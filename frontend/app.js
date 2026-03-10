@@ -6,6 +6,8 @@ function app() {
     selectedChar: null,
     job: null,
     simResult: null,
+    pubResult: null,
+    pubJob: null,
     simMode: "armory",
     addonText: "",
     simOptions: {
@@ -71,7 +73,11 @@ function app() {
       }
 
       if (resultId) {
-        this.loadHistoryResult(resultId);
+        if (this.sessionId) {
+          this.loadHistoryResult(resultId);
+        } else {
+          this.loadPubResult(resultId);
+        }
       }
     },
 
@@ -141,6 +147,28 @@ function app() {
       } catch (e) {
         alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
       }
+    },
+
+    async loadPubResult(jobId) {
+      try {
+        this.pubResult = await API.getResultJson(jobId);
+        const entry = this.history.find(e => e.job_id === jobId);
+        this.pubJob = {
+          id:        jobId,
+          charName:  entry?.character_name !== 'Addon Export' ? (entry?.character_name || null) : null,
+          realmSlug: null,
+          charClass: entry?.character_class || null,
+          charSpec:  entry?.character_spec || null,
+        };
+      } catch (e) {
+        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku.");
+      }
+    },
+
+    get pubSortedSpells() {
+      if (!this.pubResult?.spells) return [];
+      const key = this.spellSort;
+      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
     get filteredChars() {
