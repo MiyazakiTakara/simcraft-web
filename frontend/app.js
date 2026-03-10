@@ -44,8 +44,49 @@ function app() {
     newsPerPage: 5,
     expandedNews: null,
     activeTab: "symulacje",
+    currentView: "home",
 
     newsTeaser(body) {
+      if (!body) return "";
+      return body.length > 150 ? body.slice(0, 150) + "..." : body;
+    },
+
+    init() {
+      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+
+      const params = new URLSearchParams(window.location.search);
+      const sessionFromUrl = params.get("session");
+
+      if (sessionFromUrl) {
+        this.sessionId = sessionFromUrl;
+        localStorage.setItem("simcraft_session", sessionFromUrl);
+        history.replaceState({}, "", "/");
+      } else {
+        const saved = localStorage.getItem("simcraft_session");
+        if (saved) this.sessionId = saved;
+      }
+
+      window.addEventListener("hashchange", () => this.handleHash());
+      this.handleHash();
+
+      if (this.sessionId) {
+        this.loadCharacters();
+        this.loadHistory();
+      } else {
+        this.loadPublicHistory();
+        this.loadNews();
+      }
+    },
+
+    handleHash() {
+      const hash = window.location.hash.slice(1);
+      if (hash === "symulacje" || hash === "profil") {
+        this.currentView = hash;
+        this.activeTab = hash;
+      } else {
+        this.currentView = "home";
+      }
+    },
       if (!body) return "";
       return body.length > 150 ? body.slice(0, 150) + "..." : body;
     },
