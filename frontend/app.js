@@ -29,18 +29,17 @@ function app() {
     errorChars: null,
     _pollInterval: null,
     history: [],
+    news: [],
     loadingHistory: false,
     spellSort: "total_dmg",
     copiedJobId: null,
     chartModal: null,
     hoveredSpell: null,
 
-    // Historia: sort + paginacja
     historySort: "date",
     historyPage: 1,
     historyPerPage: 10,
 
-    // Motyw
     theme: localStorage.getItem("simcraft_theme") || "dark",
 
     STAT_LABELS: {
@@ -90,7 +89,15 @@ function app() {
         this.loadHistory();
       } else {
         this.loadPublicHistory();
+        this.loadNews();
       }
+    },
+
+    async loadNews() {
+      try {
+        const res = await fetch('/admin/api/news/public');
+        if (res.ok) this.news = await res.json();
+      } catch (e) { console.error('Failed to load news', e); }
     },
 
     toggleTheme() {
@@ -143,6 +150,7 @@ function app() {
           localStorage.removeItem("simcraft_session");
           this.sessionId = null;
           this.loadPublicHistory();
+          this.loadNews();
         } else {
           this.errorChars = e.message;
         }
@@ -153,7 +161,6 @@ function app() {
 
     async loadHistory() {
       try {
-        // Zalogowany: pobierz tylko swoja historie
         this.history = await API.getHistory(this.sessionId);
         this.historyPage = 1;
       } catch (e) { console.error("Failed to load history", e); }
@@ -242,7 +249,7 @@ function app() {
                 character_realm_slug: "",
                 dps:                  result.dps,
                 fight_style:          this.guestSimOptions.fight_style,
-                user_id:              null,  // guest
+                user_id:              null,
               });
               this.loadPublicHistory();
               this.guestLoadingSim = false;
@@ -351,7 +358,7 @@ function app() {
             character_realm_slug: this.selectedChar?.realm_slug || "",
             dps:                  this.simResult.dps,
             fight_style:          this.simOptions.fight_style,
-            user_id:              this.sessionId || null,  // przypisz do konta
+            user_id:              this.sessionId || null,
           });
           this.loadHistory();
           this.loadingSim = false;
