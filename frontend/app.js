@@ -51,34 +51,6 @@ function app() {
       return body.length > 150 ? body.slice(0, 150) + "..." : body;
     },
 
-    init() {
-      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
-
-      const params = new URLSearchParams(window.location.search);
-      const sessionFromUrl = params.get("session");
-
-      if (sessionFromUrl) {
-        this.sessionId = sessionFromUrl;
-        localStorage.setItem("simcraft_session", sessionFromUrl);
-        history.replaceState({}, "", "/");
-      } else {
-        const saved = localStorage.getItem("simcraft_session");
-        if (saved) this.sessionId = saved;
-      }
-
-      window.addEventListener("hashchange", () => this.handleHash());
-      this.handleHash();
-
-      if (this.sessionId) {
-        this.loadCharacters();
-        this.loadHistory();
-        this.loadNews();
-      } else {
-        this.loadPublicHistory();
-        this.loadNews();
-      }
-    },
-
     handleHash() {
       const hash = window.location.hash.slice(1);
       if (hash === "symulacje" || hash === "profil") {
@@ -136,6 +108,7 @@ function app() {
       if (this.sessionId) {
         this.loadCharacters();
         this.loadHistory();
+        this.loadNews();
       } else {
         this.loadPublicHistory();
         this.loadNews();
