@@ -65,6 +65,10 @@ function app() {
       try {
         const chars = await API.getCharacters(this.sessionId);
         this.characters = chars;
+        // Auto-select pierwszej postaci jesli zadna nie jest wybrana
+        if (this.characters.length && !this.selectedChar) {
+          this.selectedChar = this.characters[0];
+        }
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
             .then((m) => { ch.avatar = m.avatar; })
