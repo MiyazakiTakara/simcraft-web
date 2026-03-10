@@ -6,7 +6,7 @@ function app() {
     selectedChar: null,
     job: null,
     simResult: null,
-    simMode: "addon",
+    simMode: "armory",
     addonText: "",
     simOptions: {
       fight_style: "Patchwerk",
@@ -112,7 +112,12 @@ function app() {
         target_error: this.simOptions.target_error,
       };
 
-      if (this.simMode === "addon" && this.addonText.trim()) {
+      if (this.simMode === "addon") {
+        if (!this.addonText.trim()) {
+          alert("Wklej addon export!");
+          this.loadingSim = false;
+          return;
+        }
         payload.addon_text = this.addonText.trim();
       } else if (this.selectedChar) {
         payload.name       = this.selectedChar.name;
