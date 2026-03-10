@@ -120,8 +120,25 @@ function app() {
     async loadHistoryResult(jobId) {
       try {
         this.simResult = await API.getResultJson(jobId);
-        this.job = { id: jobId };
         this.selectedHistory = jobId;
+
+        // Uzupelnij dane postaci z wpisu historii jesli dostepne
+        const entry = this.history.find(e => e.job_id === jobId);
+        const charName = entry?.character_name || null;
+        const charClass = entry?.character_class || null;
+
+        // Sprobuj znalezc realm_slug z listy postaci (jesli zalogowany)
+        const charObj = charName
+          ? this.characters.find(c => c.name === charName)
+          : null;
+
+        this.job = {
+          id:        jobId,
+          charName:  charName !== 'Addon Export' ? charName : null,
+          realmSlug: charObj?.realm_slug || null,
+          charClass: charClass || null,
+          charSpec:  charObj?.spec || null,
+        };
       } catch (e) {
         alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
       }
@@ -144,7 +161,6 @@ function app() {
       return this.CLASS_COLORS[className] || "#aaa";
     },
 
-    // Kolor tekstu kontrastowy do tla klasy
     classTextColor(className) {
       const light = ["Hunter", "Mage", "Monk", "Rogue", "Priest"];
       return light.includes(className) ? "#111" : "#fff";
@@ -193,14 +209,13 @@ function app() {
 
       try {
         const { job_id } = await API.startSim(payload);
-        // Zapisz dane postaci w job zeby miec je przy wyswietlaniu wynikow
         this.job = {
-          id:         job_id,
-          status:     "running",
-          charName:   this.selectedChar?.name || null,
-          realmSlug:  this.selectedChar?.realm_slug || null,
-          charClass:  this.selectedChar?.class || null,
-          charSpec:   this.selectedChar?.spec || null,
+          id:        job_id,
+          status:    "running",
+          charName:  this.selectedChar?.name || null,
+          realmSlug: this.selectedChar?.realm_slug || null,
+          charClass: this.selectedChar?.class || null,
+          charSpec:  this.selectedChar?.spec || null,
         };
         this._pollInterval = setInterval(() => this._pollJob(), 3000);
       } catch (e) {
