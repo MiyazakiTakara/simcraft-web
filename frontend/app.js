@@ -43,6 +43,7 @@ function app() {
     newsPage: 1,
     newsPerPage: 5,
     expandedNews: null,
+    activeTab: "symulacje",
 
     newsTeaser(body) {
       if (!body) return "";
@@ -391,8 +392,48 @@ function app() {
           this.loadingSim = false;
         }
       } catch (e) {
+          clearInterval(this._pollInterval);
+          this.loadingSim = false;
+        }
+      } catch (e) {
         clearInterval(this._pollInterval);
         this.loadingSim = false;
+      }
+    },
+
+    getCharacterTrends() {
+      const charMap = new Map();
+      for (const entry of this.history) {
+        if (!entry.character_name || entry.character_name === 'Addon Export') continue;
+        const key = entry.character_name;
+        if (!charMap.has(key)) {
+          charMap.set(key, {
+            name: entry.character_name,
+            charClass: entry.character_class,
+            charSpec: entry.character_spec,
+            realmSlug: entry.character_realm_slug,
+            dps: [],
+            fight_style: entry.fight_style,
+            created_at: entry.created_at,
+          });
+        }
+        const char = charMap.get(key);
+        char.dps.push({ dps: entry.dps, created_at: entry.created_at, fight_style: entry.fight_style });
+        if (entry.created_at > char.created_at) char.created_at = entry.created_at;
+      }
+      return Array.from(charMap.values()).sort((a, b) => b.created_at - a.created_at);
+    },
+
+    getCharAvatar(name) {
+      const ch = this.characters.find(c => c.name === name);
+      return ch ? ch.avatar : null;
+    },
+
+    selectCharByName(name) {
+      const ch = this.characters.find(c => c.name === name);
+      if (ch) {
+        this.selectChar(ch);
+        this.activeTab = 'symulacje';
       }
     },
 
