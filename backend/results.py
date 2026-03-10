@@ -72,11 +72,9 @@ def ability_crit(ab: dict) -> float:
 
 
 def spell_display_name(ab: dict) -> str:
-    """Zwraca ladna nazwe spella - spell_name ma priorytet nad name."""
     spell_name = ab.get("spell_name", "").strip()
     if spell_name:
         return spell_name
-    # fallback: zamien snake_case na Title Case
     raw = ab.get("name", "?")
     return raw.replace("_", " ").title()
 
@@ -95,16 +93,13 @@ def parse_results(json_path: str):
         player = players[0]
         cd = player.get("collected_data", {})
 
-        # DPS
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
 
-        # Fight length
         fl_data      = cd.get("fight_length", {})
         fight_length = safe_float(fl_data.get("mean", 1)) or 1.0
 
-        # STATS
         bs         = cd.get("buffed_stats", {})
         attr       = bs.get("attribute", {})
         stats_data = bs.get("stats", {})
@@ -120,7 +115,6 @@ def parse_results(json_path: str):
             "versatility": int(safe_float(stats_data.get("versatility_rating", 0))),
         }
 
-        # ABILITIES
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             abilities = []
@@ -151,7 +145,6 @@ def parse_results(json_path: str):
                 "executes":  executes,
             })
 
-        # fallback z action_sequence gdy brak statystyk
         if not spells:
             action_seq = cd.get("action_sequence", [])
             spell_counts: dict = {}
@@ -166,7 +159,6 @@ def parse_results(json_path: str):
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        # Procenty - osobno dla dps i dmg
         total_spell_dps = sum(s["dps"] for s in spells)
         total_spell_dmg = sum(s["total_dmg"] for s in spells)
 
@@ -174,7 +166,6 @@ def parse_results(json_path: str):
             s["dps_pct"] = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
             s["dmg_pct"] = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
 
-        # Sortowanie po total_dmg
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
         top_spells = spells[:25]
@@ -202,62 +193,129 @@ def parse_results(json_path: str):
         return {"error": str(e), "trace": traceback.format_exc()}
 
 
+def _build_chart_df(abilities, key_fn, top_n=12):
+    """Zwraca posortowany DataFrame z kolumnami name i value."""
+    import pandas as pd
+    rows = []
+    for ab in abilities:
+        if not isinstance(ab, dict):
+            continue
+        name = spell_display_name(ab)[:28]
+        val  = key_fn(ab)
+        if val > 0:
+            rows.append({"name": name, "value": val})
+    if not rows:
+        return None
+    df = pd.DataFrame(rows).sort_values("value", ascending=False)
+    if len(df) > top_n:
+        other_val = df.iloc[top_n:]["value"].sum()
+        import pandas as pd as _pd
+        df = _pd.concat([df.head(top_n), _pd.DataFrame([{"name": "Other", "value": other_val}])], ignore_index=True)
+    return df
+
+
 def generate_dps_chart(json_path: str) -> str:
     try:
-        import plotly.express as px
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
         import pandas as pd
 
         with open(json_path) as f:
             raw = json.load(f)
 
-        sim = raw.get("sim", {})
+        sim     = raw.get("sim", {})
         players = sim.get("players", [])
         if not players:
             return None
 
-        player = players[0]
+        player    = players[0]
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             return None
 
-        chart_data = []
-        for ab in abilities:
-            if not isinstance(ab, dict):
-                continue
-            name = spell_display_name(ab)[:28]
-            dmg  = ability_total_dmg(ab)
-            if dmg > 0:
-                chart_data.append({"name": name, "dmg": dmg})
+        TOP_N  = 12
+        COLORS = [
+            "#f0027f","#386cb0","#fdc086","#7fc97f","#beaed4",
+            "#bf5b17","#666666","#1b9e77","#d95f02","#7570b3",
+            "#e7298a","#66a61e","#aaaaaa",
+        ]
 
-        if not chart_data:
+        def build_data(key_fn):
+            rows = []
+            for ab in abilities:
+                if not isinstance(ab, dict):
+                    continue
+                name = spell_display_name(ab)[:28]
+                val  = key_fn(ab)
+                if val > 0:
+                    rows.append({"name": name, "value": val})
+            if not rows:
+                return [], []
+            df = pd.DataFrame(rows).sort_values("value", ascending=False).reset_index(drop=True)
+            if len(df) > TOP_N:
+                other = df.iloc[TOP_N:]["value"].sum()
+                df = pd.concat([df.head(TOP_N), pd.DataFrame([{"name": "Other", "value": other}])], ignore_index=True)
+            return df["name"].tolist(), df["value"].tolist()
+
+        dmg_names, dmg_vals = build_data(ability_total_dmg)
+        dps_names, dps_vals = build_data(ability_dps)
+
+        if not dmg_vals and not dps_vals:
             return None
 
-        df = pd.DataFrame(chart_data).sort_values("dmg", ascending=False)
-        if len(df) > 12:
-            top       = df.head(12).copy()
-            other_dmg = df.iloc[12:]["dmg"].sum()
-            df = pd.concat([top, pd.DataFrame([{"name": "Other", "dmg": other_dmg}])], ignore_index=True)
-
-        total_dmg   = df["dmg"].sum()
         player_name = player.get("name", "?")
+        total_dmg   = sum(dmg_vals)
+        total_dps   = sum(dps_vals)
 
-        fig = px.pie(
-            df, values="dmg", names="name",
-            title=f"{player_name} \u2014 DPS Breakdown<br><sup>Total DMG: {total_dmg:,.0f}</sup>",
-            hole=0.4,
-            color_discrete_sequence=px.colors.sequential.Plasma_r,
+        fig = make_subplots(
+            rows=1, cols=2,
+            specs=[[{"type": "pie"}, {"type": "pie"}]],
+            subplot_titles=[
+                f"Total DMG  ({total_dmg/1_000_000:.1f}M)",
+                f"DPS  ({total_dps/1_000:.0f}k)",
+            ],
         )
-        fig.update_traces(textposition="inside", textinfo="percent+label", textfont_size=12)
-        fig.update_layout(
+
+        fig.add_trace(go.Pie(
+            labels=dmg_names, values=dmg_vals,
+            hole=0.38,
+            textinfo="percent",
+            textfont_size=11,
+            marker=dict(colors=COLORS[:len(dmg_names)], line=dict(color="#0d0d1a", width=1.5)),
+            name="Total DMG",
             showlegend=True,
-            legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
-            width=800, height=540,
-            margin=dict(t=80, b=20, l=20, r=180),
-            paper_bgcolor="#1a1a2e",
-            plot_bgcolor="#1a1a2e",
-            font=dict(color="#e0e0e0", size=13),
-            title_font=dict(size=16, color="#ffffff"),
+        ), row=1, col=1)
+
+        fig.add_trace(go.Pie(
+            labels=dps_names, values=dps_vals,
+            hole=0.38,
+            textinfo="percent",
+            textfont_size=11,
+            marker=dict(colors=COLORS[:len(dps_names)], line=dict(color="#0d0d1a", width=1.5)),
+            name="DPS",
+            showlegend=False,
+        ), row=1, col=2)
+
+        fig.update_layout(
+            title=dict(
+                text=f"{player_name} \u2014 Damage Breakdown",
+                font=dict(size=17, color="#ffffff"),
+                x=0.5, xanchor="center",
+            ),
+            legend=dict(
+                orientation="v",
+                yanchor="middle", y=0.5,
+                xanchor="left",   x=1.01,
+                font=dict(size=11, color="#cccccc"),
+                bgcolor="rgba(0,0,0,0)",
+            ),
+            paper_bgcolor="#12121f",
+            plot_bgcolor="#12121f",
+            font=dict(color="#cccccc", size=12),
+            width=1100, height=520,
+            margin=dict(t=70, b=30, l=20, r=200),
         )
+        fig.update_annotations(font=dict(size=13, color="#aaaaaa"))
 
         png_path = f"/tmp/dps-chart-{os.path.basename(json_path)}.png"
         fig.write_image(png_path, engine="kaleido", scale=2)
