@@ -213,7 +213,7 @@ async def get_character_talents(session: str, realm_slug: str, name: str):
             headers={"Authorization": f"Bearer {token}"},
             timeout=15,
         )
-        print(f"TALENTS RESP: {resp.status_code} {resp.text[:200]}", flush=True)
+        print(f"TALENTS RESP: {resp.status_code} {resp.text[:500]}", flush=True)
         if resp.status_code == 404:
             from fastapi import HTTPException
             raise HTTPException(404, "Character not found")
