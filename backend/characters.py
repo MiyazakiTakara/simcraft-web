@@ -1,14 +1,32 @@
+import asyncio
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from auth import get_session_token, get_blizzard_token
 
 router = APIRouter()
 
 
+async def _fetch_spec(client: httpx.AsyncClient, token: str, realm_slug: str, name: str) -> str:
+    """Pobiera active_spec dla postaci z dedykowanego endpointu."""
+    try:
+        resp = await client.get(
+            f"https://eu.api.blizzard.com/profile/wow/character/{realm_slug}/{name.lower()}"
+            "?namespace=profile-eu&locale=en_GB",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("active_spec", {}).get("name", "")
+    except Exception:
+        pass
+    return ""
+
+
 @router.get("/api/characters")
 async def list_characters(session: str):
     access_token = await get_session_token(session)
+    blizzard_token = await get_blizzard_token()
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(
@@ -33,11 +51,23 @@ async def list_characters(session: str):
                 "realm":      ch["realm"]["name"],
                 "region":     "eu",
                 "class":      ch.get("playable_class", {}).get("name", ""),
-                "spec":       ch.get("active_spec", {}).get("name", ""),
+                "spec":       "",
                 "level":      ch["level"],
                 "avatar":     None,
             })
+
     chars.sort(key=lambda c: c["level"], reverse=True)
+
+    # Pobierz spec rownolegla dla max 20 najwyzszych postaci (rate limit)
+    top_chars = chars[:20]
+    async with httpx.AsyncClient() as client:
+        specs = await asyncio.gather(*[
+            _fetch_spec(client, blizzard_token, c["realm_slug"], c["name"])
+            for c in top_chars
+        ])
+    for ch, spec in zip(top_chars, specs):
+        ch["spec"] = spec
+
     return chars
 
 
