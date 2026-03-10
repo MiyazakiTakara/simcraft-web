@@ -99,7 +99,12 @@
           <template x-if="!sessionId">
             <a href="/auth/login" class="btn btn-login">🔑 Zaloguj przez Battle.net</a>
           </template>
-          <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Spróbuj bez logowania ↓</button>
+          <template x-if="sessionId">
+            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Szybka symulacja z addona ↓</button>
+          </template>
+          <template x-if="!sessionId">
+            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Spróbuj bez logowania ↓</button>
+          </template>
         </div>
       </div>
 
