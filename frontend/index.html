@@ -158,6 +158,7 @@
                     :href="armoryUrl(job.realmSlug, job.charName)"
                     target="_blank"
                     rel="noopener"
+                    title="Otwórz Armory"
                     :style="{
                       background: classColor(job.charClass),
                       color: classTextColor(job.charClass),
@@ -168,9 +169,14 @@
                       textDecoration: 'none',
                       letterSpacing: '.02em',
                       whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '.3rem',
                     }"
-                    x-text="(job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || job.charName)"
-                  ></a>
+                  >
+                    <span x-text="(job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || job.charName)"></span>
+                    <span style="font-size:.75rem;opacity:.8">↗</span>
+                  </a>
                   <span style="font-size:.85rem" x-text="job.charName"></span>
                 </template>
                 <!-- Fallback dla addon / historii bez danych -->
