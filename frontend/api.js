@@ -41,6 +41,12 @@ const API = {
     return r.json();
   },
 
+  async getResultMeta(jobId) {
+    const r = await fetch(`/api/result/${jobId}/meta`);
+    if (!r.ok) return null;
+    return r.json();
+  },
+
   async saveToHistory(entry) {
     const r = await fetch("/api/history", {
       method: "POST",

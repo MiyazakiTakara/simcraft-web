@@ -32,6 +32,9 @@ function app() {
     loadingHistory: false,
     spellSort: "total_dmg",
     copiedJobId: null,
+    chartModal: null,
+    sharedResultLoading: false,
+    sharedResultError: null,
 
     STAT_LABELS: {
       strength:    "Strength",
@@ -81,6 +84,7 @@ function app() {
         this.loadPublicHistory();
       }
 
+      // Jeśli jest ?result= w URL – ładuj od razu, niezależnie od historii i logowania
       if (resultId) {
         if (this.sessionId) {
           this.loadHistoryResult(resultId);
@@ -134,11 +138,15 @@ function app() {
       try {
         this.simResult = await API.getResultJson(jobId);
         this.selectedHistory = jobId;
-        const entry = this.history.find(e => e.job_id === jobId);
-        const charName = entry?.character_name || null;
+        // Próbuj z lokalnej historii, fallback do /meta
+        let entry = this.history.find(e => e.job_id === jobId);
+        if (!entry) {
+          entry = await API.getResultMeta(jobId);
+        }
+        const charName  = entry?.character_name || null;
         const charClass = entry?.character_class || null;
-        const charSpec = entry?.character_spec || null;
-        const charObj = charName ? this.characters.find(c => c.name === charName) : null;
+        const charSpec  = entry?.character_spec || null;
+        const charObj   = charName ? this.characters.find(c => c.name === charName) : null;
         this.job = {
           id:        jobId,
           charName:  charName !== 'Addon Export' ? charName : null,
@@ -147,24 +155,36 @@ function app() {
           charSpec:  charSpec || charObj?.spec || null,
         };
       } catch (e) {
-        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
+        alert("Nie udało się załadować wyniku: " + e.message);
       }
     },
 
     async loadPubResult(jobId) {
+      this.sharedResultLoading = true;
+      this.sharedResultError = null;
       try {
-        this.pubResult = await API.getResultJson(jobId);
-        this.pubResult._source = 'history';
-        const entry = this.history.find(e => e.job_id === jobId);
+        // Oba fetch równolegle – nie czekamy na historię
+        const [result, meta] = await Promise.all([
+          API.getResultJson(jobId),
+          API.getResultMeta(jobId),
+        ]);
+        result._source = meta?.character_name === 'Addon Export' ? 'addon' : 'history';
+        this.pubResult = result;
         this.pubJob = {
           id:        jobId,
-          charName:  entry?.character_name !== 'Addon Export' ? (entry?.character_name || null) : null,
+          charName:  meta?.character_name !== 'Addon Export' ? (meta?.character_name || null) : null,
           realmSlug: null,
-          charClass: entry?.character_class || null,
-          charSpec:  entry?.character_spec || null,
+          charClass: meta?.character_class || null,
+          charSpec:  meta?.character_spec  || null,
         };
+        // Aktualizuj URL żeby link był bookmarkowalny
+        const url = new URL(window.location);
+        url.searchParams.set('result', jobId);
+        history.replaceState({}, '', url);
       } catch (e) {
-        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku.");
+        this.sharedResultError = "Nie udało się załadować wyniku. Link może być nieprawidłowy lub wynik wygasł.";
+      } finally {
+        this.sharedResultLoading = false;
       }
     },
 
@@ -202,11 +222,15 @@ function app() {
                 dps:             result.dps,
                 fight_style:     this.guestSimOptions.fight_style,
               });
+              // Ustaw URL żeby można było skopiować link od razu
+              const url = new URL(window.location);
+              url.searchParams.set('result', guestJobId);
+              history.replaceState({}, '', url);
               this.loadPublicHistory();
               this.guestLoadingSim = false;
             } else if (status.status === "error") {
               clearInterval(this._guestPollInterval);
-              this.guestSimError = "B\u0142\u0105d symulacji: " + (status.error || "Nieznany b\u0142\u0105d");
+              this.guestSimError = "Błąd symulacji: " + (status.error || "Nieznany błąd");
               this.guestLoadingSim = false;
             }
           } catch (e) {
@@ -215,7 +239,7 @@ function app() {
           }
         }, 3000);
       } catch (e) {
-        this.guestSimError = "B\u0142\u0105d: " + e.message;
+        this.guestSimError = "Błąd: " + e.message;
         this.guestLoadingSim = false;
       }
     },
@@ -309,6 +333,10 @@ function app() {
             dps:              this.simResult.dps,
             fight_style:      this.simOptions.fight_style,
           });
+          // Ustaw URL żeby link był gotowy od razu po symulacji
+          const url = new URL(window.location);
+          url.searchParams.set('result', this.job.id);
+          history.replaceState({}, '', url);
           this.loadHistory();
           this.loadingSim = false;
         } else if (status.status === "error") {

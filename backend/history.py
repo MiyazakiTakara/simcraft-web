@@ -3,7 +3,7 @@ import json
 import time
 import threading
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
@@ -44,6 +44,25 @@ async def get_history():
     with _lock:
         data = _load()
     return sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:50]
+
+
+@router.get("/api/result/{job_id}/meta")
+async def get_result_meta(job_id: str):
+    """Publiczny endpoint – zwraca metadane symulacji (bez auth)."""
+    with _lock:
+        data = _load()
+    entry = next((e for e in data if e.get("job_id") == job_id), None)
+    if not entry:
+        raise HTTPException(404, "Result meta not found")
+    return {
+        "job_id":          entry.get("job_id"),
+        "character_name":  entry.get("character_name"),
+        "character_class": entry.get("character_class"),
+        "character_spec":  entry.get("character_spec"),
+        "dps":             entry.get("dps"),
+        "fight_style":     entry.get("fight_style"),
+        "created_at":      entry.get("created_at"),
+    }
 
 
 @router.post("/api/history")
