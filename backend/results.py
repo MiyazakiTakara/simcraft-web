@@ -193,27 +193,6 @@ def parse_results(json_path: str):
         return {"error": str(e), "trace": traceback.format_exc()}
 
 
-def _build_chart_df(abilities, key_fn, top_n=12):
-    """Zwraca posortowany DataFrame z kolumnami name i value."""
-    import pandas as pd
-    rows = []
-    for ab in abilities:
-        if not isinstance(ab, dict):
-            continue
-        name = spell_display_name(ab)[:28]
-        val  = key_fn(ab)
-        if val > 0:
-            rows.append({"name": name, "value": val})
-    if not rows:
-        return None
-    df = pd.DataFrame(rows).sort_values("value", ascending=False)
-    if len(df) > top_n:
-        other_val = df.iloc[top_n:]["value"].sum()
-        import pandas as pd as _pd
-        df = _pd.concat([df.head(top_n), _pd.DataFrame([{"name": "Other", "value": other_val}])], ignore_index=True)
-    return df
-
-
 def generate_dps_chart(json_path: str) -> str:
     try:
         import plotly.graph_objects as go
@@ -235,9 +214,9 @@ def generate_dps_chart(json_path: str) -> str:
 
         TOP_N  = 12
         COLORS = [
-            "#f0027f","#386cb0","#fdc086","#7fc97f","#beaed4",
-            "#bf5b17","#666666","#1b9e77","#d95f02","#7570b3",
-            "#e7298a","#66a61e","#aaaaaa",
+            "#f0027f", "#386cb0", "#fdc086", "#7fc97f", "#beaed4",
+            "#bf5b17", "#999999", "#1b9e77", "#d95f02", "#7570b3",
+            "#e7298a", "#66a61e", "#aaaaaa",
         ]
 
         def build_data(key_fn):
@@ -254,7 +233,10 @@ def generate_dps_chart(json_path: str) -> str:
             df = pd.DataFrame(rows).sort_values("value", ascending=False).reset_index(drop=True)
             if len(df) > TOP_N:
                 other = df.iloc[TOP_N:]["value"].sum()
-                df = pd.concat([df.head(TOP_N), pd.DataFrame([{"name": "Other", "value": other}])], ignore_index=True)
+                df = pd.concat(
+                    [df.head(TOP_N), pd.DataFrame([{"name": "Other", "value": other}])],
+                    ignore_index=True
+                )
             return df["name"].tolist(), df["value"].tolist()
 
         dmg_names, dmg_vals = build_data(ability_total_dmg)
@@ -264,20 +246,21 @@ def generate_dps_chart(json_path: str) -> str:
             return None
 
         player_name = player.get("name", "?")
-        total_dmg   = sum(dmg_vals)
-        total_dps   = sum(dps_vals)
+        total_dmg   = sum(dmg_vals) if dmg_vals else 0
+        total_dps   = sum(dps_vals) if dps_vals else 0
 
         fig = make_subplots(
             rows=1, cols=2,
             specs=[[{"type": "pie"}, {"type": "pie"}]],
             subplot_titles=[
-                f"Total DMG  ({total_dmg/1_000_000:.1f}M)",
-                f"DPS  ({total_dps/1_000:.0f}k)",
+                f"Total DMG  ({total_dmg / 1_000_000:.1f}M)",
+                f"DPS  ({total_dps / 1_000:.0f}k)",
             ],
         )
 
         fig.add_trace(go.Pie(
-            labels=dmg_names, values=dmg_vals,
+            labels=dmg_names,
+            values=dmg_vals,
             hole=0.38,
             textinfo="percent",
             textfont_size=11,
@@ -287,7 +270,8 @@ def generate_dps_chart(json_path: str) -> str:
         ), row=1, col=1)
 
         fig.add_trace(go.Pie(
-            labels=dps_names, values=dps_vals,
+            labels=dps_names,
+            values=dps_vals,
             hole=0.38,
             textinfo="percent",
             textfont_size=11,
