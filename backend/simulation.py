@@ -2,6 +2,7 @@ import os
 import uuid
 import subprocess
 import threading
+import time
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -16,6 +17,7 @@ RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 SIMC_PATH = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
+JOB_TIMEOUT = int(os.environ.get("JOB_TIMEOUT", "360"))  # sekundy, domyslnie 6 minut
 
 jobs: dict = {}
 
@@ -49,7 +51,6 @@ def _build_simc_input(req: SimRequest, out_path: str) -> str:
         region = (req.region or "eu").lower()
         realm  = (req.realm_slug or "").lower()
         name   = (req.name or "").lower()
-        # Poprawny format SimC dla trybu armory
         lines.append(f"armory={region},{realm},{name}")
 
     return "\n".join(lines)
@@ -67,7 +68,7 @@ def _run_sim(job_id: str, simc_input: str):
     try:
         result = subprocess.run(
             [SIMC_PATH, inp_path],
-            capture_output=True, text=True, timeout=300
+            capture_output=True, text=True, timeout=JOB_TIMEOUT
         )
         out_path = jobs[job_id].get("json_path")
         if result.returncode != 0 or not os.path.exists(out_path):
@@ -77,13 +78,35 @@ def _run_sim(job_id: str, simc_input: str):
             jobs[job_id]["status"] = "done"
     except subprocess.TimeoutExpired:
         jobs[job_id]["status"] = "error"
-        jobs[job_id]["error"]  = "Simulation timed out (>5 min)"
+        jobs[job_id]["error"]  = f"Symulacja przekroczyla limit czasu ({JOB_TIMEOUT}s)"
     except Exception as e:
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"]  = str(e)
     finally:
         with _running_lock:
             _running_sims -= 1
+
+
+def _watchdog():
+    """Co minute sprawdza czy jakis job nie utknol w 'running' zbyt dlugo."""
+    while True:
+        time.sleep(60)
+        now = time.time()
+        for job_id, job in list(jobs.items()):
+            if job.get("status") == "running":
+                started = job.get("started_at", now)
+                if now - started > JOB_TIMEOUT + 60:
+                    jobs[job_id]["status"] = "error"
+                    jobs[job_id]["error"]  = "Job timeout (watchdog)"
+                    with _running_lock:
+                        global _running_sims
+                        if _running_sims > 0:
+                            _running_sims -= 1
+                    print(f"Watchdog: job {job_id} timeout", flush=True)
+
+
+# Uruchom watchdog w tle
+threading.Thread(target=_watchdog, daemon=True).start()
 
 
 @router.post("/api/sim")
@@ -104,7 +127,12 @@ async def start_sim(request: Request, req: SimRequest):
     os.makedirs(job_dir, exist_ok=True)
     out_path = os.path.join(job_dir, "output.json")
 
-    jobs[job_id] = {"status": "running", "json_path": out_path, "error": None}
+    jobs[job_id] = {
+        "status":     "running",
+        "json_path":  out_path,
+        "error":      None,
+        "started_at": time.time(),
+    }
 
     simc_input = _build_simc_input(req, out_path)
     t = threading.Thread(target=_run_sim, args=(job_id, simc_input), daemon=True)

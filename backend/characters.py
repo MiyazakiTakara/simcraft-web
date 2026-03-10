@@ -33,6 +33,7 @@ async def list_characters(session: str):
                 "realm":      ch["realm"]["name"],
                 "region":     "eu",
                 "class":      ch.get("playable_class", {}).get("name", ""),
+                "spec":       ch.get("active_spec", {}).get("name", ""),
                 "level":      ch["level"],
                 "avatar":     None,
             })
