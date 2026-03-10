@@ -2,10 +2,6 @@ import os
 import uuid
 import subprocess
 import threading
-import json
-import re
-import time
-import collections
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -39,21 +35,21 @@ class SimRequest(BaseModel):
     target_error: Optional[float] = 0.5
 
 
-def _build_simc_input(req: SimRequest) -> str:
+def _build_simc_input(req: SimRequest, out_path: str) -> str:
     lines = []
     lines.append(f"fight_style={req.fight_style}")
     lines.append(f"iterations={min(req.iterations, 10000)}")
     lines.append(f"target_error={max(0.1, min(req.target_error, 5.0))}")
-    lines.append("json2=output.json")
+    lines.append(f"json2={out_path}")
     lines.append("output=/dev/null")
 
     if req.addon_text:
         lines.append(req.addon_text.strip())
     else:
         region = (req.region or "eu").lower()
-        realm  = req.realm_slug or ""
-        name   = req.name or ""
-        lines.append(f"{name}=armory,{region},{realm},{name.lower()}")
+        realm  = (req.realm_slug or "").lower()
+        name   = (req.name or "").lower()  # SimC wymaga lowercase
+        lines.append(f"{name}=armory,{region},{realm},{name}")
 
     return "\n".join(lines)
 
@@ -63,22 +59,21 @@ def _run_sim(job_id: str, simc_input: str):
     job_dir  = os.path.join(RESULTS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     inp_path = os.path.join(job_dir, "input.simc")
-    out_path = os.path.join(job_dir, "output.json")
 
     with open(inp_path, "w") as f:
-        f.write(simc_input.replace("json2=output.json", f"json2={out_path}"))
+        f.write(simc_input)
 
     try:
         result = subprocess.run(
             [SIMC_PATH, inp_path],
             capture_output=True, text=True, timeout=300
         )
+        out_path = jobs[job_id].get("json_path")
         if result.returncode != 0 or not os.path.exists(out_path):
             jobs[job_id]["status"] = "error"
             jobs[job_id]["error"]  = result.stderr[-2000:] if result.stderr else "simc failed"
         else:
-            jobs[job_id]["status"]    = "done"
-            jobs[job_id]["json_path"] = out_path
+            jobs[job_id]["status"] = "done"
     except subprocess.TimeoutExpired:
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"]  = "Simulation timed out (>5 min)"
@@ -103,10 +98,14 @@ async def start_sim(request: Request, req: SimRequest):
             raise HTTPException(429, f"Serwer zajety ({MAX_CONCURRENT} symulacji rownoczesnie). Sprobuj za chwile.")
         _running_sims += 1
 
-    job_id = str(uuid.uuid4())
-    jobs[job_id] = {"status": "running", "json_path": None, "error": None}
+    job_id   = str(uuid.uuid4())
+    job_dir  = os.path.join(RESULTS_DIR, job_id)
+    os.makedirs(job_dir, exist_ok=True)
+    out_path = os.path.join(job_dir, "output.json")
 
-    simc_input = _build_simc_input(req)
+    jobs[job_id] = {"status": "running", "json_path": out_path, "error": None}
+
+    simc_input = _build_simc_input(req, out_path)
     t = threading.Thread(target=_run_sim, args=(job_id, simc_input), daemon=True)
     t.start()
 
