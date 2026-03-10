@@ -41,6 +41,8 @@
     .dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
     .chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
     .chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
+    .pub-history-card { cursor: pointer; }
+    .pub-history-card:hover { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -173,9 +175,9 @@
         </div>
         <div class="landing-history-grid">
           <template x-for="n in pagedNews" :key="n.id">
-            <div class="pub-history-card" style="cursor:default">
+            <div class="pub-history-card" @click="expandedNews = n">
               <div class="pub-card-name" x-text="n.title"></div>
-              <div style="font-size:.82rem;color:var(--muted);white-space:pre-wrap;line-height:1.5;margin-top:.3rem" x-text="n.body"></div>
+              <div style="font-size:.82rem;color:var(--muted);white-space:pre-wrap;line-height:1.5;margin-top:.3rem" x-text="newsTeaser(n.body)"></div>
               <div class="pub-card-meta" style="margin-top:.4rem" x-text="formatTime(n.created_at)"></div>
             </div>
           </template>
@@ -186,6 +188,15 @@
             <button :class="{active: newsPage === p}" @click="newsPage = p" x-text="p"></button>
           </template>
           <button @click="newsPage < newsPageCount && newsPage++" :disabled="newsPage === newsPageCount">&raquo;</button>
+        </div>
+      </div>
+
+      <!-- News Modal -->
+      <div class="chart-modal-overlay" x-show="expandedNews" x-cloak @click="expandedNews = null" style="display:none">
+        <div class="news-modal" @click.stop style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:600px;width:95%;max-height:80vh;overflow-y:auto;padding:1.5rem;cursor:default">
+          <h2 x-text="expandedNews?.title" style="margin-bottom:.8rem"></h2>
+          <div style="font-size:.9rem;color:var(--text);white-space:pre-wrap;line-height:1.6" x-text="expandedNews?.body"></div>
+          <div class="pub-card-meta" x-text="formatTime(expandedNews?.created_at)" style="margin-top:1rem"></div>
         </div>
       </div>
 
