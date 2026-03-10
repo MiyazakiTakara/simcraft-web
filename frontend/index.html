@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/style.css?v=2"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=2"></script>
+  <script src="/app.js?v=3"></script>
 </head>
 <body>
 <div x-data="app()" x-init="init()" class="container">
@@ -206,7 +206,7 @@
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
-              <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(job.id))">🔗 Udostępnij</button>
+              <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(job.id), job.id)" x-text="copiedJobId === job.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
             </div>
           </div>
         </template>
@@ -225,7 +225,7 @@
                 <div class="history-time" x-text="formatTime(entry.created_at)"></div>
                 <div class="history-style" x-text="entry.fight_style"></div>
               </div>
-              <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id))" title="Skopiuj link">🔗</button>
+              <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)" x-text="copiedJobId === entry.job_id ? '✓' : '🔗'" title="Skopiuj link"></button>
             </div>
           </template>
         </div>
