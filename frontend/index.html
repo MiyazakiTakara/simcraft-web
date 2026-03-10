@@ -32,9 +32,45 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
   <script src="/app.js?v=10"></script>
+
+  <style>
+    .chart-section {
+      margin-top: 1.2rem;
+      text-align: center;
+    }
+    .chart-section h2 {
+      margin-bottom: .6rem;
+      text-align: left;
+    }
+    .dps-chart-img {
+      width: 100%;
+      max-width: 800px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      cursor: zoom-in;
+    }
+    .chart-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+      cursor: zoom-out;
+    }
+    .chart-modal-overlay img {
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.7);
+    }
+  </style>
 </head>
 <body>
 <div x-data="app()" x-init="init()" class="container">
+
+  <!-- Modal powiększenia chartu -->
+  <div class="chart-modal-overlay" x-show="chartModal" x-cloak @click="chartModal=false" style="display:none">
+    <img :src="chartModal" alt="DPS Chart"/>
+  </div>
 
   <!-- Header -->
   <header class="header">
@@ -184,8 +220,21 @@
                 </template>
               </div>
             </div>
+            <!-- DPS PIE CHART -->
+            <div class="chart-section">
+              <h2>🥧 DPS Pie Chart</h2>
+              <img
+                class="dps-chart-img"
+                :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()"
+                alt="DPS Chart"
+                @click="chartModal = $el.src"
+                loading="lazy"
+              />
+            </div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+              <span style="color:var(--border)">·</span>
+              <a :href="'/api/result/' + pubJob.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
               <span style="color:var(--border)">·</span>
               <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
               <a href="/auth/login" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none">🔑 Zaloguj się aby używać Armory</a>
@@ -309,8 +358,21 @@
                   </template>
                 </div>
               </div>
+              <!-- DPS PIE CHART -->
+              <div class="chart-section">
+                <h2>🥧 DPS Pie Chart</h2>
+                <img
+                  class="dps-chart-img"
+                  :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()"
+                  alt="DPS Chart"
+                  @click="chartModal = $el.src"
+                  loading="lazy"
+                />
+              </div>
               <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
                 <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+                <span style="color:var(--border)">·</span>
+                <a :href="'/api/result/' + pubJob.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
                 <span style="color:var(--border)">·</span>
                 <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
                 <a href="/auth/login" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;margin:0;text-decoration:none">🔑 Zaloguj się aby symulować</a>
@@ -459,8 +521,8 @@
                         <div class="spell-head">
                           <span x-text="sp.name"></span>
                           <span style="display:flex;gap:.6rem;align-items:center">
-                            <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
-                            <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
+                            <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span>
+                            <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span>
                             <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                           </span>
                         </div>
@@ -472,8 +534,21 @@
                 <template x-if="!sortedSpells.length"><p style="color:var(--muted);font-size:.85rem">Brak danych o spellach (użyj trybu addon dla pełnych danych)</p></template>
               </div>
             </div>
+            <!-- DPS PIE CHART -->
+            <div class="chart-section">
+              <h2>🥧 DPS Pie Chart</h2>
+              <img
+                class="dps-chart-img"
+                :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()"
+                alt="DPS Chart"
+                @click="chartModal = $el.src"
+                loading="lazy"
+              />
+            </div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+              <span style="color:var(--border)">·</span>
+              <a :href="'/api/result/' + job.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
               <span style="color:var(--border)">·</span>
               <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(job.id), job.id)" x-text="copiedJobId === job.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
             </div>
