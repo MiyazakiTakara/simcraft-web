@@ -135,7 +135,7 @@ function app() {
         this.job = {
           id:        jobId,
           charName:  charName !== 'Addon Export' ? charName : null,
-          realmSlug: charObj?.realm_slug || null,
+          realmSlug: charObj?.realm_slug || entry?.character_realm_slug || null,
           charClass: charClass || null,
           charSpec:  charSpec || charObj?.spec || null,
         };
@@ -155,7 +155,7 @@ function app() {
         this.pubJob = {
           id:        jobId,
           charName:  meta?.character_name !== 'Addon Export' ? (meta?.character_name || null) : null,
-          realmSlug: null,
+          realmSlug: meta?.character_realm_slug || null,
           charClass: meta?.character_class || null,
           charSpec:  meta?.character_spec  || null,
         };
@@ -191,12 +191,13 @@ function app() {
               this.pubResult = result;
               this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null };
               await API.saveToHistory({
-                job_id:          guestJobId,
-                character_name:  "Addon Export",
-                character_class: "",
-                character_spec:  "",
-                dps:             result.dps,
-                fight_style:     this.guestSimOptions.fight_style,
+                job_id:               guestJobId,
+                character_name:       "Addon Export",
+                character_class:      "",
+                character_spec:       "",
+                character_realm_slug: "",
+                dps:                  result.dps,
+                fight_style:          this.guestSimOptions.fight_style,
               });
               this.loadPublicHistory();
               this.guestLoadingSim = false;
@@ -298,16 +299,16 @@ function app() {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
           await API.saveToHistory({
-            job_id:           this.job.id,
-            character_name:   this.selectedChar?.name || "Addon Export",
-            character_class:  this.selectedChar?.class || "",
-            character_spec:   this.selectedChar?.spec || "",
-            dps:              this.simResult.dps,
-            fight_style:      this.simOptions.fight_style,
+            job_id:               this.job.id,
+            character_name:       this.selectedChar?.name || "Addon Export",
+            character_class:      this.selectedChar?.class || "",
+            character_spec:       this.selectedChar?.spec || "",
+            character_realm_slug: this.selectedChar?.realm_slug || "",
+            dps:                  this.simResult.dps,
+            fight_style:          this.simOptions.fight_style,
           });
           this.loadHistory();
           this.loadingSim = false;
-          // zostajemy na stronie — wynik pokazuje się inline
         } else if (status.status === "error") {
           clearInterval(this._pollInterval);
           alert("Blad symulacji:\n" + (status.error || "Nieznany blad"));

@@ -35,6 +35,7 @@ class HistoryEntry(BaseModel):
     character_name: Optional[str] = "Unknown"
     character_class: Optional[str] = ""
     character_spec: Optional[str] = ""
+    character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
     fight_style: Optional[str] = "Patchwerk"
 
@@ -55,13 +56,14 @@ async def get_result_meta(job_id: str):
     if not entry:
         raise HTTPException(404, "Result meta not found")
     return {
-        "job_id":          entry.get("job_id"),
-        "character_name":  entry.get("character_name"),
-        "character_class": entry.get("character_class"),
-        "character_spec":  entry.get("character_spec"),
-        "dps":             entry.get("dps"),
-        "fight_style":     entry.get("fight_style"),
-        "created_at":      entry.get("created_at"),
+        "job_id":               entry.get("job_id"),
+        "character_name":       entry.get("character_name"),
+        "character_class":      entry.get("character_class"),
+        "character_spec":       entry.get("character_spec"),
+        "character_realm_slug": entry.get("character_realm_slug", ""),
+        "dps":                  entry.get("dps"),
+        "fight_style":          entry.get("fight_style"),
+        "created_at":           entry.get("created_at"),
     }
 
 
@@ -71,13 +73,14 @@ async def add_history(entry: HistoryEntry):
         data = _load()
         if not any(e["job_id"] == entry.job_id for e in data):
             data.append({
-                "job_id":           entry.job_id,
-                "character_name":   entry.character_name,
-                "character_class":  entry.character_class,
-                "character_spec":   entry.character_spec,
-                "dps":              entry.dps,
-                "fight_style":      entry.fight_style,
-                "created_at":       int(time.time()),
+                "job_id":               entry.job_id,
+                "character_name":       entry.character_name,
+                "character_class":      entry.character_class,
+                "character_spec":       entry.character_spec,
+                "character_realm_slug": entry.character_realm_slug or "",
+                "dps":                  entry.dps,
+                "fight_style":          entry.fight_style,
+                "created_at":           int(time.time()),
             })
             data = sorted(data, key=lambda x: x.get("created_at", 0), reverse=True)[:200]
             _save(data)
