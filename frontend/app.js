@@ -72,6 +72,7 @@ function app() {
       if (this.sessionId) {
         this.loadCharacters();
         this.loadHistory();
+        this.loadNews();
       } else {
         this.loadPublicHistory();
         this.loadNews();
