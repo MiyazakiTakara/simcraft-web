@@ -71,6 +71,76 @@ def ability_crit(ab: dict) -> float:
     return 0.0
 
 
+def ability_miss_pct(ab: dict) -> float:
+    """Procent miss+dodge+parry+glance ze wszystkich prób."""
+    def _from_results(results: dict):
+        if not isinstance(results, dict):
+            return 0.0, 0.0
+        miss_keys = ("miss", "dodge", "parry", "glancing")
+        total_hits = 0.0
+        total_miss = 0.0
+        for key, block in results.items():
+            if not isinstance(block, dict):
+                continue
+            cnt = safe_float(block.get("count") or block.get("count_sum", 0))
+            if key in miss_keys:
+                total_miss += cnt
+            total_hits += cnt
+        return total_miss, total_hits
+
+    miss_total, hit_total = 0.0, 0.0
+    for key in ("direct_results", "tick_results"):
+        m, h = _from_results(ab.get(key, {}))
+        miss_total += m
+        hit_total  += h
+
+    children = ab.get("children", [])
+    if isinstance(children, list):
+        for c in children:
+            if isinstance(c, dict):
+                for key in ("direct_results", "tick_results"):
+                    m, h = _from_results(c.get(key, {}))
+                    miss_total += m
+                    hit_total  += h
+
+    if hit_total > 0:
+        return round((miss_total / hit_total) * 100, 1)
+    return 0.0
+
+
+def ability_avg_hit(ab: dict, total_dmg: float, count: int) -> float:
+    """Średni hit = total_dmg / count (hits that landed)."""
+    # Spróbuj wziąć avg bezpośrednio z hit/crit block
+    def _avg_from_results(results: dict):
+        if not isinstance(results, dict):
+            return None
+        total_val = 0.0
+        total_cnt = 0.0
+        for key, block in results.items():
+            if key in ("miss", "dodge", "parry", "glancing"):
+                continue
+            if not isinstance(block, dict):
+                continue
+            mean = safe_float(block.get("actual_amount", {}).get("mean", 0) if isinstance(block.get("actual_amount"), dict) else 0)
+            cnt  = safe_float(block.get("count") or block.get("count_sum", 0))
+            if mean > 0 and cnt > 0:
+                total_val += mean * cnt
+                total_cnt += cnt
+        if total_cnt > 0:
+            return round(total_val / total_cnt)
+        return None
+
+    for key in ("direct_results", "tick_results"):
+        v = _avg_from_results(ab.get(key, {}))
+        if v is not None:
+            return v
+
+    # Fallback: total_dmg / count
+    if count and count > 0 and total_dmg > 0:
+        return round(total_dmg / count)
+    return 0
+
+
 def spell_display_name(ab: dict) -> str:
     spell_name = ab.get("spell_name", "").strip()
     if spell_name:
@@ -130,6 +200,8 @@ def parse_results(json_path: str):
 
             name     = spell_display_name(ab)
             crit     = ability_crit(ab)
+            miss_pct = ability_miss_pct(ab)
+
             executes = 0
             ne = ab.get("num_executes")
             if isinstance(ne, dict):
@@ -137,12 +209,17 @@ def parse_results(json_path: str):
             elif isinstance(ne, (int, float)):
                 executes = int(ne)
 
+            avg_hit = ability_avg_hit(ab, tot_dmg, executes)
+
             spells.append({
                 "name":      name,
                 "dps":       round(dps, 2),
                 "total_dmg": round(tot_dmg),
                 "crit_pct":  round(crit, 2),
                 "executes":  executes,
+                "count":     executes,
+                "avg_hit":   avg_hit,
+                "miss_pct":  miss_pct,
             })
 
         if not spells:
@@ -156,6 +233,7 @@ def parse_results(json_path: str):
                 spells.append({
                     "name": sname, "dps": 0.0, "total_dmg": 0,
                     "crit_pct": 0.0, "executes": count,
+                    "count": count, "avg_hit": 0, "miss_pct": 0.0,
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
@@ -174,7 +252,7 @@ def parse_results(json_path: str):
         if other_dps > 0 or other_dmg > 0:
             top_spells.append({
                 "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
-                "crit_pct": 0, "executes": 0,
+                "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
                 "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
             })
@@ -213,7 +291,6 @@ def generate_dps_chart(json_path: str) -> str:
         if not isinstance(abilities, list):
             return None
 
-        # Prawdziwy total DPS i total DMG z collected_data
         real_dps = safe_float(cd.get("dps", {}).get("mean", 0))
         real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
 
@@ -252,7 +329,6 @@ def generate_dps_chart(json_path: str) -> str:
 
         player_name = player.get("name", "?")
 
-        # Tytuly pokazuja prawdziwe wartosci z collected_data, nie sume slice'a
         def fmt_dmg(v):
             if v >= 1_000_000:
                 return f"{v / 1_000_000:.1f}M"
