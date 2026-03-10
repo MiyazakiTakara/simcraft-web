@@ -20,6 +20,9 @@ function app() {
     history: [],
     loadingHistory: false,
 
+    // Sortowanie spell table: 'total_dmg' (domyslne, jak Raidbots) lub 'dps'
+    spellSort: "total_dmg",
+
     STAT_LABELS: {
       strength:    "Strength",
       agility:     "Agility",
@@ -35,7 +38,6 @@ function app() {
       const params = new URLSearchParams(window.location.search);
       const session = params.get("session");
       const resultId = params.get("result");
-      
       if (session) {
         this.sessionId = session;
         history.replaceState({}, "", "/");
@@ -44,7 +46,6 @@ function app() {
       } else {
         this.loadPublicHistory();
       }
-      
       if (resultId) {
         this.loadHistoryResult(resultId);
       }
@@ -69,19 +70,13 @@ function app() {
     },
 
     async loadHistory() {
-      try {
-        this.history = await API.getHistory();
-      } catch (e) {
-        console.error("Failed to load history", e);
-      }
+      try { this.history = await API.getHistory(); }
+      catch (e) { console.error("Failed to load history", e); }
     },
 
     async loadPublicHistory() {
-      try {
-        this.history = await API.getPublicHistory();
-      } catch (e) {
-        console.error("Failed to load public history", e);
-      }
+      try { this.history = await API.getPublicHistory(); }
+      catch (e) { console.error("Failed to load public history", e); }
     },
 
     async loadHistoryResult(jobId) {
@@ -90,17 +85,21 @@ function app() {
         this.job = { id: jobId };
         this.selectedHistory = jobId;
       } catch (e) {
-        alert("Nie udało się załadować wyniku: " + e.message);
+        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
       }
     },
 
     get filteredChars() {
       const q = this.charFilter.toLowerCase();
       return this.characters.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.realm.toLowerCase().includes(q)
+        (c) => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
       );
+    },
+
+    get sortedSpells() {
+      if (!this.simResult?.spells) return [];
+      const key = this.spellSort;
+      return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
     selectChar(ch) {
@@ -190,8 +189,16 @@ function app() {
       return String(v);
     },
 
-    pctBarWidth(dps, maxDps) {
-      return maxDps > 0 ? Math.round((dps / maxDps) * 100) + "%" : "0%";
+    formatDmg(v) {
+      if (!v && v !== 0) return "\u2014";
+      if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
+      if (v >= 1_000)     return (v / 1_000).toFixed(0) + "k";
+      return String(Math.round(v));
+    },
+
+    pctBarWidth(val, spells, key) {
+      const max = Math.max(...spells.map(s => s[key] ?? 0));
+      return max > 0 ? Math.round((val / max) * 100) + "%" : "0%";
     },
 
     formatStatName(key) {
@@ -222,7 +229,7 @@ function app() {
       navigator.clipboard.writeText(text).then(() => {
         alert("Link skopiowany do schowka!");
       }).catch(() => {
-        alert("Nie udało się skopiować linku");
+        alert("Nie uda\u0142o si\u0119 skopiowa\u0107 linku");
       });
     },
   };

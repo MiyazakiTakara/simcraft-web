@@ -18,13 +18,25 @@ def ability_dps(ab: dict) -> float:
         v = safe_float(pa.get("mean"))
         if v > 0:
             return v
-
     children = ab.get("children", [])
     if isinstance(children, list) and children:
         total = sum(ability_dps(c) for c in children if isinstance(c, dict))
         if total > 0:
             return total
+    return 0.0
 
+
+def ability_total_dmg(ab: dict) -> float:
+    """compound_amount.mean = sredni total damage ability przez caly fight."""
+    v = safe_float(ab.get("compound_amount", 0))
+    if v > 0:
+        return v
+    # fallback: suma z children
+    children = ab.get("children", [])
+    if isinstance(children, list) and children:
+        total = sum(ability_total_dmg(c) for c in children if isinstance(c, dict))
+        if total > 0:
+            return total
     return 0.0
 
 
@@ -56,7 +68,6 @@ def ability_crit(ab: dict) -> float:
         crits = [c for c in crits if c and c > 0]
         if crits:
             return round(sum(crits) / len(crits), 2)
-
     return 0.0
 
 
@@ -79,22 +90,28 @@ def parse_results(json_path: str):
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
 
-        # STATS — uzywamy ratingow (crit_rating, haste_rating itd.)
-        # primary attributes z buffed_stats.attribute
-        # secondary ratingi z buffed_stats.stats
+        # Fight length (mean)
+        fl_data    = cd.get("fight_length", {})
+        fight_length = safe_float(fl_data.get("mean", 1)) or 1.0
+
+        # Total damage dealt by player (compound_dmg.mean)
+        total_dmg_data = cd.get("compound_dmg", {})
+        total_dmg = safe_float(total_dmg_data.get("mean", 0))
+
+        # STATS
         bs         = cd.get("buffed_stats", {})
         attr       = bs.get("attribute", {})
         stats_data = bs.get("stats", {})
 
         stats = {
-            "strength":   int(safe_float(attr.get("strength"))),
-            "agility":    int(safe_float(attr.get("agility"))),
-            "stamina":    int(safe_float(attr.get("stamina"))),
-            "intellect":  int(safe_float(attr.get("intellect"))),
-            "crit":       int(safe_float(stats_data.get("crit_rating", 0))),
-            "haste":      int(safe_float(stats_data.get("haste_rating", 0))),
-            "mastery":    int(safe_float(stats_data.get("mastery_rating", 0))),
-            "versatility":int(safe_float(stats_data.get("versatility_rating", 0))),
+            "strength":    int(safe_float(attr.get("strength"))),
+            "agility":     int(safe_float(attr.get("agility"))),
+            "stamina":     int(safe_float(attr.get("stamina"))),
+            "intellect":   int(safe_float(attr.get("intellect"))),
+            "crit":        int(safe_float(stats_data.get("crit_rating", 0))),
+            "haste":       int(safe_float(stats_data.get("haste_rating", 0))),
+            "mastery":     int(safe_float(stats_data.get("mastery_rating", 0))),
+            "versatility": int(safe_float(stats_data.get("versatility_rating", 0))),
         }
 
         # ABILITIES
@@ -103,18 +120,19 @@ def parse_results(json_path: str):
             abilities = []
 
         spells = []
-        total_spell_dps = 0.0
 
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
 
-            dps = ability_dps(ab)
-            if dps <= 0:
+            dps      = ability_dps(ab)
+            tot_dmg  = ability_total_dmg(ab)
+
+            if dps <= 0 and tot_dmg <= 0:
                 continue
 
-            name = ab.get("spell_name") or ab.get("name", "?")
-            crit = ability_crit(ab)
+            name     = ab.get("spell_name") or ab.get("name", "?")
+            crit     = ability_crit(ab)
 
             executes = 0
             ne = ab.get("num_executes")
@@ -124,12 +142,12 @@ def parse_results(json_path: str):
                 executes = int(ne)
 
             spells.append({
-                "name":     name,
-                "dps":      round(dps, 2),
-                "crit_pct": round(crit, 2),
-                "executes": executes,
+                "name":      name,
+                "dps":       round(dps, 2),
+                "total_dmg": round(tot_dmg),
+                "crit_pct":  round(crit, 2),
+                "executes":  executes,
             })
-            total_spell_dps += dps
 
         if not spells:
             action_seq = cd.get("action_sequence", [])
@@ -139,32 +157,40 @@ def parse_results(json_path: str):
                 spell_counts[sname] = spell_counts.get(sname, 0) + 1
             for sname, count in spell_counts.items():
                 spells.append({
-                    "name": sname, "dps": 0.0,
-                    "crit_pct": 0.0, "executes": count, "percent": 0.0,
+                    "name": sname, "dps": 0.0, "total_dmg": 0,
+                    "crit_pct": 0.0, "executes": count,
+                    "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        spells = sorted(spells, key=lambda x: x["dps"], reverse=True)
+        # Procenty
+        total_spell_dps = sum(s["dps"] for s in spells)
+        total_spell_dmg = sum(s["total_dmg"] for s in spells)
 
-        if total_spell_dps > 0:
-            for s in spells:
-                s["percent"] = round((s["dps"] / total_spell_dps) * 100, 2)
-            top_spells = spells[:25]
-            other_dps = sum(s["dps"] for s in spells[25:])
-            if other_dps > 0:
-                top_spells.append({
-                    "name": "Other", "dps": round(other_dps, 2),
-                    "crit_pct": 0, "executes": 0,
-                    "percent": round((other_dps / total_spell_dps) * 100, 2),
-                })
-        else:
-            top_spells = spells
+        for s in spells:
+            s["dps_pct"]  = round((s["dps"] / total_spell_dps * 100), 2) if total_spell_dps > 0 else 0.0
+            s["dmg_pct"]  = round((s["total_dmg"] / total_spell_dmg * 100), 2) if total_spell_dmg > 0 else 0.0
+
+        # Domyslne sortowanie: total_dmg (jak Raidbots)
+        spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
+
+        top_spells = spells[:25]
+        other_dps  = sum(s["dps"] for s in spells[25:])
+        other_dmg  = sum(s["total_dmg"] for s in spells[25:])
+        if other_dps > 0 or other_dmg > 0:
+            top_spells.append({
+                "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
+                "crit_pct": 0, "executes": 0,
+                "dps_pct": round(other_dps / total_spell_dps * 100, 2) if total_spell_dps > 0 else 0,
+                "dmg_pct": round(other_dmg / total_spell_dmg * 100, 2) if total_spell_dmg > 0 else 0,
+            })
 
         return {
-            "name":    player.get("name", "?"),
-            "dps":     round(dps_mean, 1),
-            "dps_std": round(dps_std, 1),
-            "stats":   stats,
-            "spells":  top_spells,
+            "name":         player.get("name", "?"),
+            "dps":          round(dps_mean, 1),
+            "dps_std":      round(dps_std, 1),
+            "fight_length": round(fight_length, 1),
+            "stats":        stats,
+            "spells":       top_spells,
         }
 
     except Exception as e:
@@ -185,16 +211,13 @@ async def get_result_debug(job_id: str):
     job = jobs.get(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
-
     try:
         with open(job["json_path"]) as f:
             raw = json.load(f)
-
         sim = raw.get("sim", {})
         players = sim.get("players", [])
         if not players:
             return {"error": "no players"}
-
         player = players[0]
         stats_raw = player.get("stats", [])
 
@@ -202,11 +225,7 @@ async def get_result_debug(job_id: str):
             if depth > 4:
                 return "..."
             if isinstance(obj, dict):
-                return {
-                    k: strip_timeseries(v, depth + 1)
-                    for k, v in obj.items()
-                    if k not in ("data", "timeline", "distribution")
-                }
+                return {k: strip_timeseries(v, depth + 1) for k, v in obj.items() if k not in ("data", "timeline", "distribution")}
             if isinstance(obj, list):
                 if len(obj) > 3:
                     return [strip_timeseries(i, depth + 1) for i in obj[:3]] + [f"...+{len(obj)-3} more"]
