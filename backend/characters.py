@@ -99,7 +99,7 @@ async def get_character_media(session: str, realm_slug: str, name: str):
 
 @router.get("/api/character/equipment")
 async def get_character_equipment(session: str, realm_slug: str, name: str):
-    token = await get_session_token(session)
+    token = await get_blizzard_token()
     name_lower = name.lower()
 
     async with httpx.AsyncClient() as client:
@@ -113,6 +113,9 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
         if resp.status_code == 404:
             from fastapi import HTTPException
             raise HTTPException(404, "Character not found")
+        if resp.status_code == 401:
+            from fastapi import HTTPException
+            raise HTTPException(401, "Character data is private")
         resp.raise_for_status()
         data = resp.json()
 
@@ -144,7 +147,7 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
 
 @router.get("/api/character/statistics")
 async def get_character_statistics(session: str, realm_slug: str, name: str):
-    token = await get_session_token(session)
+    token = await get_blizzard_token()
     name_lower = name.lower()
 
     async with httpx.AsyncClient() as client:
@@ -158,6 +161,9 @@ async def get_character_statistics(session: str, realm_slug: str, name: str):
         if resp.status_code == 404:
             from fastapi import HTTPException
             raise HTTPException(404, "Character not found")
+        if resp.status_code == 401:
+            from fastapi import HTTPException
+            raise HTTPException(401, "Character data is private")
         resp.raise_for_status()
         data = resp.json()
 
@@ -199,7 +205,7 @@ async def get_character_statistics(session: str, realm_slug: str, name: str):
 
 @router.get("/api/character/talents")
 async def get_character_talents(session: str, realm_slug: str, name: str):
-    token = await get_session_token(session)
+    token = await get_blizzard_token()
     name_lower = name.lower()
 
     async with httpx.AsyncClient() as client:
@@ -213,6 +219,9 @@ async def get_character_talents(session: str, realm_slug: str, name: str):
         if resp.status_code == 404:
             from fastapi import HTTPException
             raise HTTPException(404, "Character not found")
+        if resp.status_code == 401:
+            from fastapi import HTTPException
+            raise HTTPException(401, "Character data is private")
         resp.raise_for_status()
         data = resp.json()
 
