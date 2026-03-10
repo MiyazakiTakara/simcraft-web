@@ -20,6 +20,19 @@ function app() {
     history: [],
     loadingHistory: false,
 
+    STAT_LABELS: {
+      strength:          "Strength",
+      agility:           "Agility",
+      stamina:           "Stamina",
+      intellect:         "Intellect",
+      crit_pct:          "Critical Strike",
+      haste_pct:         "Haste",
+      mastery_pct:       "Mastery",
+      versatility_pct:   "Versatility",
+    },
+
+    PCT_STATS: new Set(["crit_pct", "haste_pct", "mastery_pct", "versatility_pct"]),
+
     init() {
       const params = new URLSearchParams(window.location.search);
       const session = params.get("session");
@@ -34,7 +47,6 @@ function app() {
         this.loadPublicHistory();
       }
       
-      // Load shared result if provided
       if (resultId) {
         this.loadHistoryResult(resultId);
       }
@@ -46,7 +58,6 @@ function app() {
       try {
         const chars = await API.getCharacters(this.sessionId);
         this.characters = chars;
-        // load avatars async
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
             .then((m) => { ch.avatar = m.avatar; })
@@ -78,7 +89,7 @@ function app() {
     async loadHistoryResult(jobId) {
       try {
         this.simResult = await API.getResultJson(jobId);
-        this.job = { id: jobId };  // Set job so share button works
+        this.job = { id: jobId };
         this.selectedHistory = jobId;
       } catch (e) {
         alert("Nie udało się załadować wyniku: " + e.message);
@@ -147,7 +158,6 @@ function app() {
         if (status.status === "done") {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
-          // Save to history
           await API.saveToHistory({
             job_id: this.job.id,
             character_name: this.selectedChar?.name || "Addon Export",
@@ -176,7 +186,7 @@ function app() {
     },
 
     formatDps(v) {
-      if (!v && v !== 0) return "—";
+      if (!v && v !== 0) return "\u2014";
       if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
       if (v >= 1_000)     return (v / 1_000).toFixed(1) + "k";
       return String(v);
@@ -187,16 +197,19 @@ function app() {
     },
 
     formatStatName(key) {
-      return key;
+      return this.STAT_LABELS[key] || key;
     },
 
     formatStatValue(key, val) {
+      if (this.PCT_STATS.has(key)) {
+        return (typeof val === "number" ? val.toFixed(2) : val) + "%";
+      }
       if (typeof val === "number") return Math.round(val).toLocaleString();
       return val;
     },
 
     formatTime(timestamp) {
-      if (!timestamp) return "—";
+      if (!timestamp) return "\u2014";
       const date = new Date(timestamp * 1000);
       const now = new Date();
       const diff = Math.floor((now - date) / 1000);
