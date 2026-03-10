@@ -3,24 +3,29 @@ import time
 import uuid
 import secrets
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Form
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
 from database import SessionLocal, AdminSessionModel, NewsModel
 
 router = APIRouter(prefix="/admin")
 
-KEYCLOAK_URL      = os.environ["KEYCLOAK_URL"].rstrip("/")
-KEYCLOAK_REALM    = os.environ["KEYCLOAK_REALM"]
-KEYCLOAK_CLIENT_ID     = os.environ["KEYCLOAK_CLIENT_ID"]
-KEYCLOAK_CLIENT_SECRET = os.environ["KEYCLOAK_CLIENT_SECRET"]
-ADMIN_REDIRECT_URI     = os.environ["ADMIN_REDIRECT_URI"]
+ADMIN_COOKIE = "admin_session"
+SESSION_TTL  = 60 * 60 * 8  # 8 godzin
 
-ADMIN_COOKIE   = "admin_session"
-SESSION_TTL    = 60 * 60 * 8  # 8 godzin
 
-_oidc_base = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
+def _cfg():
+    """Lazy-load Keycloak config — czytane przy pierwszym request, nie przy imporcie."""
+    url    = os.environ["KEYCLOAK_URL"].rstrip("/")
+    realm  = os.environ["KEYCLOAK_REALM"]
+    base   = f"{url}/realms/{realm}/protocol/openid-connect"
+    return {
+        "client_id":     os.environ["KEYCLOAK_CLIENT_ID"],
+        "client_secret": os.environ["KEYCLOAK_CLIENT_SECRET"],
+        "redirect_uri":  os.environ["ADMIN_REDIRECT_URI"],
+        "oidc_base":     base,
+    }
 
 
 # ---------- helpers ----------
@@ -52,11 +57,12 @@ def _require_admin(request: Request) -> dict:
 
 @router.get("/login")
 async def admin_login():
+    cfg   = _cfg()
     state = secrets.token_urlsafe(16)
     url = (
-        f"{_oidc_base}/auth"
-        f"?client_id={KEYCLOAK_CLIENT_ID}"
-        f"&redirect_uri={ADMIN_REDIRECT_URI}"
+        f"{cfg['oidc_base']}/auth"
+        f"?client_id={cfg['client_id']}"
+        f"&redirect_uri={cfg['redirect_uri']}"
         f"&response_type=code"
         f"&scope=openid profile email"
         f"&state={state}"
@@ -66,24 +72,24 @@ async def admin_login():
 
 @router.get("/callback")
 async def admin_callback(code: str, state: str = None):
+    cfg = _cfg()
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{_oidc_base}/token",
+            f"{cfg['oidc_base']}/token",
             data={
-                "grant_type":   "authorization_code",
-                "code":         code,
-                "redirect_uri": ADMIN_REDIRECT_URI,
-                "client_id":    KEYCLOAK_CLIENT_ID,
-                "client_secret": KEYCLOAK_CLIENT_SECRET,
+                "grant_type":    "authorization_code",
+                "code":          code,
+                "redirect_uri":  cfg["redirect_uri"],
+                "client_id":     cfg["client_id"],
+                "client_secret": cfg["client_secret"],
             },
             timeout=10,
         )
         resp.raise_for_status()
         token_data = resp.json()
 
-        # Pobierz info o userze
         userinfo_resp = await client.get(
-            f"{_oidc_base}/userinfo",
+            f"{cfg['oidc_base']}/userinfo",
             headers={"Authorization": f"Bearer {token_data['access_token']}"},
             timeout=10,
         )
@@ -133,8 +139,7 @@ async def admin_logout(request: Request):
 @router.get("/", response_class=HTMLResponse)
 async def admin_panel(request: Request):
     _require_admin(request)
-    html_path = "/app/frontend/admin.html"
-    with open(html_path) as f:
+    with open("/app/frontend/admin.html") as f:
         return HTMLResponse(f.read())
 
 
@@ -205,10 +210,13 @@ async def delete_news(news_id: int, request: Request):
     return {"ok": True}
 
 
-# ---------- publiczne API (bez autoryzacji) ----------
+# ---------- publiczne API ----------
 
 @router.get("/api/news/public")
 async def public_news():
     with SessionLocal() as db:
-        rows = db.query(NewsModel).filter(NewsModel.published == True).order_by(NewsModel.created_at.desc()).limit(20).all()
+        rows = (db.query(NewsModel)
+                .filter(NewsModel.published == True)
+                .order_by(NewsModel.created_at.desc())
+                .limit(20).all())
     return [{"id": r.id, "title": r.title, "body": r.body, "created_at": r.created_at} for r in rows]
