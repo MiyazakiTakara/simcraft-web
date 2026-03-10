@@ -29,7 +29,6 @@ def ability_dps(ab: dict) -> float:
 
 
 def ability_total_dmg(ab: dict) -> float:
-    """compound_amount.mean = sredni total damage ability przez caly fight."""
     v = safe_float(ab.get("compound_amount", 0))
     if v > 0:
         return v
@@ -72,6 +71,16 @@ def ability_crit(ab: dict) -> float:
     return 0.0
 
 
+def spell_display_name(ab: dict) -> str:
+    """Zwraca ladna nazwe spella - spell_name ma priorytet nad name."""
+    spell_name = ab.get("spell_name", "").strip()
+    if spell_name:
+        return spell_name
+    # fallback: zamien snake_case na Title Case
+    raw = ab.get("name", "?")
+    return raw.replace("_", " ").title()
+
+
 def parse_results(json_path: str):
     try:
         with open(json_path) as f:
@@ -91,13 +100,9 @@ def parse_results(json_path: str):
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
 
-        # Fight length (mean)
-        fl_data    = cd.get("fight_length", {})
+        # Fight length
+        fl_data      = cd.get("fight_length", {})
         fight_length = safe_float(fl_data.get("mean", 1)) or 1.0
-
-        # Total damage dealt by player (compound_dmg.mean)
-        total_dmg_data = cd.get("compound_dmg", {})
-        total_dmg = safe_float(total_dmg_data.get("mean", 0))
 
         # STATS
         bs         = cd.get("buffed_stats", {})
@@ -121,20 +126,16 @@ def parse_results(json_path: str):
             abilities = []
 
         spells = []
-
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
-
-            dps      = ability_dps(ab)
-            tot_dmg  = ability_total_dmg(ab)
-
+            dps     = ability_dps(ab)
+            tot_dmg = ability_total_dmg(ab)
             if dps <= 0 and tot_dmg <= 0:
                 continue
 
-            name     = ab.get("spell_name") or ab.get("name", "?")
+            name     = spell_display_name(ab)
             crit     = ability_crit(ab)
-
             executes = 0
             ne = ab.get("num_executes")
             if isinstance(ne, dict):
@@ -150,11 +151,13 @@ def parse_results(json_path: str):
                 "executes":  executes,
             })
 
+        # fallback z action_sequence gdy brak statystyk
         if not spells:
             action_seq = cd.get("action_sequence", [])
             spell_counts: dict = {}
             for action in action_seq:
                 sname = action.get("spell_name") or action.get("name", "?")
+                sname = sname.replace("_", " ").title()
                 spell_counts[sname] = spell_counts.get(sname, 0) + 1
             for sname, count in spell_counts.items():
                 spells.append({
@@ -163,15 +166,15 @@ def parse_results(json_path: str):
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        # Procenty
+        # Procenty - osobno dla dps i dmg
         total_spell_dps = sum(s["dps"] for s in spells)
         total_spell_dmg = sum(s["total_dmg"] for s in spells)
 
         for s in spells:
-            s["dps_pct"]  = round((s["dps"] / total_spell_dps * 100), 2) if total_spell_dps > 0 else 0.0
-            s["dmg_pct"]  = round((s["total_dmg"] / total_spell_dmg * 100), 2) if total_spell_dmg > 0 else 0.0
+            s["dps_pct"] = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
+            s["dmg_pct"] = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
 
-        # Domyslne sortowanie: total_dmg (jak Raidbots)
+        # Sortowanie po total_dmg
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
         top_spells = spells[:25]
@@ -181,8 +184,8 @@ def parse_results(json_path: str):
             top_spells.append({
                 "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
                 "crit_pct": 0, "executes": 0,
-                "dps_pct": round(other_dps / total_spell_dps * 100, 2) if total_spell_dps > 0 else 0,
-                "dmg_pct": round(other_dmg / total_spell_dmg * 100, 2) if total_spell_dmg > 0 else 0,
+                "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
+                "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
             })
 
         return {
@@ -200,7 +203,6 @@ def parse_results(json_path: str):
 
 
 def generate_dps_chart(json_path: str) -> str:
-    """Generuje PNG pie chart DPS breakdown. Zwraca sciezke do pliku."""
     try:
         import plotly.express as px
         import pandas as pd
@@ -222,43 +224,34 @@ def generate_dps_chart(json_path: str) -> str:
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
-            name = (ab.get("spell_name") or ab.get("name", "?"))[:28]
-            dmg = ability_total_dmg(ab)
+            name = spell_display_name(ab)[:28]
+            dmg  = ability_total_dmg(ab)
             if dmg > 0:
                 chart_data.append({"name": name, "dmg": dmg})
 
         if not chart_data:
             return None
 
-        df = pd.DataFrame(chart_data)
-        df = df.sort_values("dmg", ascending=False)
-
-        # Top 12 + reszta jako Other
+        df = pd.DataFrame(chart_data).sort_values("dmg", ascending=False)
         if len(df) > 12:
-            top = df.head(12).copy()
+            top       = df.head(12).copy()
             other_dmg = df.iloc[12:]["dmg"].sum()
-            other_row = pd.DataFrame([{"name": "Other", "dmg": other_dmg}])
-            df = pd.concat([top, other_row], ignore_index=True)
+            df = pd.concat([top, pd.DataFrame([{"name": "Other", "dmg": other_dmg}])], ignore_index=True)
 
-        total_dmg = df["dmg"].sum()
+        total_dmg   = df["dmg"].sum()
         player_name = player.get("name", "?")
 
         fig = px.pie(
             df, values="dmg", names="name",
-            title=f"{player_name} — DPS Breakdown<br><sup>Total DMG: {total_dmg:,.0f}</sup>",
+            title=f"{player_name} \u2014 DPS Breakdown<br><sup>Total DMG: {total_dmg:,.0f}</sup>",
             hole=0.4,
             color_discrete_sequence=px.colors.sequential.Plasma_r,
         )
-        fig.update_traces(
-            textposition="inside",
-            textinfo="percent+label",
-            textfont_size=12,
-        )
+        fig.update_traces(textposition="inside", textinfo="percent+label", textfont_size=12)
         fig.update_layout(
             showlegend=True,
             legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
-            width=800,
-            height=540,
+            width=800, height=540,
             margin=dict(t=80, b=20, l=20, r=180),
             paper_bgcolor="#1a1a2e",
             plot_bgcolor="#1a1a2e",
