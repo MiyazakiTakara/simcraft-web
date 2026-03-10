@@ -17,7 +17,7 @@ RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 SIMC_PATH = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
-JOB_TIMEOUT = int(os.environ.get("JOB_TIMEOUT", "360"))  # sekundy, domyslnie 6 minut
+JOB_TIMEOUT = int(os.environ.get("JOB_TIMEOUT", "360"))
 
 jobs: dict = {}
 
@@ -88,7 +88,6 @@ def _run_sim(job_id: str, simc_input: str):
 
 
 def _watchdog():
-    """Co minute sprawdza czy jakis job nie utknol w 'running' zbyt dlugo."""
     while True:
         time.sleep(60)
         now = time.time()
@@ -105,11 +104,10 @@ def _watchdog():
                     print(f"Watchdog: job {job_id} timeout", flush=True)
 
 
-# Uruchom watchdog w tle
 threading.Thread(target=_watchdog, daemon=True).start()
 
 
-@router.post("/api/sim")
+@router.post("/api/simulate")
 @limiter.limit("5/minute")
 async def start_sim(request: Request, req: SimRequest):
     global _running_sims
@@ -141,7 +139,7 @@ async def start_sim(request: Request, req: SimRequest):
     return {"job_id": job_id}
 
 
-@router.get("/api/sim/{job_id}/status")
+@router.get("/api/job/{job_id}")
 async def get_job_status(job_id: str):
     job = jobs.get(job_id)
     if not job:
