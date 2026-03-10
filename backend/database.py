@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, String, Float, Integer, Text
+from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ.get(
@@ -23,8 +23,8 @@ class HistoryEntryModel(Base):
     character_realm_slug = Column(String(128), default="")
     dps            = Column(Float, default=0.0)
     fight_style    = Column(String(64), default="Patchwerk")
-    user_id        = Column(String(64), nullable=True, index=True)  # session_id lub None (guest)
-    created_at     = Column(Integer, default=0)  # unix timestamp
+    user_id        = Column(String(64), nullable=True, index=True)
+    created_at     = Column(Integer, default=0)
 
 
 class SessionModel(Base):
@@ -33,6 +33,24 @@ class SessionModel(Base):
     session_id   = Column(String(64), primary_key=True)
     access_token = Column(Text, nullable=False)
     expires_at   = Column(Float, nullable=False)
+
+
+class AdminSessionModel(Base):
+    __tablename__ = "admin_sessions"
+
+    session_id = Column(String(64), primary_key=True)
+    username   = Column(String(128), nullable=False)
+    expires_at = Column(Float, nullable=False)
+
+
+class NewsModel(Base):
+    __tablename__ = "news"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    title      = Column(String(256), nullable=False)
+    body       = Column(Text, nullable=False)
+    published  = Column(Boolean, default=True)
+    created_at = Column(Integer, default=0)
 
 
 def init_db():

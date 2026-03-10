@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SimCraft — Panel Admina</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0d0d0d;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #333;
+      padding-bottom: 1rem;
+    }
+    header h1 { font-size: 1.4rem; color: #fff; }
+    header span { font-size: 0.85rem; color: #888; }
+    a.logout {
+      color: #e55;
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-left: 1rem;
+    }
+    section { max-width: 860px; margin: 0 auto; }
+    h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #ccc; }
+    .form-box {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .form-box input, .form-box textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+      resize: vertical;
+    }
+    .form-box textarea { min-height: 120px; }
+    .form-box label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    button.primary {
+      background: #f4a01c;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.4rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button.primary:hover { background: #e09010; }
+    .news-list { display: flex; flex-direction: column; gap: 1rem; }
+    .news-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .news-card .info { flex: 1; }
+    .news-card .info h3 { font-size: 1rem; margin-bottom: 0.3rem; }
+    .news-card .info p { font-size: 0.85rem; color: #888; white-space: pre-wrap; }
+    .news-card .meta { font-size: 0.75rem; color: #555; margin-top: 0.4rem; }
+    .news-card .actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    button.danger {
+      background: transparent;
+      color: #e55;
+      border: 1px solid #e55;
+      border-radius: 6px;
+      padding: 0.35rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    button.danger:hover { background: #2a1010; }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      margin-left: 0.5rem;
+      font-weight: 600;
+    }
+    .badge.published { background: #1a3a1a; color: #4c4; }
+    .badge.draft { background: #2a2a1a; color: #aa8; }
+    .empty { color: #555; text-align: center; padding: 2rem 0; }
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: #222; border: 1px solid #444;
+      color: #eee; padding: 0.7rem 1.2rem;
+      border-radius: 8px; font-size: 0.9rem;
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚙️ SimCraft Admin</h1>
+    <div>
+      <span id="username"></span>
+      <a class="logout" href="/admin/logout">Wyloguj</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>Dodaj news</h2>
+    <div class="form-box">
+      <input type="text" id="news-title" placeholder="Tytuł newsa..." />
+      <textarea id="news-body" placeholder="Treść..."></textarea>
+      <label>
+        <input type="checkbox" id="news-published" checked />
+        Opublikowany
+      </label>
+      <button class="primary" onclick="createNews()">Dodaj news</button>
+    </div>
+
+    <h2>Newsy</h2>
+    <div class="news-list" id="news-list">
+      <p class="empty">Ładowanie...</p>
+    </div>
+  </section>
+
+  <div id="toast"></div>
+
+  <script>
+    function toast(msg, color = '#eee') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.color = color;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function fmt(ts) {
+      return new Date(ts * 1000).toLocaleString('pl-PL');
+    }
+
+    async function loadNews() {
+      const res = await fetch('/admin/api/news');
+      if (res.status === 302 || res.redirected) {
+        window.location = '/admin/login'; return;
+      }
+      const news = await res.json();
+      const list = document.getElementById('news-list');
+      if (!news.length) {
+        list.innerHTML = '<p class="empty">Brak newsów.</p>';
+        return;
+      }
+      list.innerHTML = news.map(n => `
+        <div class="news-card" id="card-${n.id}">
+          <div class="info">
+            <h3>${escHtml(n.title)}
+              <span class="badge ${n.published ? 'published' : 'draft'}">
+                ${n.published ? 'opublikowany' : 'szkic'}
+              </span>
+            </h3>
+            <p>${escHtml(n.body)}</p>
+            <div class="meta">${fmt(n.created_at)}</div>
+          </div>
+          <div class="actions">
+            <button class="danger" onclick="togglePublish(${n.id}, ${n.published})">
+              ${n.published ? 'Ukryj' : 'Publikuj'}
+            </button>
+            <button class="danger" onclick="deleteNews(${n.id})">Usuń</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function createNews() {
+      const title = document.getElementById('news-title').value.trim();
+      const body  = document.getElementById('news-body').value.trim();
+      const published = document.getElementById('news-published').checked;
+      if (!title || !body) { toast('Uzupełnij tytuł i treść!', '#e88'); return; }
+      const res = await fetch('/admin/api/news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body, published }),
+      });
+      if (res.ok) {
+        toast('News dodany!', '#4c4');
+        document.getElementById('news-title').value = '';
+        document.getElementById('news-body').value = '';
+        loadNews();
+      } else {
+        toast('Błąd przy dodawaniu.', '#e55');
+      }
+    }
+
+    async function deleteNews(id) {
+      if (!confirm('Na pewno usunąć?')) return;
+      const res = await fetch(`/admin/api/news/${id}`, { method: 'DELETE' });
+      if (res.ok) { toast('Usunięto.', '#aaa'); loadNews(); }
+      else toast('Błąd.', '#e55');
+    }
+
+    async function togglePublish(id, current) {
+      const res = await fetch(`/admin/api/news/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ published: !current }),
+      });
+      if (res.ok) loadNews();
+      else toast('Błąd.', '#e55');
+    }
+
+    loadNews();
+  </script>
+</body>
+</html>

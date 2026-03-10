@@ -15,6 +15,7 @@ from characters import router as characters_router
 from simulation import router as sim_router, RESULTS_DIR, jobs
 from results import router as results_router
 from history import router as history_router
+from admin import router as admin_router
 
 _id  = os.environ["BLIZZARD_CLIENT_ID"]
 _sec = os.environ["BLIZZARD_CLIENT_SECRET"]
@@ -37,7 +38,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -60,6 +61,7 @@ app.include_router(characters_router)
 app.include_router(sim_router)
 app.include_router(results_router)
 app.include_router(history_router)
+app.include_router(admin_router)
 
 
 BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")
