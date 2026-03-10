@@ -22,7 +22,8 @@ def ability_dps(ab: dict) -> float:
     """
     Extract DPS from a SimC ability entry.
     SimC JSON2: portionaps.mean = DPS contribution of this ability.
-    If portionaps is missing (parent entry), sum children portionaps.
+    If portionaps is missing (parent entry without direct damage),
+    recursively sum children portionaps.
     compoundamount.mean is total damage dealt (NOT DPS) — avoid for DPS.
     """
     pa = ab.get("portionaps")
@@ -31,34 +32,80 @@ def ability_dps(ab: dict) -> float:
         if v > 0:
             return v
 
-    # Parent entry with no portionaps: sum children
+    # Parent entry with no portionaps: sum children recursively
     children = ab.get("children", [])
     if children:
         total = sum(ability_dps(c) for c in children)
         if total > 0:
             return total
 
-    # Last resort flat fields
+    # Last resort flat fields (older SimC formats)
     if isinstance(ab.get("dps"), (int, float)):
         return safe_float(ab["dps"])
     return 0.0
 
 
 def ability_crit(ab: dict) -> float:
-    """Extract crit % from ability. Looks inside directresults/tickresults."""
-    dr = ab.get("directresults", {})
-    if isinstance(dr, dict):
-        crit_block = dr.get("crit", {})
-        hit_block = dr.get("hit", {})
+    """
+    Extract crit % from ability.
+    Looks inside directresults and tickresults for crit/hit counts.
+    Falls back to children aggregate if parent has no results.
+    """
+    def _crit_from_results(results: dict) -> float | None:
+        if not isinstance(results, dict):
+            return None
+        crit_block = results.get("crit", {})
+        hit_block = results.get("hit", {})
         crit_count = safe_float(crit_block.get("countsum") if isinstance(crit_block, dict) else 0)
         hit_count = safe_float(hit_block.get("countsum") if isinstance(hit_block, dict) else 0)
         total = crit_count + hit_count
         if total > 0:
             return round((crit_count / total) * 100, 2)
+        return None
+
+    # Try directresults first, then tickresults
+    for key in ("directresults", "tickresults"):
+        result = _crit_from_results(ab.get(key, {}))
+        if result is not None:
+            return result
+
+    # Try aggregating from children
+    children = ab.get("children", [])
+    if children:
+        crits = [ability_crit(c) for c in children]
+        crits = [c for c in crits if c > 0]
+        if crits:
+            return round(sum(crits) / len(crits), 2)
+
+    # Flat fallback
     if isinstance(ab.get("crit_pct"), (int, float)):
         v = safe_float(ab["crit_pct"])
         return v * 100 if v <= 1 else v
     return 0.0
+
+
+def _get_abilities(player: dict) -> list:
+    """
+    Safely extract ability list from player dict.
+    In SimC JSON2 abilities live in player["stats"] as a list of dicts.
+    Guard against player["stats"] being a dict (buffed_stats confusion).
+    """
+    raw = player.get("stats", [])
+    if isinstance(raw, list):
+        # Verify first element looks like an ability (has spell_name or portionaps)
+        if raw and isinstance(raw[0], dict):
+            if "spell_name" in raw[0] or "portionaps" in raw[0] or "children" in raw[0]:
+                return raw
+        elif not raw:
+            return []
+    if isinstance(raw, dict):
+        # Some SimC versions nest abilities under a sub-key
+        for key in ("stats", "abilities", "actions"):
+            sub = raw.get(key, [])
+            if isinstance(sub, list) and sub:
+                return sub
+    # Fallback: try collected_data action_sequence (no DPS info, just counts)
+    return []
 
 
 def parse_results(json_path: str):
@@ -85,14 +132,13 @@ def parse_results(json_path: str):
         # -------------------------
         # STATS
         # SimC JSON2: buffed_stats.attribute = primary stats
-        #             buffed_stats.stats = secondary stats (spell_crit, spell_haste, etc.)
+        #             buffed_stats.stats = secondary stats
         # Fallback: try reading secondaries directly from buffed_stats root.
         # -------------------------
         bs = cd.get("buffed_stats", {})
         attr = bs.get("attribute", {})
         stats_data = bs.get("stats", {})
 
-        # If stats sub-dict is empty, secondaries may live directly in bs
         if not stats_data:
             stats_data = bs
 
@@ -114,14 +160,17 @@ def parse_results(json_path: str):
         }
 
         # -------------------------
-        # SPELLS
+        # SPELLS / ABILITIES
         # -------------------------
-        abilities = player.get("stats", [])
+        abilities = _get_abilities(player)
 
         spells = []
         total_spell_dps = 0.0
 
         for ab in abilities:
+            if not isinstance(ab, dict):
+                continue
+
             dps = ability_dps(ab)
             if dps <= 0:
                 continue
@@ -144,6 +193,7 @@ def parse_results(json_path: str):
             })
             total_spell_dps += dps
 
+        # Fallback: no abilities with DPS found — use action_sequence for counts only
         if not spells:
             action_seq = cd.get("action_sequence", [])
             spell_counts: dict = {}
@@ -151,8 +201,13 @@ def parse_results(json_path: str):
                 spell_name = action.get("spell_name") or action.get("name", "?")
                 spell_counts[spell_name] = spell_counts.get(spell_name, 0) + 1
             for spell_name, count in spell_counts.items():
-                spells.append({"name": spell_name, "dps": 0.0, "crit_pct": 0.0,
-                                "executes": count, "percent": 0.0})
+                spells.append({
+                    "name": spell_name,
+                    "dps": 0.0,
+                    "crit_pct": 0.0,
+                    "executes": count,
+                    "percent": 0.0,
+                })
 
         spells = sorted(spells, key=lambda x: x["dps"], reverse=True)
 
