@@ -51,7 +51,6 @@ def ability_total_dmg(ab: dict) -> float:
 def _stats_from_results(results: dict):
     """
     Zwraca (crit_pct, hit_count, miss_pct, avg_hit) z direct_results lub tick_results.
-    Struktura bloku: { "crit": {"pct": 15.09, "count": {"sum": 756}, "actual_amount": {"mean": 9714}}, "hit": {...}, ... }
     """
     if not isinstance(results, dict) or not results:
         return None
@@ -62,7 +61,6 @@ def _stats_from_results(results: dict):
     total_val  = 0.0
     total_cnt  = 0.0
     miss_keys  = {"miss", "dodge", "parry", "glancing"}
-    hit_keys   = {"hit", "crit", "glancing_buf"}
 
     for key, block in results.items():
         if not isinstance(block, dict):
@@ -72,9 +70,7 @@ def _stats_from_results(results: dict):
             crit_count += cnt
         if key in miss_keys:
             miss_count += cnt
-
-        # avg_hit: szukamy actual_amount.mean dla trafien (nie miss)
-        if key not in miss_keys:
+        else:
             aa = block.get("actual_amount")
             if isinstance(aa, dict):
                 mean = safe_float(aa.get("mean", 0))
@@ -92,10 +88,6 @@ def _stats_from_results(results: dict):
 
 
 def _collect_stats(ab: dict):
-    """
-    Zbiera (crit_pct, total_hit_count, miss_pct, avg_hit) z ability i jego children rekurencyjnie.
-    Wazona srednia po hit_count.
-    """
     results_list = []
     for key in ("direct_results", "tick_results"):
         r = ab.get(key)
@@ -103,44 +95,65 @@ def _collect_stats(ab: dict):
             s = _stats_from_results(r)
             if s:
                 results_list.append(s)
-
     for child in ab.get("children", []):
         if isinstance(child, dict):
             results_list.extend(_collect_stats(child))
-
     return results_list
 
 
 def _weighted_stats(ab: dict):
     """Zwraca (crit_pct, miss_pct, avg_hit) wazone po hit_count."""
-    parts = _collect_stats(ab)  # lista (crit_pct, hit_count, miss_pct, avg_hit)
+    parts = _collect_stats(ab)
     if not parts:
         return 0.0, 0.0, 0
-
-    total_w   = sum(p[1] for p in parts)
+    total_w = sum(p[1] for p in parts)
     if total_w == 0:
         return 0.0, 0.0, 0
-
     crit_pct = sum(p[0] * p[1] for p in parts) / total_w
     miss_pct = sum(p[2] * p[1] for p in parts) / total_w
     avg_hit  = int(sum(p[3] * p[1] for p in parts) / total_w)
     return round(crit_pct, 2), round(miss_pct, 1), avg_hit
 
 
-def ability_count(ab: dict) -> int:
-    """Liczba wykonan (num_executes.mean * count lub sum)."""
-    ne = ab.get("num_executes")
-    if isinstance(ne, dict):
-        # preferujemy mean (srednia na fight), nie sum (total przez wszystkie iteracje)
-        return int(safe_float(ne.get("mean", 0)))
-    if isinstance(ne, (int, float)):
-        return int(ne)
-    # jesli parent ma 0, zsumuj dzieci
-    total = 0
+def _hit_count_from_results(ab: dict) -> float:
+    """Suma hit+crit count z direct/tick_results (i children) — fallback dla count."""
+    total = 0.0
+    for key in ("direct_results", "tick_results"):
+        r = ab.get(key)
+        if not isinstance(r, dict):
+            continue
+        miss_keys = {"miss", "dodge", "parry", "glancing"}
+        for bkey, block in r.items():
+            if isinstance(block, dict) and bkey not in miss_keys:
+                total += _get_count(block)
     for child in ab.get("children", []):
         if isinstance(child, dict):
-            total += ability_count(child)
+            total += _hit_count_from_results(child)
     return total
+
+
+def ability_count(ab: dict) -> int:
+    """Liczba wykonan. Dla AoE/DoT spelli z num_executes=0 bierze hit_count z results."""
+    ne = ab.get("num_executes")
+    executes = 0
+    if isinstance(ne, dict):
+        executes = int(safe_float(ne.get("mean", 0)))
+    elif isinstance(ne, (int, float)):
+        executes = int(ne)
+
+    if executes > 0:
+        return executes
+
+    # Fallback 1: zsumuj dzieci
+    child_sum = sum(
+        ability_count(c) for c in ab.get("children", []) if isinstance(c, dict)
+    )
+    if child_sum > 0:
+        return child_sum
+
+    # Fallback 2: hit_count z results (dla channeled/AoE)
+    hc = _hit_count_from_results(ab)
+    return int(hc)
 
 
 def spell_display_name(ab: dict) -> str:
@@ -200,11 +213,10 @@ def parse_results(json_path: str):
             if dps <= 0 and tot_dmg <= 0:
                 continue
 
-            name                    = spell_display_name(ab)
+            name                        = spell_display_name(ab)
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
-            executes                = ability_count(ab)
+            executes                    = ability_count(ab)
 
-            # avg_hit fallback: total_dmg / executes
             if avg_hit == 0 and executes > 0 and tot_dmg > 0:
                 avg_hit = round(tot_dmg / executes)
 
@@ -433,7 +445,6 @@ async def get_debug_spell(job_id: str):
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             return {"error": "no abilities list"}
-
         out = []
         for ab in abilities[:5]:
             if not isinstance(ab, dict):
@@ -450,7 +461,6 @@ async def get_debug_spell(job_id: str):
             })
             if len(out) >= 3:
                 break
-
         return {"spells": out}
     except Exception as e:
         import traceback
