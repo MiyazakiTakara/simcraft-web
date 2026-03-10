@@ -72,7 +72,6 @@ def ability_crit(ab: dict) -> float:
 
 
 def ability_miss_pct(ab: dict) -> float:
-    """Procent miss+dodge+parry+glance ze wszystkich prób."""
     def _from_results(results: dict):
         if not isinstance(results, dict):
             return 0.0, 0.0
@@ -109,8 +108,6 @@ def ability_miss_pct(ab: dict) -> float:
 
 
 def ability_avg_hit(ab: dict, total_dmg: float, count: int) -> float:
-    """Średni hit = total_dmg / count (hits that landed)."""
-    # Spróbuj wziąć avg bezpośrednio z hit/crit block
     def _avg_from_results(results: dict):
         if not isinstance(results, dict):
             return None
@@ -135,7 +132,6 @@ def ability_avg_hit(ab: dict, total_dmg: float, count: int) -> float:
         if v is not None:
             return v
 
-    # Fallback: total_dmg / count
     if count and count > 0 and total_dmg > 0:
         return round(total_dmg / count)
     return 0
@@ -422,6 +418,45 @@ async def get_dps_chart(job_id: str):
     if not png or not os.path.exists(png):
         raise HTTPException(500, "Chart generation failed")
     return FileResponse(png, media_type="image/png")
+
+
+@router.get("/api/result/{job_id}/debug-spell")
+async def get_debug_spell(job_id: str):
+    """Pokazuje raw strukturę direct_results/tick_results pierwszych 3 spelli."""
+    job = jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        raise HTTPException(404, "Result not ready")
+    try:
+        with open(job["json_path"]) as f:
+            raw = json.load(f)
+        player = raw.get("sim", {}).get("players", [{}])[0]
+        abilities = player.get("stats", [])
+        if not isinstance(abilities, list):
+            return {"error": "no abilities list"}
+
+        out = []
+        for ab in abilities[:5]:
+            if not isinstance(ab, dict):
+                continue
+            if ability_total_dmg(ab) <= 0 and ability_dps(ab) <= 0:
+                continue
+            out.append({
+                "name":           spell_display_name(ab),
+                "keys":           list(ab.keys()),
+                "num_executes":   ab.get("num_executes"),
+                "direct_results": ab.get("direct_results"),
+                "tick_results":   ab.get("tick_results"),
+                "children_count": len(ab.get("children", [])),
+                "child_0_keys":   list(ab["children"][0].keys()) if ab.get("children") else [],
+                "child_0_direct": ab["children"][0].get("direct_results") if ab.get("children") else None,
+            })
+            if len(out) >= 3:
+                break
+
+        return {"spells": out}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
 
 
 @router.get("/api/result/{job_id}/debug")
