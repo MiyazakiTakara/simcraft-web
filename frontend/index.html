@@ -25,7 +25,6 @@
         localStorage.setItem('simcraft_session', session);
         history.replaceState({}, '', '/');
       }
-      // Wczytaj motyw przed renderem (unika flashu)
       var theme = localStorage.getItem('simcraft_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
     })();
@@ -34,7 +33,7 @@
   <link rel="stylesheet" href="/style.css?v=5"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=11"></script>
+  <script src="/app.js?v=12"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -42,6 +41,20 @@
     .dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
     .chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
     .chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
+
+    /* News */
+    .news-section { max-width: 760px; margin: 0 auto 2rem; width: 100%; }
+    .news-section h2 { font-size: 1rem; color: var(--text); margin-bottom: .8rem; }
+    .news-card-pub {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .9rem 1.1rem;
+      margin-bottom: .6rem;
+    }
+    .news-card-pub h3 { font-size: .95rem; margin-bottom: .3rem; color: var(--text); }
+    .news-card-pub p { font-size: .85rem; color: var(--muted); white-space: pre-wrap; line-height: 1.5; }
+    .news-card-pub .news-date { font-size: .72rem; color: var(--border); margin-top: .4rem; }
   </style>
 </head>
 <body>
@@ -56,7 +69,6 @@
   <header class="header">
     <div class="header-logo">⚔️ SimCraft Web</div>
     <div style="display:flex;align-items:center;gap:.6rem">
-      <!-- Theme toggle -->
       <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? 'Przełącz na jasny' : 'Przełącz na ciemny'">
         <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
       </button>
@@ -85,10 +97,16 @@
         </div>
       </div>
 
-      <div class="landing-features">
-        <div class="feature-card"><div class="feature-icon">🌐</div><div class="feature-title">Import z Armory</div><div class="feature-desc">Zaloguj się przez Battle.net i symuluj dowolny swój charakter bezpośrednio z serwerów Blizzard.</div></div>
-        <div class="feature-card"><div class="feature-icon">📋</div><div class="feature-title">Addon Export</div><div class="feature-desc">Wklej output z addona SimulationCraft (/simc) i uruchom symulację bez logowania.</div></div>
-        <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Udostępnianie</div><div class="feature-desc">Każda symulacja ma unikalny link — podziel się wynikiem ze znajomymi lub gildią.</div></div>
+      <!-- Newsy -->
+      <div class="news-section" x-show="news.length > 0">
+        <h2>📰 Aktualności</h2>
+        <template x-for="n in news" :key="n.id">
+          <div class="news-card-pub">
+            <h3 x-text="n.title"></h3>
+            <p x-text="n.body"></p>
+            <div class="news-date" x-text="formatTime(n.created_at)"></div>
+          </div>
+        </template>
       </div>
 
       <!-- Addon Export -->
@@ -178,7 +196,6 @@
         <div class="landing-history-header">
           <h2>📈 Ostatnie symulacje</h2>
           <span x-text="history.length + ' wyników'"></span>
-          <!-- Sort -->
           <div style="display:flex;gap:.3rem;margin-left:auto">
             <button class="tab" :class="{active: historySort==='date'}" @click="setHistorySort('date')" style="font-size:.72rem;padding:.2rem .5rem">Data</button>
             <button class="tab" :class="{active: historySort==='dps'}" @click="setHistorySort('dps')" style="font-size:.72rem;padding:.2rem .5rem">DPS</button>
@@ -201,7 +218,6 @@
                 </div>
               </template>
             </div>
-            <!-- Paginacja -->
             <div class="pagination" x-show="historyPageCount > 1">
               <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
               <template x-for="p in historyPages()" :key="p">
@@ -212,7 +228,6 @@
           </div>
         </template>
 
-        <!-- Widok pojedynczego wyniku z historii -->
         <template x-if="pubResult && pubResult._source !== 'addon'">
           <div>
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Powrót do listy</button>
@@ -403,7 +418,6 @@
       <!-- Historia boczna -->
       <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
         <h2>Historia</h2>
-        <!-- Sort -->
         <div class="history-sort-bar">
           <button :class="{active: historySort==='date'}" @click="setHistorySort('date')">Data</button>
           <button :class="{active: historySort==='dps'}" @click="setHistorySort('dps')">DPS ↓</button>
@@ -426,7 +440,6 @@
             </div>
           </template>
         </div>
-        <!-- Paginacja -->
         <div class="pagination" x-show="historyPageCount > 1">
           <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
           <template x-for="p in historyPages()" :key="p">
