@@ -19,8 +19,6 @@ function app() {
     _pollInterval: null,
     history: [],
     loadingHistory: false,
-
-    // Sortowanie spell table: 'total_dmg' (domyslne, jak Raidbots) lub 'dps'
     spellSort: "total_dmg",
 
     STAT_LABELS: {
@@ -36,16 +34,27 @@ function app() {
 
     init() {
       const params = new URLSearchParams(window.location.search);
-      const session = params.get("session");
+      const sessionFromUrl = params.get("session");
       const resultId = params.get("result");
-      if (session) {
-        this.sessionId = session;
+
+      // Sesja z URL (zaraz po logowaniu) — zapisz w localStorage
+      if (sessionFromUrl) {
+        this.sessionId = sessionFromUrl;
+        localStorage.setItem("simcraft_session", sessionFromUrl);
         history.replaceState({}, "", "/");
+      } else {
+        // Przy odswiezeniu — odczytaj z localStorage
+        const saved = localStorage.getItem("simcraft_session");
+        if (saved) this.sessionId = saved;
+      }
+
+      if (this.sessionId) {
         this.loadCharacters();
         this.loadHistory();
       } else {
         this.loadPublicHistory();
       }
+
       if (resultId) {
         this.loadHistoryResult(resultId);
       }
@@ -56,6 +65,7 @@ function app() {
       this.errorChars = null;
       try {
         const chars = await API.getCharacters(this.sessionId);
+        // Jesli backend zwroci 401/blad sesji — wyczysc i przekieruj do logowania
         this.characters = chars;
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
@@ -63,7 +73,14 @@ function app() {
             .catch(() => {});
         }
       } catch (e) {
-        this.errorChars = e.message;
+        // Sesja wygasla — wyczysc localStorage
+        if (e.message.includes("401") || e.message.includes("403") || e.message.includes("Unauthorized")) {
+          localStorage.removeItem("simcraft_session");
+          this.sessionId = null;
+          this.loadPublicHistory();
+        } else {
+          this.errorChars = e.message;
+        }
       } finally {
         this.loadingChars = false;
       }
@@ -175,6 +192,7 @@ function app() {
     },
 
     logout() {
+      localStorage.removeItem("simcraft_session");
       this.sessionId = null;
       this.characters = [];
       this.selectedChar = null;
