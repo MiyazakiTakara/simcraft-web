@@ -186,16 +186,20 @@ function app() {
             const status = await API.getJobStatus(guestJobId);
             if (status.status === "done") {
               clearInterval(this._guestPollInterval);
+              const result = await API.getResultJson(guestJobId);
+              result._source = 'addon';
+              this.pubResult = result;
+              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null };
               await API.saveToHistory({
                 job_id:          guestJobId,
                 character_name:  "Addon Export",
                 character_class: "",
                 character_spec:  "",
-                dps:             (await API.getResultJson(guestJobId)).dps,
+                dps:             result.dps,
                 fight_style:     this.guestSimOptions.fight_style,
               });
-              // Redirect na dedykowaną stronę wyniku
-              window.location.href = `/result/${guestJobId}`;
+              this.loadPublicHistory();
+              this.guestLoadingSim = false;
             } else if (status.status === "error") {
               clearInterval(this._guestPollInterval);
               this.guestSimError = "B\u0142\u0105d symulacji: " + (status.error || "Nieznany b\u0142\u0105d");
@@ -301,8 +305,9 @@ function app() {
             dps:              this.simResult.dps,
             fight_style:      this.simOptions.fight_style,
           });
-          // Redirect na dedykowaną stronę wyniku
-          window.location.href = `/result/${this.job.id}`;
+          this.loadHistory();
+          this.loadingSim = false;
+          // zostajemy na stronie — wynik pokazuje się inline
         } else if (status.status === "error") {
           clearInterval(this._pollInterval);
           alert("Blad symulacji:\n" + (status.error || "Nieznany blad"));

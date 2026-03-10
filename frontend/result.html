@@ -10,8 +10,6 @@
   <script src="/api.js?v=2"></script>
   <style>
     .result-page { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
-    .result-back { display:inline-flex; align-items:center; gap:.4rem; color:var(--muted); font-size:.85rem; text-decoration:none; margin-bottom:1.2rem; transition:color .15s; }
-    .result-back:hover { color: var(--text); }
     .result-not-found { text-align:center; padding:4rem 1rem; color:var(--muted); }
     .result-not-found .icon { font-size:3rem; margin-bottom:1rem; }
     .chart-section { margin-top:1.2rem; }
@@ -35,7 +33,7 @@
   <!-- Header -->
   <header class="header">
     <a href="/" class="header-logo" style="text-decoration:none">⚔️ SimCraft Web</a>
-    <a href="/" class="btn btn-ghost" style="font-size:.85rem">&#8592; Stróna główna</a>
+    <a href="/" class="btn btn-ghost" style="font-size:.85rem">← Strona główna</a>
   </header>
 
   <div class="result-page">
@@ -62,12 +60,39 @@
             <div class="dps-value" x-text="formatDps(result.dps)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
               <span>DPS (±<span x-text="formatDps(result.dps_std)"></span>)</span>
-              <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export'">
+
+              <!-- Badge postaci z linkiem do Armory -->
+              <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && armoryUrl()">
+                <a
+                  :href="armoryUrl()"
+                  target="_blank"
+                  rel="noopener"
+                  :style="{
+                    background: classColor(meta.character_class),
+                    color: classTextColor(meta.character_class),
+                    padding: '.2rem .7rem',
+                    borderRadius: '999px',
+                    fontWeight: '700',
+                    fontSize: '.85rem',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '.3rem',
+                  }"
+                >
+                  <span x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"></span>
+                  <span style="font-size:.75rem;opacity:.8">↗</span>
+                </a>
+              </template>
+
+              <!-- Badge bez linku (addon export lub brak realm_slug) -->
+              <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && !armoryUrl()">
                 <span
                   :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem'}"
                   x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"
                 ></span>
               </template>
+
               <template x-if="meta && meta.fight_style">
                 <span style="color:var(--muted);font-size:.82rem" x-text="meta.fight_style"></span>
               </template>
@@ -180,7 +205,6 @@ function resultPage() {
     },
 
     async init() {
-      // jobId z URL: /result/<jobId>
       this.jobId = window.location.pathname.split('/').filter(Boolean).pop();
       if (!this.jobId) { this.error = 'Brak ID symulacji.'; this.loading = false; return; }
       try {
@@ -195,6 +219,15 @@ function resultPage() {
       } finally {
         this.loading = false;
       }
+    },
+
+    // Buduje URL Armory na podstawie meta — realm_slug nie jest w historii,
+    // więc używamy slugifikacji nazwy realm z meta.character_realm (jeśli dostępny)
+    armoryUrl() {
+      const name      = this.meta?.character_name;
+      const realmSlug = this.meta?.realm_slug || this.meta?.character_realm_slug;
+      if (!name || !realmSlug || name === 'Addon Export') return null;
+      return `https://worldofwarcraft.blizzard.com/en-gb/character/eu/${realmSlug}/${name.toLowerCase()}`;
     },
 
     get sortedSpells() {
