@@ -21,17 +21,15 @@ function app() {
     loadingHistory: false,
 
     STAT_LABELS: {
-      strength:          "Strength",
-      agility:           "Agility",
-      stamina:           "Stamina",
-      intellect:         "Intellect",
-      crit_pct:          "Critical Strike",
-      haste_pct:         "Haste",
-      mastery_pct:       "Mastery",
-      versatility_pct:   "Versatility",
+      strength:    "Strength",
+      agility:     "Agility",
+      stamina:     "Stamina",
+      intellect:   "Intellect",
+      crit:        "Critical Strike",
+      haste:       "Haste",
+      mastery:     "Mastery",
+      versatility: "Versatility",
     },
-
-    PCT_STATS: new Set(["crit_pct", "haste_pct", "mastery_pct", "versatility_pct"]),
 
     init() {
       const params = new URLSearchParams(window.location.search);
@@ -201,10 +199,7 @@ function app() {
     },
 
     formatStatValue(key, val) {
-      if (this.PCT_STATS.has(key)) {
-        return (typeof val === "number" ? val.toFixed(2) : val) + "%";
-      }
-      if (typeof val === "number") return Math.round(val).toLocaleString();
+      if (typeof val === "number") return val.toLocaleString();
       return val;
     },
 
