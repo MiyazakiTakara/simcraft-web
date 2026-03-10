@@ -20,6 +20,18 @@ const API = {
     return this._fetch(`/api/character-media?session=${encodeURIComponent(session)}&realm_slug=${encodeURIComponent(realmSlug)}&name=${encodeURIComponent(charName)}`);
   },
 
+  async getCharacterEquipment(session, realmSlug, charName) {
+    return this._fetch(`/api/character/equipment?session=${encodeURIComponent(session)}&realm_slug=${encodeURIComponent(realmSlug)}&name=${encodeURIComponent(charName)}`);
+  },
+
+  async getCharacterStatistics(session, realmSlug, charName) {
+    return this._fetch(`/api/character/statistics?session=${encodeURIComponent(session)}&realm_slug=${encodeURIComponent(realmSlug)}&name=${encodeURIComponent(charName)}`);
+  },
+
+  async getCharacterTalents(session, realmSlug, charName) {
+    return this._fetch(`/api/character/talents?session=${encodeURIComponent(session)}&realm_slug=${encodeURIComponent(realmSlug)}&name=${encodeURIComponent(charName)}`);
+  },
+
   async startSim(payload) {
     return this._fetch("/api/simulate", {
       method: "POST",

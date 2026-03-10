@@ -30,10 +30,10 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="/style.css?v=5"/>
+  <link rel="stylesheet" href="/style.css?v=6"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=15"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/app.js?v=16"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -488,7 +488,7 @@
       <h2 style="margin-bottom:1rem">👤 Twój Profil</h2>
       <div class="char-grid">
         <template x-for="char in characters" :key="char.id">
-          <div class="char-card" @click="selectChar(char)">
+          <div class="char-card" @click="openCharDetails(char)">
             <div class="char-card-header">
               <img class="char-card-avatar" :src="char.avatar || '/static/default_avatar.png'" :alt="char.name"/>
               <div class="char-card-info">
@@ -516,6 +516,89 @@
           <p style="font-size:.85rem">Twoje postacie WoW pojawią się automatycznie po zalogowaniu.</p>
         </div>
       </template>
+    </div>
+  </template>
+
+  <!-- CHAR DETAILS MODAL -->
+  <template x-if="charDetailsModal">
+    <div class="chart-modal-overlay" @click="closeCharDetails()" style="display:flex;align-items:center;justify-content:center">
+      <div @click.stop style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;padding:1.5rem;cursor:default">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <img :src="charDetailsModal.avatar || '/static/default_avatar.png'" style="width:64px;height:64px;border-radius:8px"/>
+            <div>
+              <h2 style="margin:0" x-text="charDetailsModal.name"></h2>
+              <div style="color:var(--muted);font-size:.9rem" x-text="charDetailsModal.realm + ' · lv' + charDetailsModal.level + ' · ' + (charDetailsModal.spec ? charDetailsModal.spec + ' ' : '') + charDetailsModal.class"></div>
+            </div>
+          </div>
+          <button @click="closeCharDetails()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)">&times;</button>
+        </div>
+
+        <template x-if="loadingCharDetails">
+          <div style="text-align:center;padding:2rem;color:var(--muted)">Ładowanie...</div>
+        </template>
+
+        <template x-if="charDetailsError">
+          <div style="text-align:center;padding:2rem;color:#f66" x-text="'Błąd: ' + charDetailsError"></div>
+        </template>
+
+        <template x-if="!loadingCharDetails && !charDetailsError">
+          <div>
+            <!-- Gear -->
+            <h3 style="margin:1rem 0 .5rem">🎒 Gear</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem">
+              <template x-for="item in charEquipment" :key="item.slot">
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem">
+                  <div style="color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:.2rem" x-text="item.slot"></div>
+                  <div :style="{color: getItemQualityColor(item.quality)}" x-text="item.name"></div>
+                  <div style="color:var(--accent);font-size:.75rem" x-text="'ilvl ' + item.level"></div>
+                  <template x-for="stat in item.stats.slice(0,3)" :key="stat.type">
+                    <div style="font-size:.7rem;color:var(--muted)" x-text="stat.type + ': ' + stat.value"></div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            <!-- Talents -->
+            <template x-if="charTalents.length > 0">
+              <div>
+                <h3 style="margin:1rem 0 .5rem">✨ Talenty</h3>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+                  <template x-for="talent in charTalents" :key="talent.tier">
+                    <div style="width:50px;height:50px;background:var(--bg);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center" :title="talent.spell?.name">
+                      <template x-if="talent.spell">
+                        <img :src="'https://render.worldofwarcraft.com/eu/icons/56/' + talent.spell.icon + '.jpg'" style="width:40px;height:40px;border-radius:4px"/>
+                      </template>
+                      <template x-if="!talent.spell">
+                        <div style="width:40px;height:40px;background:var(--border);border-radius:4px"></div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- Statistics -->
+            <template x-if="Object.keys(charStatistics).length > 0">
+              <div>
+                <h3 style="margin:1rem 0 .5rem">📊 Statystyki</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem">
+                  <template x-for="[key, val] in Object.entries(charStatistics)" :key="key">
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem">
+                      <div style="color:var(--muted);font-size:.7rem" x-text="key"></div>
+                      <div x-text="typeof val === 'number' ? val.toLocaleString() : val"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <div style="margin-top:1.5rem;display:flex;gap:.5rem">
+          <button class="btn btn-primary" @click="selectChar(charDetailsModal); closeCharDetails()">🏃 Uruchom symulację</button>
+        </div>
+      </div>
     </div>
   </template>
 

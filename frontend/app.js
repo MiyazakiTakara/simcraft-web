@@ -51,6 +51,12 @@ function app() {
       return body.length > 150 ? body.slice(0, 150) + "..." : body;
     },
 
+    charEquipment: [],
+    charStatistics: {},
+    charTalents: [],
+    loadingCharDetails: false,
+    charDetailsError: null,
+
     handleHash() {
       const hash = window.location.hash.slice(1);
       if (hash === "symulacje" || hash === "profil") {
@@ -213,6 +219,43 @@ function app() {
       } catch (e) { console.error("Failed to load public history", e); }
     },
 
+    async loadCharDetails(char) {
+      this.loadingCharDetails = true;
+      this.charDetailsError = null;
+      this.charEquipment = [];
+      this.charStatistics = {};
+      this.charTalents = [];
+      try {
+        const [eq, stats, talents] = await Promise.all([
+          API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
+          API.getCharacterStatistics(this.sessionId, char.realm_slug, char.name),
+          API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
+        ]);
+        this.charEquipment = eq.equipment || [];
+        this.charStatistics = stats.statistics || {};
+        this.charTalents = talents.talents || [];
+      } catch (e) {
+        this.charDetailsError = e.message;
+        console.error("Failed to load char details", e);
+      } finally {
+        this.loadingCharDetails = false;
+      }
+    },
+
+    getItemQualityColor(quality) {
+      const colors = {
+        "Poor": "#9d9d9d",
+        "Common": "#ffffff",
+        "Uncommon": "#1eff00",
+        "Rare": "#0070dd",
+        "Epic": "#a335ee",
+        "Legendary": "#ff8000",
+        "Artifact": "#e6cc80",
+        "Heirloom": "#00ccff",
+      };
+      return colors[quality] || "#fff";
+    },
+
     async loadHistoryResult(jobId) {
       try {
         this.simResult = await API.getResultJson(jobId);
@@ -345,6 +388,17 @@ function app() {
       this.currentView = "symulacje";
       this.activeTab = "symulacje";
       localStorage.setItem("simcraft_last_char", ch.name);
+    },
+
+    charDetailsModal: null,
+
+    openCharDetails(ch) {
+      this.charDetailsModal = ch;
+      this.loadCharDetails(ch);
+    },
+
+    closeCharDetails() {
+      this.charDetailsModal = null;
     },
 
     async startSim() {

@@ -95,3 +95,142 @@ async def get_character_media(session: str, realm_slug: str, name: str):
         raise HTTPException(404, "Avatar not found")
 
     return {"avatar": avatar}
+
+
+@router.get("/api/character/equipment")
+async def get_character_equipment(session: str, realm_slug: str, name: str):
+    token = await get_session_token(session)
+    name_lower = name.lower()
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"https://eu.api.blizzard.com/profile/wow/character"
+            f"/{realm_slug}/{name_lower}/equipment"
+            f"?namespace=profile-eu&locale=en_GB",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        if resp.status_code == 404:
+            from fastapi import HTTPException
+            raise HTTPException(404, "Character not found")
+        resp.raise_for_status()
+        data = resp.json()
+
+    equipment = []
+    for slot in data.get("equipped_items", []):
+        item = {
+            "slot": slot.get("slot", {}).get("name", ""),
+            "name": slot.get("item", {}).get("name", ""),
+            "icon": slot.get("item", {}).get("media", {}).get("id", ""),
+            "quality": slot.get("item", {}).get("quality", {}).get("type", ""),
+            "level": slot.get("level", {}).get("value", 0),
+            "stats": [],
+        }
+        for stat in slot.get("stats", []):
+            item["stats"].append({
+                "type": stat.get("type", ""),
+                "value": stat.get("value", 0),
+            })
+        enchant = slot.get("enchant", {})
+        if enchant:
+            item["enchant"] = enchant.get("display_string", "")
+        gem = slot.get("gem", {})
+        if gem:
+            item["gem"] = gem.get("item", {}).get("name", "")
+        equipment.append(item)
+
+    return {"equipment": equipment}
+
+
+@router.get("/api/character/statistics")
+async def get_character_statistics(session: str, realm_slug: str, name: str):
+    token = await get_session_token(session)
+    name_lower = name.lower()
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"https://eu.api.blizzard.com/profile/wow/character"
+            f"/{realm_slug}/{name_lower}/statistics"
+            f"?namespace=profile-eu&locale=en_GB",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        if resp.status_code == 404:
+            from fastapi import HTTPException
+            raise HTTPException(404, "Character not found")
+        resp.raise_for_status()
+        data = resp.json()
+
+    stats = {}
+    stat_map = {
+        "health": "Health",
+        "power": "Power",
+        "power_regen": "Power Regen",
+        "speed": "Speed",
+        "strength": "Strength",
+        "agility": "Agility",
+        "stamina": "Stamina",
+        "intellect": "Intellect",
+        "crit_rating": "Crit",
+        "crit_percent": "Crit %",
+        "haste_rating": "Haste",
+        "haste_percent": "Haste %",
+        "mastery_rating": "Mastery",
+        "mastery_percent": "Mastery %",
+        "versatility_rating": "Versatility",
+        "versatility_damage_done_bonus": "Vers %",
+        "avoidance_rating": "Avoidance",
+        "armor": "Armor",
+        "dodge_rating": "Dodge",
+        "dodge_percent": "Dodge %",
+        "parry_rating": "Parry",
+        "parry_percent": "Parry %",
+        "block_rating": "Block",
+        "block_percent": "Block %",
+    }
+
+    for key, label in stat_map.items():
+        val = data.get(key)
+        if val is not None:
+            stats[label] = val
+
+    return {"statistics": stats}
+
+
+@router.get("/api/character/talents")
+async def get_character_talents(session: str, realm_slug: str, name: str):
+    token = await get_session_token(session)
+    name_lower = name.lower()
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"https://eu.api.blizzard.com/profile/wow/character"
+            f"/{realm_slug}/{name_lower}/talents"
+            f"?namespace=profile-eu&locale=en_GB",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        if resp.status_code == 404:
+            from fastapi import HTTPException
+            raise HTTPException(404, "Character not found")
+        resp.raise_for_status()
+        data = resp.json()
+
+    talents = []
+    for t in data.get("talents", []):
+        if t.get("selected"):
+            for tier in t.get("tiers", []):
+                tier_data = {
+                    "tier": tier.get("tier_index", 0),
+                    "spell": None,
+                }
+                spell = tier.get("spell", {})
+                if spell:
+                    tier_data["spell"] = {
+                        "name": spell.get("name", ""),
+                        "icon": spell.get("icon", ""),
+                        "id": spell.get("id", ""),
+                    }
+                talents.append(tier_data)
+
+    return {"talents": talents}
