@@ -64,11 +64,17 @@ function app() {
       this.errorChars = null;
       try {
         const chars = await API.getCharacters(this.sessionId);
-        this.characters = chars;
-        // Auto-select pierwszej postaci jesli zadna nie jest wybrana
-        if (this.characters.length && !this.selectedChar) {
+        // Sortuj malejaco po levelu
+        this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+
+        // Przywroc ostatnio wybrana postac z localStorage
+        const lastCharName = localStorage.getItem("simcraft_last_char");
+        if (lastCharName && !this.selectedChar) {
+          this.selectedChar = this.characters.find(c => c.name === lastCharName) || this.characters[0];
+        } else if (!this.selectedChar && this.characters.length) {
           this.selectedChar = this.characters[0];
         }
+
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
             .then((m) => { ch.avatar = m.avatar; })
@@ -124,6 +130,8 @@ function app() {
       this.selectedChar = ch;
       this.simResult = null;
       this.job = null;
+      // Zapamietaj ostatnio wybrana postac
+      localStorage.setItem("simcraft_last_char", ch.name);
     },
 
     async startSim() {
@@ -194,6 +202,7 @@ function app() {
 
     logout() {
       localStorage.removeItem("simcraft_session");
+      localStorage.removeItem("simcraft_last_char");
       this.sessionId = null;
       this.characters = [];
       this.selectedChar = null;
