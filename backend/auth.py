@@ -1,12 +1,12 @@
 import os
 import time
-import json
 import uuid
 import httpx
 import secrets
-import threading
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
+
+from database import SessionLocal, SessionModel
 
 router = APIRouter()
 
@@ -14,45 +14,22 @@ CLIENT_ID     = os.environ["BLIZZARD_CLIENT_ID"]
 CLIENT_SECRET = os.environ["BLIZZARD_CLIENT_SECRET"]
 REDIRECT_URI  = os.environ.get("REDIRECT_URI", "http://localhost:8000/auth/callback")
 
-RESULTS_DIR   = os.environ.get("RESULTS_DIR", "/app/results")
-SESSIONS_FILE = os.path.join(RESULTS_DIR, "sessions.json")
-_lock = threading.Lock()
-
 print(f"REDIRECT_URI = {REDIRECT_URI}", flush=True)
 
 _token_cache: dict = {"token": None, "expires_at": 0}
 
 
-def _load_sessions() -> dict:
-    if not os.path.exists(SESSIONS_FILE):
-        return {}
-    try:
-        with open(SESSIONS_FILE) as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def _save_sessions(sessions: dict):
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    with open(SESSIONS_FILE, "w") as f:
-        json.dump(sessions, f)
-
-
 def _get_session(session_id: str) -> dict | None:
-    with _lock:
-        sessions = _load_sessions()
-    s = sessions.get(session_id)
-    if not s:
+    with SessionLocal() as db:
+        row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+    if not row:
         return None
-    # Wygasla sesja
-    if time.time() > s.get("expires_at", 0):
-        with _lock:
-            sessions = _load_sessions()
-            sessions.pop(session_id, None)
-            _save_sessions(sessions)
+    if time.time() > row.expires_at:
+        with SessionLocal() as db:
+            db.query(SessionModel).filter(SessionModel.session_id == session_id).delete()
+            db.commit()
         return None
-    return s
+    return {"access_token": row.access_token, "expires_at": row.expires_at}
 
 
 async def get_blizzard_token() -> str:
@@ -117,18 +94,17 @@ async def auth_callback(code: str, state: str = None):
         data = resp.json()
 
     session_id = str(uuid.uuid4())
-    session_data = {
-        "access_token": data["access_token"],
-        "expires_at":   time.time() + data.get("expires_in", 86400),
-    }
-    with _lock:
-        sessions = _load_sessions()
-        sessions[session_id] = session_data
-        # Wyczysc wygasle sesje
-        now = time.time()
-        sessions = {k: v for k, v in sessions.items() if v.get("expires_at", 0) > now}
-        sessions[session_id] = session_data
-        _save_sessions(sessions)
+    expires_at = time.time() + data.get("expires_in", 86400)
+
+    with SessionLocal() as db:
+        # Wyczysc wygasle sesje przy okazji
+        db.query(SessionModel).filter(SessionModel.expires_at < time.time()).delete()
+        db.add(SessionModel(
+            session_id   = session_id,
+            access_token = data["access_token"],
+            expires_at   = expires_at,
+        ))
+        db.commit()
 
     return RedirectResponse(f"/?session={session_id}")
 
@@ -136,8 +112,7 @@ async def auth_callback(code: str, state: str = None):
 @router.get("/auth/logout")
 async def auth_logout(session: str = None):
     if session:
-        with _lock:
-            sessions = _load_sessions()
-            sessions.pop(session, None)
-            _save_sessions(sessions)
+        with SessionLocal() as db:
+            db.query(SessionModel).filter(SessionModel.session_id == session).delete()
+            db.commit()
     return RedirectResponse("/")

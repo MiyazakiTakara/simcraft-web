@@ -1,16 +1,36 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simcraft
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simcraft}
+      POSTGRES_DB: simcraft
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simcraft"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   simcraft-web:
     build: .
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       - BLIZZARD_CLIENT_ID=${BLIZZARD_CLIENT_ID}
       - BLIZZARD_CLIENT_SECRET=${BLIZZARD_CLIENT_SECRET}
       - REDIRECT_URI=${REDIRECT_URI}
+      - DATABASE_URL=postgresql://simcraft:${POSTGRES_PASSWORD:-simcraft}@db:5432/simcraft
       - LANG=en_US.UTF-8
       - LC_ALL=en_US.UTF-8
     volumes:
-      - ./results:/app/results  
+      - ./results:/app/results
     restart: unless-stopped
 
-
+volumes:
+  postgres_data:

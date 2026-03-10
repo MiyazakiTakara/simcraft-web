@@ -9,6 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from database import init_db
 from auth import router as auth_router
 from characters import router as characters_router
 from simulation import router as sim_router, RESULTS_DIR, jobs
@@ -20,6 +21,10 @@ _sec = os.environ["BLIZZARD_CLIENT_SECRET"]
 with open("/root/.simc_apikey", "w") as _f:
     _f.write(f"{_id}:{_sec}")
 print(f".simc_apikey written ({os.path.getsize('/root/.simc_apikey')} bytes)", flush=True)
+
+# Inicjalizacja bazy danych
+init_db()
+print("Baza danych zainicjalizowana", flush=True)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -38,11 +43,10 @@ app.add_middleware(
 
 
 class NoCacheStaticMiddleware(BaseHTTPMiddleware):
-    """Dodaje Cache-Control: no-cache dla plikow statycznych JS/CSS/HTML."""
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         path = request.url.path.split("?")[0]
-        if path.endswith((".js", ".css", ".html")) or path in ("/", ) or path.startswith("/result/"):
+        if path.endswith((".js", ".css", ".html")) or path in ("/",) or path.startswith("/result/"):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
@@ -63,20 +67,16 @@ BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")
 
 @app.get("/result/{job_id}", response_class=HTMLResponse)
 async def result_page(job_id: str):
-    """Serwuje result.html z dynamicznymi OG meta tagami."""
-    import json
-    from history import _load, _lock
+    from database import SessionLocal, HistoryEntryModel
 
-    # Pobierz meta z historii
-    with _lock:
-        data = _load()
-    entry = next((e for e in data if e.get("job_id") == job_id), {})
+    with SessionLocal() as db:
+        entry = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == job_id).first()
 
-    char_name   = entry.get("character_name") or "Addon Export"
-    char_class  = entry.get("character_class") or ""
-    char_spec   = entry.get("character_spec") or ""
-    dps         = entry.get("dps") or 0
-    fight_style = entry.get("fight_style") or "Patchwerk"
+    char_name   = (entry and entry.character_name)  or "Addon Export"
+    char_class  = (entry and entry.character_class) or ""
+    char_spec   = (entry and entry.character_spec)  or ""
+    dps         = (entry and entry.dps)             or 0
+    fight_style = (entry and entry.fight_style)     or "Patchwerk"
 
     if dps >= 1_000_000:
         dps_str = f"{dps / 1_000_000:.2f}M"
@@ -86,11 +86,7 @@ async def result_page(job_id: str):
         dps_str = str(int(dps))
 
     spec_class = f"{char_spec} {char_class}".strip()
-    if spec_class:
-        og_title = f"{char_name} ({spec_class}) — {dps_str} DPS"
-    else:
-        og_title = f"{char_name} — {dps_str} DPS"
-
+    og_title = f"{char_name} ({spec_class}) — {dps_str} DPS" if spec_class else f"{char_name} — {dps_str} DPS"
     og_desc  = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
     og_image = f"{BASE_URL}/api/result/{job_id}/dps-chart.png"
     og_url   = f"{BASE_URL}/result/{job_id}"
@@ -99,7 +95,6 @@ async def result_page(job_id: str):
     with open(html_path) as f:
         html = f.read()
 
-    # Wstrzyknij OG tagi do <head>
     og_tags = f"""
     <meta property="og:title"       content="{og_title}"/>
     <meta property="og:description" content="{og_desc}"/>
@@ -118,7 +113,7 @@ async def result_page(job_id: str):
 
 def _restore_jobs():
     for fname in os.listdir(RESULTS_DIR):
-        if not fname.endswith(".json") or fname == "history.json":
+        if not fname.endswith(".json") or fname in ("history.json", "sessions.json"):
             continue
         job_id = fname[:-5]
         fpath  = os.path.join(RESULTS_DIR, fname)
