@@ -105,7 +105,7 @@ def _build_profile(req: SimRequest) -> str:
         f"fight_style={req.fight_style}",
         f"iterations={req.iterations}",
         f"target_error={req.target_error}",
-        "json2=1",
+        # json2 jest przekazywany jako argument CMD, nie w profilu
     ]
     return "\n".join(lines)
 
