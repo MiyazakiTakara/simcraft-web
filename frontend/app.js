@@ -10,6 +10,15 @@ function app() {
     pubJob: null,
     simMode: "armory",
     addonText: "",
+    guestAddonText: "",
+    guestSimOptions: {
+      fight_style: "Patchwerk",
+      iterations: 1000,
+      target_error: 0.5,
+    },
+    guestLoadingSim: false,
+    guestSimError: null,
+    _guestPollInterval: null,
     simOptions: {
       fight_style: "Patchwerk",
       iterations: 1000,
@@ -87,14 +96,12 @@ function app() {
       try {
         const chars = await API.getCharacters(this.sessionId);
         this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
-
         const lastCharName = localStorage.getItem("simcraft_last_char");
         if (lastCharName && !this.selectedChar) {
           this.selectedChar = this.characters.find(c => c.name === lastCharName) || this.characters[0];
         } else if (!this.selectedChar && this.characters.length) {
           this.selectedChar = this.characters[0];
         }
-
         for (const ch of this.characters) {
           API.getCharacterMedia(this.sessionId, ch.realm_slug, ch.name.toLowerCase())
             .then((m) => { ch.avatar = m.avatar; })
@@ -127,16 +134,11 @@ function app() {
       try {
         this.simResult = await API.getResultJson(jobId);
         this.selectedHistory = jobId;
-
         const entry = this.history.find(e => e.job_id === jobId);
         const charName = entry?.character_name || null;
         const charClass = entry?.character_class || null;
         const charSpec = entry?.character_spec || null;
-
-        const charObj = charName
-          ? this.characters.find(c => c.name === charName)
-          : null;
-
+        const charObj = charName ? this.characters.find(c => c.name === charName) : null;
         this.job = {
           id:        jobId,
           charName:  charName !== 'Addon Export' ? charName : null,
@@ -152,6 +154,7 @@ function app() {
     async loadPubResult(jobId) {
       try {
         this.pubResult = await API.getResultJson(jobId);
+        this.pubResult._source = 'history';
         const entry = this.history.find(e => e.job_id === jobId);
         this.pubJob = {
           id:        jobId,
@@ -162,6 +165,58 @@ function app() {
         };
       } catch (e) {
         alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku.");
+      }
+    },
+
+    async startGuestSim() {
+      if (!this.guestAddonText.trim()) {
+        this.guestSimError = "Wklej tekst z addona!";
+        return;
+      }
+      this.guestSimError = null;
+      this.guestLoadingSim = true;
+      this.pubResult = null;
+      this.pubJob = null;
+      try {
+        const { job_id } = await API.startSim({
+          addon_text:   this.guestAddonText.trim(),
+          fight_style:  this.guestSimOptions.fight_style,
+          iterations:   this.guestSimOptions.iterations,
+          target_error: this.guestSimOptions.target_error,
+        });
+        const guestJobId = job_id;
+        this._guestPollInterval = setInterval(async () => {
+          try {
+            const status = await API.getJobStatus(guestJobId);
+            if (status.status === "done") {
+              clearInterval(this._guestPollInterval);
+              const result = await API.getResultJson(guestJobId);
+              result._source = 'addon';
+              this.pubResult = result;
+              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null };
+              await API.saveToHistory({
+                job_id:          guestJobId,
+                character_name:  "Addon Export",
+                character_class: "",
+                character_spec:  "",
+                dps:             result.dps,
+                fight_style:     this.guestSimOptions.fight_style,
+              });
+              this.loadPublicHistory();
+              this.guestLoadingSim = false;
+            } else if (status.status === "error") {
+              clearInterval(this._guestPollInterval);
+              this.guestSimError = "B\u0142\u0105d symulacji: " + (status.error || "Nieznany b\u0142\u0105d");
+              this.guestLoadingSim = false;
+            }
+          } catch (e) {
+            clearInterval(this._guestPollInterval);
+            this.guestLoadingSim = false;
+          }
+        }, 3000);
+      } catch (e) {
+        this.guestSimError = "B\u0142\u0105d: " + e.message;
+        this.guestLoadingSim = false;
       }
     },
 
@@ -184,15 +239,11 @@ function app() {
       return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
-    classColor(className) {
-      return this.CLASS_COLORS[className] || "#aaa";
-    },
-
+    classColor(className) { return this.CLASS_COLORS[className] || "#aaa"; },
     classTextColor(className) {
       const light = ["Hunter", "Mage", "Monk", "Rogue", "Priest"];
       return light.includes(className) ? "#111" : "#fff";
     },
-
     armoryUrl(realmSlug, name) {
       if (!realmSlug || !name) return null;
       return `https://worldofwarcraft.blizzard.com/en-gb/character/eu/${realmSlug}/${name.toLowerCase()}`;
@@ -209,31 +260,22 @@ function app() {
       this.loadingSim = true;
       this.simResult = null;
       this.job = null;
-
       const payload = {
         session:      this.sessionId,
         fight_style:  this.simOptions.fight_style,
         iterations:   this.simOptions.iterations,
         target_error: this.simOptions.target_error,
       };
-
       if (this.simMode === "addon") {
-        if (!this.addonText.trim()) {
-          alert("Wklej addon export!");
-          this.loadingSim = false;
-          return;
-        }
+        if (!this.addonText.trim()) { alert("Wklej addon export!"); this.loadingSim = false; return; }
         payload.addon_text = this.addonText.trim();
       } else if (this.selectedChar) {
         payload.name       = this.selectedChar.name;
         payload.realm_slug = this.selectedChar.realm_slug;
         payload.region     = this.selectedChar.region || "eu";
       } else {
-        alert("Wybierz postac lub wklej addon export!");
-        this.loadingSim = false;
-        return;
+        alert("Wybierz postac lub wklej addon export!"); this.loadingSim = false; return;
       }
-
       try {
         const { job_id } = await API.startSim(payload);
         this.job = {
@@ -296,28 +338,21 @@ function app() {
       if (v >= 1_000)     return (v / 1_000).toFixed(1) + "k";
       return String(v);
     },
-
     formatDmg(v) {
       if (!v && v !== 0) return "\u2014";
       if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
       if (v >= 1_000)     return (v / 1_000).toFixed(0) + "k";
       return String(Math.round(v));
     },
-
     pctBarWidth(val, spells, key) {
       const max = Math.max(...spells.map(s => s[key] ?? 0));
       return max > 0 ? Math.round((val / max) * 100) + "%" : "0%";
     },
-
-    formatStatName(key) {
-      return this.STAT_LABELS[key] || key;
-    },
-
+    formatStatName(key) { return this.STAT_LABELS[key] || key; },
     formatStatValue(key, val) {
       if (typeof val === "number") return val.toLocaleString();
       return val;
     },
-
     formatTime(timestamp) {
       if (!timestamp) return "\u2014";
       const date = new Date(timestamp * 1000);
@@ -328,11 +363,7 @@ function app() {
       if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
       return date.toLocaleDateString('pl-PL');
     },
-
-    getShareUrl(jobId) {
-      return window.location.origin + "/?result=" + jobId;
-    },
-
+    getShareUrl(jobId) { return window.location.origin + "/?result=" + jobId; },
     copyToClipboard(text, jobId) {
       navigator.clipboard.writeText(text).then(() => {
         this.copiedJobId = jobId || true;
