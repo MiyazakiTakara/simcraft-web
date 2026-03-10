@@ -208,9 +208,14 @@ def generate_dps_chart(json_path: str) -> str:
             return None
 
         player    = players[0]
+        cd        = player.get("collected_data", {})
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             return None
+
+        # Prawdziwy total DPS i total DMG z collected_data
+        real_dps = safe_float(cd.get("dps", {}).get("mean", 0))
+        real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
 
         TOP_N  = 12
         COLORS = [
@@ -246,16 +251,29 @@ def generate_dps_chart(json_path: str) -> str:
             return None
 
         player_name = player.get("name", "?")
-        total_dmg   = sum(dmg_vals) if dmg_vals else 0
-        total_dps   = sum(dps_vals) if dps_vals else 0
+
+        # Tytuly pokazuja prawdziwe wartosci z collected_data, nie sume slice'a
+        def fmt_dmg(v):
+            if v >= 1_000_000:
+                return f"{v / 1_000_000:.1f}M"
+            if v >= 1_000:
+                return f"{v / 1_000:.0f}k"
+            return str(int(v))
+
+        def fmt_dps(v):
+            if v >= 1_000_000:
+                return f"{v / 1_000_000:.2f}M"
+            if v >= 1_000:
+                return f"{v / 1_000:.1f}k"
+            return str(int(v))
+
+        dmg_title = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
+        dps_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
 
         fig = make_subplots(
             rows=1, cols=2,
             specs=[[{"type": "pie"}, {"type": "pie"}]],
-            subplot_titles=[
-                f"Total DMG  ({total_dmg / 1_000_000:.1f}M)",
-                f"DPS  ({total_dps / 1_000:.0f}k)",
-            ],
+            subplot_titles=[dmg_title, dps_title],
         )
 
         fig.add_trace(go.Pie(
