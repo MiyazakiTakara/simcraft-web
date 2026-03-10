@@ -145,9 +145,13 @@ function app() {
     async loadNews() {
       try {
         const res = await fetch('/admin/api/news/public');
+        console.log('loadNews response:', res.status, res.ok);
         if (res.ok) {
           this.news = await res.json();
           this.newsPage = 1;
+          console.log('news loaded:', this.news.length);
+        } else {
+          console.error('News API error:', res.status);
         }
       } catch (e) { console.error('Failed to load news', e); }
     },
