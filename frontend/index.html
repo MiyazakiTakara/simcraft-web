@@ -97,18 +97,6 @@
         </div>
       </div>
 
-      <!-- Newsy -->
-      <div class="news-section" x-show="news.length > 0">
-        <h2>📰 Aktualności</h2>
-        <template x-for="n in news" :key="n.id">
-          <div class="news-card-pub">
-            <h3 x-text="n.title"></h3>
-            <p x-text="n.body"></p>
-            <div class="news-date" x-text="formatTime(n.created_at)"></div>
-          </div>
-        </template>
-      </div>
-
       <!-- Addon Export -->
       <div id="addon-section" class="panel" style="max-width:760px;margin:0 auto;width:100%">
         <h2 style="font-size:1rem;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:.3rem">📋 Symuluj bez logowania — Addon Export</h2>
@@ -187,6 +175,18 @@
               <span style="color:var(--border)">·</span>
               <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
             </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Newsy -->
+      <div class="news-section" x-show="news.length > 0">
+        <h2>📰 Aktualności</h2>
+        <template x-for="n in news" :key="n.id">
+          <div class="news-card-pub">
+            <h3 x-text="n.title"></h3>
+            <p x-text="n.body"></p>
+            <div class="news-date" x-text="formatTime(n.created_at)"></div>
           </div>
         </template>
       </div>
