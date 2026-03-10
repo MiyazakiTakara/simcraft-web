@@ -1,5 +1,7 @@
 import json
+import os
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from simulation import jobs
 
 router = APIRouter()
@@ -31,7 +33,6 @@ def ability_total_dmg(ab: dict) -> float:
     v = safe_float(ab.get("compound_amount", 0))
     if v > 0:
         return v
-    # fallback: suma z children
     children = ab.get("children", [])
     if isinstance(children, list) and children:
         total = sum(ability_total_dmg(c) for c in children if isinstance(c, dict))
@@ -198,12 +199,100 @@ def parse_results(json_path: str):
         return {"error": str(e), "trace": traceback.format_exc()}
 
 
+def generate_dps_chart(json_path: str) -> str:
+    """Generuje PNG pie chart DPS breakdown. Zwraca sciezke do pliku."""
+    try:
+        import plotly.express as px
+        import pandas as pd
+
+        with open(json_path) as f:
+            raw = json.load(f)
+
+        sim = raw.get("sim", {})
+        players = sim.get("players", [])
+        if not players:
+            return None
+
+        player = players[0]
+        abilities = player.get("stats", [])
+        if not isinstance(abilities, list):
+            return None
+
+        chart_data = []
+        for ab in abilities:
+            if not isinstance(ab, dict):
+                continue
+            name = (ab.get("spell_name") or ab.get("name", "?"))[:28]
+            dmg = ability_total_dmg(ab)
+            if dmg > 0:
+                chart_data.append({"name": name, "dmg": dmg})
+
+        if not chart_data:
+            return None
+
+        df = pd.DataFrame(chart_data)
+        df = df.sort_values("dmg", ascending=False)
+
+        # Top 12 + reszta jako Other
+        if len(df) > 12:
+            top = df.head(12).copy()
+            other_dmg = df.iloc[12:]["dmg"].sum()
+            other_row = pd.DataFrame([{"name": "Other", "dmg": other_dmg}])
+            df = pd.concat([top, other_row], ignore_index=True)
+
+        total_dmg = df["dmg"].sum()
+        player_name = player.get("name", "?")
+
+        fig = px.pie(
+            df, values="dmg", names="name",
+            title=f"{player_name} — DPS Breakdown<br><sup>Total DMG: {total_dmg:,.0f}</sup>",
+            hole=0.4,
+            color_discrete_sequence=px.colors.sequential.Plasma_r,
+        )
+        fig.update_traces(
+            textposition="inside",
+            textinfo="percent+label",
+            textfont_size=12,
+        )
+        fig.update_layout(
+            showlegend=True,
+            legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+            width=800,
+            height=540,
+            margin=dict(t=80, b=20, l=20, r=180),
+            paper_bgcolor="#1a1a2e",
+            plot_bgcolor="#1a1a2e",
+            font=dict(color="#e0e0e0", size=13),
+            title_font=dict(size=16, color="#ffffff"),
+        )
+
+        png_path = f"/tmp/dps-chart-{os.path.basename(json_path)}.png"
+        fig.write_image(png_path, engine="kaleido", scale=2)
+        return png_path
+
+    except Exception as e:
+        import traceback
+        print(f"[chart error] {e}\n{traceback.format_exc()}")
+        return None
+
+
 @router.get("/api/result/{job_id}/json")
 async def get_result_json(job_id: str):
     job = jobs.get(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     return parse_results(job["json_path"])
+
+
+@router.get("/api/result/{job_id}/dps-chart.png")
+async def get_dps_chart(job_id: str):
+    job = jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        raise HTTPException(404, "Result not ready")
+    png = generate_dps_chart(job["json_path"])
+    if not png or not os.path.exists(png):
+        raise HTTPException(500, "Chart generation failed")
+    return FileResponse(png, media_type="image/png")
 
 
 @router.get("/api/result/{job_id}/debug")
