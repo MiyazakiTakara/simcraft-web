@@ -132,8 +132,27 @@ def _hit_count_from_results(ab: dict) -> float:
     return total
 
 
-def ability_count(ab: dict) -> int:
-    """Liczba wykonan. Dla AoE/DoT spelli z num_executes=0 bierze hit_count z results."""
+def _has_only_ticks(ab: dict) -> bool:
+    """True jezeli spell nie ma direct_results (ani w sobie ani w dzieciach), tylko tick_results."""
+    if ab.get("direct_results"):
+        return False
+    for child in ab.get("children", []):
+        if isinstance(child, dict) and not _has_only_ticks(child):
+            return False
+    # przynajmniej jedno tick_results gdzies w drzewie
+    if ab.get("tick_results"):
+        return True
+    for child in ab.get("children", []):
+        if isinstance(child, dict) and child.get("tick_results"):
+            return True
+    return False
+
+
+def ability_count(ab: dict) -> tuple[int, bool]:
+    """
+    Zwraca (count, is_channel).
+    is_channel=True gdy count pochodzi z tick fallbacku (AoE/channel).
+    """
     ne = ab.get("num_executes")
     executes = 0
     if isinstance(ne, dict):
@@ -142,18 +161,21 @@ def ability_count(ab: dict) -> int:
         executes = int(ne)
 
     if executes > 0:
-        return executes
+        return executes, False
 
     # Fallback 1: zsumuj dzieci
-    child_sum = sum(
+    child_counts = [
         ability_count(c) for c in ab.get("children", []) if isinstance(c, dict)
-    )
+    ]
+    child_sum = sum(c[0] for c in child_counts)
     if child_sum > 0:
-        return child_sum
+        # is_channel = True jezeli wszystkie dzieci sa channel
+        is_ch = all(c[1] for c in child_counts)
+        return child_sum, is_ch
 
-    # Fallback 2: hit_count z results (dla channeled/AoE)
+    # Fallback 2: hit_count z results
     hc = _hit_count_from_results(ab)
-    return int(hc)
+    return int(hc), True
 
 
 def spell_display_name(ab: dict) -> str:
@@ -215,20 +237,21 @@ def parse_results(json_path: str):
 
             name                        = spell_display_name(ab)
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
-            executes                    = ability_count(ab)
+            executes, is_channel        = ability_count(ab)
 
             if avg_hit == 0 and executes > 0 and tot_dmg > 0:
                 avg_hit = round(tot_dmg / executes)
 
             spells.append({
-                "name":      name,
-                "dps":       round(dps, 2),
-                "total_dmg": round(tot_dmg),
-                "crit_pct":  crit_pct,
-                "executes":  executes,
-                "count":     executes,
-                "avg_hit":   avg_hit,
-                "miss_pct":  miss_pct,
+                "name":       name,
+                "dps":        round(dps, 2),
+                "total_dmg":  round(tot_dmg),
+                "crit_pct":   crit_pct,
+                "executes":   executes,
+                "count":      executes,
+                "avg_hit":    avg_hit,
+                "miss_pct":   miss_pct,
+                "is_channel": is_channel,
             })
 
         if not spells:
@@ -243,6 +266,7 @@ def parse_results(json_path: str):
                     "name": sname, "dps": 0.0, "total_dmg": 0,
                     "crit_pct": 0.0, "executes": count,
                     "count": count, "avg_hit": 0, "miss_pct": 0.0,
+                    "is_channel": False,
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
@@ -262,6 +286,7 @@ def parse_results(json_path: str):
             top_spells.append({
                 "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
+                "is_channel": False,
                 "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
                 "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
             })
@@ -452,12 +477,14 @@ async def get_debug_spell(job_id: str):
             if ability_total_dmg(ab) <= 0 and ability_dps(ab) <= 0:
                 continue
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
+            cnt, is_ch = ability_count(ab)
             out.append({
-                "name":     spell_display_name(ab),
-                "count":    ability_count(ab),
-                "crit_pct": crit_pct,
-                "miss_pct": miss_pct,
-                "avg_hit":  avg_hit,
+                "name":       spell_display_name(ab),
+                "count":      cnt,
+                "is_channel": is_ch,
+                "crit_pct":   crit_pct,
+                "miss_pct":   miss_pct,
+                "avg_hit":    avg_hit,
             })
             if len(out) >= 3:
                 break

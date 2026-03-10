@@ -20,6 +20,21 @@
     .result-footer { margin-top:1.2rem; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; font-size:.82rem; color:var(--muted); }
     .result-footer a { color:var(--muted); }
     .spinner-wrap { display:flex; justify-content:center; align-items:center; padding:4rem; }
+
+    /* Spell tooltip */
+    .spell-row { position:relative; }
+    .spell-tooltip {
+      display:none;
+      position:absolute; top:calc(100% + 6px); right:0; z-index:200;
+      background:var(--panel,#1a1a2e); border:1px solid var(--border,#333);
+      border-radius:8px; padding:.55rem .75rem; min-width:170px;
+      font-size:.78rem; line-height:1.7; white-space:nowrap;
+      box-shadow:0 4px 18px rgba(0,0,0,.5); pointer-events:none;
+    }
+    .spell-row:hover .spell-tooltip { display:block; }
+    .spell-tooltip-row { display:flex; justify-content:space-between; gap:1.2rem; }
+    .spell-tooltip-label { color:var(--muted,#888); }
+    .spell-tooltip-val   { font-weight:600; color:var(--text,#eee); }
   </style>
 </head>
 <body>
@@ -140,6 +155,27 @@
                     <div class="spell-bar-bg">
                       <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
                     </div>
+
+                    <!-- Tooltip -->
+                    <div class="spell-tooltip">
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : 'Hits'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.count > 0 ? sp.count.toLocaleString() : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : 'Avg hit'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.avg_hit > 0 ? formatDmg(sp.avg_hit) : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label">Crit</span>
+                        <span class="spell-tooltip-val" x-text="sp.crit_pct > 0 ? sp.crit_pct + '%' : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row" x-show="sp.miss_pct > 0">
+                        <span class="spell-tooltip-label">Miss/Dodge</span>
+                        <span class="spell-tooltip-val" x-text="sp.miss_pct + '%'"></span>
+                      </div>
+                    </div>
+
                   </div>
                 </template>
               </div>
@@ -221,8 +257,6 @@ function resultPage() {
       }
     },
 
-    // Buduje URL Armory na podstawie meta — realm_slug nie jest w historii,
-    // więc używamy slugifikacji nazwy realm z meta.character_realm (jeśli dostępny)
     armoryUrl() {
       const name      = this.meta?.character_name;
       const realmSlug = this.meta?.realm_slug || this.meta?.character_realm_slug;
