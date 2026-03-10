@@ -142,23 +142,51 @@
 
               <!-- Spelle -->
               <div>
-                <h2 style="margin-bottom:.6rem">Breakdown spelli</h2>
-                <template x-if="simResult.spells && simResult.spells.length">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+                  <h2>Breakdown spelli</h2>
+                  <!-- Przełącznik sortowania -->
+                  <div style="display:flex;gap:.3rem">
+                    <button
+                      class="tab"
+                      :class="{active: spellSort==='total_dmg'}"
+                      @click="spellSort='total_dmg'"
+                      style="font-size:.75rem;padding:.25rem .6rem"
+                    >Total Dmg</button>
+                    <button
+                      class="tab"
+                      :class="{active: spellSort==='dps'}"
+                      @click="spellSort='dps'"
+                      style="font-size:.75rem;padding:.25rem .6rem"
+                    >DPS</button>
+                  </div>
+                </div>
+
+                <template x-if="sortedSpells.length">
                   <div class="spell-list">
-                    <template x-for="sp in simResult.spells" :key="sp.name">
+                    <template x-for="sp in sortedSpells" :key="sp.name">
                       <div class="spell-row">
                         <div class="spell-head">
                           <span x-text="sp.name"></span>
-                          <span><strong x-text="formatDps(sp.dps)"></strong> DPS · <span x-text="sp.crit_pct" style="color:var(--accent)"></span>% crit</span>
+                          <span style="display:flex;gap:.6rem;align-items:center">
+                            <span x-show="spellSort==='total_dmg'">
+                              <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                            </span>
+                            <span x-show="spellSort==='dps'">
+                              <strong x-text="formatDps(sp.dps)"></strong> DPS
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                            </span>
+                            <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                          </span>
                         </div>
                         <div class="spell-bar-bg">
-                          <div class="spell-bar-fill" :style="{width: pctBarWidth(sp.dps, simResult.spells[0].dps)}"></div>
+                          <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
                         </div>
                       </div>
                     </template>
                   </div>
                 </template>
-                <template x-if="!simResult.spells || !simResult.spells.length">
+                <template x-if="!sortedSpells.length">
                   <p style="color:var(--muted);font-size:.85rem">Brak danych o spellach (użyj trybu addon dla pełnych danych)</p>
                 </template>
               </div>
@@ -168,8 +196,8 @@
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
-              <button 
-                class="btn" 
+              <button
+                class="btn"
                 style="font-size: 0.75rem; padding: 0.35rem 0.8rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin: 0;"
                 @click="copyToClipboard(getShareUrl(job.id))"
               >
@@ -198,8 +226,8 @@
                   <div class="history-time" x-text="formatTime(entry.created_at)"></div>
                   <div class="history-style" x-text="entry.fight_style"></div>
                 </div>
-                <button 
-                  class="btn" 
+                <button
+                  class="btn"
                   style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent2); color: #fff; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;"
                   @click.stop="copyToClipboard(getShareUrl(entry.job_id))"
                   title="Skopiuj link"
