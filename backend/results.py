@@ -12,17 +12,7 @@ def safe_float(v, default=0.0):
         return default
 
 
-def pct(val):
-    """Normalize a ratio/percent value to 0-100 scale."""
-    v = safe_float(val)
-    return round(v * 100 if v <= 1 else v, 2)
-
-
 def ability_dps(ab: dict) -> float:
-    """
-    SimC JSON2 uzywa snake_case: portion_aps.mean
-    Jesli brak na rodzicu, sumuj z children rekurencyjnie.
-    """
     pa = ab.get("portion_aps")
     if isinstance(pa, dict):
         v = safe_float(pa.get("mean"))
@@ -39,9 +29,6 @@ def ability_dps(ab: dict) -> float:
 
 
 def ability_crit(ab: dict) -> float:
-    """
-    SimC JSON2 snake_case: direct_results.crit / direct_results.hit
-    """
     def _crit_from_results(results: dict):
         if not isinstance(results, dict):
             return None
@@ -49,7 +36,6 @@ def ability_crit(ab: dict) -> float:
         hit_block  = results.get("hit", {})
         crit_count = safe_float(crit_block.get("count") if isinstance(crit_block, dict) else 0)
         hit_count  = safe_float(hit_block.get("count") if isinstance(hit_block, dict) else 0)
-        # countsum lub count
         if crit_count == 0:
             crit_count = safe_float(crit_block.get("count_sum", 0) if isinstance(crit_block, dict) else 0)
         if hit_count == 0:
@@ -64,7 +50,6 @@ def ability_crit(ab: dict) -> float:
         if result is not None:
             return result
 
-    # Agreguj z children
     children = ab.get("children", [])
     if isinstance(children, list) and children:
         crits = [ability_crit(c) for c in children if isinstance(c, dict)]
@@ -89,42 +74,30 @@ def parse_results(json_path: str):
         player = players[0]
         cd = player.get("collected_data", {})
 
-        # -------------------------
         # DPS
-        # -------------------------
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
 
-        # -------------------------
-        # STATS
-        # -------------------------
-        bs        = cd.get("buffed_stats", {})
-        attr      = bs.get("attribute", {})
+        # STATS — uzywamy ratingow (crit_rating, haste_rating itd.)
+        # primary attributes z buffed_stats.attribute
+        # secondary ratingi z buffed_stats.stats
+        bs         = cd.get("buffed_stats", {})
+        attr       = bs.get("attribute", {})
         stats_data = bs.get("stats", {})
-        if not stats_data:
-            stats_data = bs
 
         stats = {
-            "strength":        safe_float(attr.get("strength")),
-            "agility":         safe_float(attr.get("agility")),
-            "stamina":         safe_float(attr.get("stamina")),
-            "intellect":       safe_float(attr.get("intellect")),
-            "crit_pct":        pct(stats_data.get("spell_crit",
-                                   stats_data.get("crit_pct",
-                                   stats_data.get("attack_crit", 0)))),
-            "haste_pct":       pct(stats_data.get("spell_haste",
-                                   stats_data.get("haste_pct",
-                                   stats_data.get("attack_haste", 0)))),
-            "mastery_pct":     pct(stats_data.get("mastery_value",
-                                   stats_data.get("mastery_pct", 0))),
-            "versatility_pct": pct(stats_data.get("damage_versatility",
-                                   stats_data.get("versatility_pct", 0))),
+            "strength":   int(safe_float(attr.get("strength"))),
+            "agility":    int(safe_float(attr.get("agility"))),
+            "stamina":    int(safe_float(attr.get("stamina"))),
+            "intellect":  int(safe_float(attr.get("intellect"))),
+            "crit":       int(safe_float(stats_data.get("crit_rating", 0))),
+            "haste":      int(safe_float(stats_data.get("haste_rating", 0))),
+            "mastery":    int(safe_float(stats_data.get("mastery_rating", 0))),
+            "versatility":int(safe_float(stats_data.get("versatility_rating", 0))),
         }
 
-        # -------------------------
-        # ABILITIES — player["stats"] to lista ability w JSON2
-        # -------------------------
+        # ABILITIES
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             abilities = []
@@ -158,7 +131,6 @@ def parse_results(json_path: str):
             })
             total_spell_dps += dps
 
-        # Fallback: brak abilities z DPS
         if not spells:
             action_seq = cd.get("action_sequence", [])
             spell_counts: dict = {}
@@ -210,7 +182,6 @@ async def get_result_json(job_id: str):
 
 @router.get("/api/result/{job_id}/debug")
 async def get_result_debug(job_id: str):
-    """Debug endpoint - surowa struktura JSON2."""
     job = jobs.get(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
