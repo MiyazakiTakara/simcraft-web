@@ -78,8 +78,8 @@
       </button>
       <template x-if="sessionId">
         <div class="header-user">
-          <a href="#symulacje" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">⚔️ Symulacje</a>
-          <a href="#profil" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">👤 Profil</a>
+          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="currentView = 'symulacje'; activeTab = 'symulacje'">⚔️ Symulacje</button>
+          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="currentView = 'profil'; activeTab = 'profil'">👤 Profil</button>
           <span class="header-badge" x-text="characters.length + ' postaci'"></span>
           <button class="btn btn-ghost" @click="logout()">Wyloguj</button>
         </div>
