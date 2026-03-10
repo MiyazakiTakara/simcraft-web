@@ -28,6 +28,11 @@ services:
       - DATABASE_URL=postgresql://simcraft:${POSTGRES_PASSWORD:-simcraft}@db:5432/simcraft
       - LANG=en_US.UTF-8
       - LC_ALL=en_US.UTF-8
+      - KEYCLOAK_URL=${KEYCLOAK_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - ADMIN_REDIRECT_URI=${ADMIN_REDIRECT_URI}
     volumes:
       - ./results:/app/results
     restart: unless-stopped
