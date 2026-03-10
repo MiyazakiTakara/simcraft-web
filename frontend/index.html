@@ -25,43 +25,23 @@
         localStorage.setItem('simcraft_session', session);
         history.replaceState({}, '', '/');
       }
+      // Wczytaj motyw przed renderem (unika flashu)
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
     })();
   </script>
 
-  <link rel="stylesheet" href="/style.css?v=4"/>
+  <link rel="stylesheet" href="/style.css?v=5"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
-  <script src="/app.js?v=10"></script>
+  <script src="/app.js?v=11"></script>
 
   <style>
-    .chart-section {
-      margin-top: 1.2rem;
-      text-align: center;
-    }
-    .chart-section h2 {
-      margin-bottom: .6rem;
-      text-align: left;
-    }
-    .dps-chart-img {
-      width: 100%;
-      max-width: 800px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      cursor: zoom-in;
-    }
-    .chart-modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.75);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999;
-      cursor: zoom-out;
-    }
-    .chart-modal-overlay img {
-      max-width: 95vw;
-      max-height: 90vh;
-      border-radius: 10px;
-      box-shadow: 0 8px 40px rgba(0,0,0,.7);
-    }
+    .chart-section { margin-top: 1.2rem; text-align: center; }
+    .chart-section h2 { margin-bottom: .6rem; text-align: left; }
+    .dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
+    .chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
+    .chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
   </style>
 </head>
 <body>
@@ -75,24 +55,27 @@
   <!-- Header -->
   <header class="header">
     <div class="header-logo">⚔️ SimCraft Web</div>
-    <template x-if="sessionId">
-      <div class="header-user">
-        <span class="header-badge" x-text="characters.length + ' postaci'"></span>
-        <button class="btn btn-ghost" @click="logout()">Wyloguj</button>
-      </div>
-    </template>
-    <template x-if="!sessionId">
-      <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem">🔑 Zaloguj</a>
-    </template>
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <!-- Theme toggle -->
+      <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? 'Przełącz na jasny' : 'Przełącz na ciemny'">
+        <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
+      </button>
+      <template x-if="sessionId">
+        <div class="header-user">
+          <span class="header-badge" x-text="characters.length + ' postaci'"></span>
+          <button class="btn btn-ghost" @click="logout()">Wyloguj</button>
+        </div>
+      </template>
+      <template x-if="!sessionId">
+        <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem">🔑 Zaloguj</a>
+      </template>
+    </div>
   </header>
 
-  <!-- ========================
-       LANDING PAGE (niezalogowany)
-       ======================== -->
+  <!-- LANDING PAGE -->
   <template x-if="!sessionId">
     <div class="landing">
 
-      <!-- Hero -->
       <div class="landing-hero">
         <h1 class="landing-hero-title">⚔️ Symulator DPS<br/>dla <span>World of Warcraft</span></h1>
         <p class="landing-hero-sub">Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.</p>
@@ -102,60 +85,25 @@
         </div>
       </div>
 
-      <!-- Features -->
       <div class="landing-features">
-        <div class="feature-card">
-          <div class="feature-icon">🌐</div>
-          <div class="feature-title">Import z Armory</div>
-          <div class="feature-desc">Zaloguj się przez Battle.net i symuluj dowolny swój charakter bezpośrednio z serwerów Blizzard.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📋</div>
-          <div class="feature-title">Addon Export</div>
-          <div class="feature-desc">Wklej output z addona SimulationCraft (/simc) i uruchom symulację bez logowania.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔗</div>
-          <div class="feature-title">Udostępnianie</div>
-          <div class="feature-desc">Każda symulacja ma unikalny link — podziel się wynikiem ze znajomymi lub gildiią.</div>
-        </div>
+        <div class="feature-card"><div class="feature-icon">🌐</div><div class="feature-title">Import z Armory</div><div class="feature-desc">Zaloguj się przez Battle.net i symuluj dowolny swój charakter bezpośrednio z serwerów Blizzard.</div></div>
+        <div class="feature-card"><div class="feature-icon">📋</div><div class="feature-title">Addon Export</div><div class="feature-desc">Wklej output z addona SimulationCraft (/simc) i uruchom symulację bez logowania.</div></div>
+        <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Udostępnianie</div><div class="feature-desc">Każda symulacja ma unikalny link — podziel się wynikiem ze znajomymi lub gildią.</div></div>
       </div>
 
-      <!-- Addon Export bez logowania -->
+      <!-- Addon Export -->
       <div id="addon-section" class="panel" style="max-width:760px;margin:0 auto;width:100%">
         <h2 style="font-size:1rem;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:.3rem">📋 Symuluj bez logowania — Addon Export</h2>
         <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem">Wpisz <code style="background:var(--bg);padding:.1rem .35rem;border-radius:4px;font-size:.8rem">/simc</code> w grze, skopiuj tekst z addona i wklej poniżej.</p>
 
-        <!-- formularz -->
         <template x-if="!pubResult || pubResult._source !== 'addon'">
           <div>
-            <textarea
-              class="addon-box"
-              placeholder="Wklej tutaj output z addona SimulationCraft..."
-              x-model="guestAddonText"
-              style="min-height:140px"
-            ></textarea>
-
+            <textarea class="addon-box" placeholder="Wklej tutaj output z addona SimulationCraft..." x-model="guestAddonText" style="min-height:140px"></textarea>
             <div class="sim-options" style="margin-bottom:1rem">
-              <div class="sim-option">
-                <label>Styl walki</label>
-                <select x-model="guestSimOptions.fight_style">
-                  <option value="Patchwerk">Patchwerk</option>
-                  <option value="HecticAddCleave">HecticAddCleave</option>
-                  <option value="LightMovement">LightMovement</option>
-                  <option value="HeavyMovement">HeavyMovement</option>
-                </select>
-              </div>
-              <div class="sim-option">
-                <label>Iteracje</label>
-                <input type="number" x-model.number="guestSimOptions.iterations" min="100" max="10000" step="100"/>
-              </div>
-              <div class="sim-option">
-                <label>Target Error %</label>
-                <input type="number" x-model.number="guestSimOptions.target_error" min="0.1" max="5" step="0.1"/>
-              </div>
+              <div class="sim-option"><label>Styl walki</label><select x-model="guestSimOptions.fight_style"><option value="Patchwerk">Patchwerk</option><option value="HecticAddCleave">HecticAddCleave</option><option value="LightMovement">LightMovement</option><option value="HeavyMovement">HeavyMovement</option></select></div>
+              <div class="sim-option"><label>Iteracje</label><input type="number" x-model.number="guestSimOptions.iterations" min="100" max="10000" step="100"/></div>
+              <div class="sim-option"><label>Target Error %</label><input type="number" x-model.number="guestSimOptions.target_error" min="0.1" max="5" step="0.1"/></div>
             </div>
-
             <button class="btn btn-primary" @click="startGuestSim()" :disabled="guestLoadingSim">
               <span x-show="guestLoadingSim" class="spinner"></span>
               <span x-show="!guestLoadingSim">▶ Uruchom symulację</span>
@@ -165,7 +113,6 @@
           </div>
         </template>
 
-        <!-- wynik addon -->
         <template x-if="pubResult && pubResult._source === 'addon'">
           <div>
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Nowa symulacja</button>
@@ -178,10 +125,7 @@
                 <h2 style="margin-bottom:.6rem">Statystyki</h2>
                 <div class="stat-list">
                   <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
-                    <div class="stat-row">
-                      <span class="stat-name" x-text="formatStatName(key)"></span>
-                      <span class="stat-val"  x-text="formatStatValue(key, val)"></span>
-                    </div>
+                    <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
                   </template>
                 </div>
               </div>
@@ -190,54 +134,40 @@
                   <h2>Breakdown spelli</h2>
                   <div style="display:flex;gap:.3rem">
                     <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                    <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                    <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                   </div>
                 </div>
-                <template x-if="pubSortedSpells.length">
-                  <div class="spell-list">
-                    <template x-for="sp in pubSortedSpells" :key="sp.name">
-                      <div class="spell-row">
-                        <div class="spell-head">
-                          <span x-text="sp.name"></span>
-                          <span style="display:flex;gap:.6rem;align-items:center">
-                            <span x-show="spellSort==='total_dmg'">
-                              <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
-                            </span>
-                            <span x-show="spellSort==='dps'">
-                              <strong x-text="formatDps(sp.dps)"></strong> DPS
-                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
-                            </span>
-                            <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
-                          </span>
-                        </div>
-                        <div class="spell-bar-bg">
-                          <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div>
-                        </div>
+                <div class="spell-list">
+                  <template x-for="sp in pubSortedSpells" :key="sp.name">
+                    <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
+                      <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
+                        <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
+                        <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
+                        <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
+                        <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                       </div>
-                    </template>
-                  </div>
-                </template>
+                      <div class="spell-head">
+                        <span x-text="sp.name"></span>
+                        <span style="display:flex;gap:.6rem;align-items:center">
+                          <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                          <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
+                          <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                        </span>
+                      </div>
+                      <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div></div>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
-            <!-- DPS PIE CHART -->
             <div class="chart-section">
               <h2>🥧 DPS Pie Chart</h2>
-              <img
-                class="dps-chart-img"
-                :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()"
-                alt="DPS Chart"
-                @click="chartModal = $el.src"
-                loading="lazy"
-              />
+              <img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/>
             </div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
-              <a :href="'/api/result/' + pubJob.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
-              <span style="color:var(--border)">·</span>
               <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
-              <a href="/auth/login" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none">🔑 Zaloguj się aby używać Armory</a>
             </div>
           </div>
         </template>
@@ -248,6 +178,12 @@
         <div class="landing-history-header">
           <h2>📈 Ostatnie symulacje</h2>
           <span x-text="history.length + ' wyników'"></span>
+          <!-- Sort -->
+          <div style="display:flex;gap:.3rem;margin-left:auto">
+            <button class="tab" :class="{active: historySort==='date'}" @click="setHistorySort('date')" style="font-size:.72rem;padding:.2rem .5rem">Data</button>
+            <button class="tab" :class="{active: historySort==='dps'}" @click="setHistorySort('dps')" style="font-size:.72rem;padding:.2rem .5rem">DPS</button>
+            <button class="tab" :class="{active: historySort==='name'}" @click="setHistorySort('name')" style="font-size:.72rem;padding:.2rem .5rem">Postać</button>
+          </div>
         </div>
 
         <template x-if="!pubResult || pubResult._source === 'addon'">
@@ -256,18 +192,22 @@
               <p style="color:var(--muted);font-size:.88rem">Brak publicznych symulacji.</p>
             </template>
             <div class="landing-history-grid">
-              <template x-for="entry in history.slice(0,24)" :key="entry.job_id">
+              <template x-for="entry in pagedHistory" :key="entry.job_id">
                 <div class="pub-history-card" @click="loadPubResult(entry.job_id)">
                   <div class="pub-card-name" x-text="entry.character_name || 'Addon Export'"></div>
-                  <div class="pub-card-class"
-                    x-show="entry.character_class"
-                    :style="{color: classColor(entry.character_class)}"
-                    x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + (entry.character_class || '')"
-                  ></div>
+                  <div class="pub-card-class" x-show="entry.character_class" :style="{color: classColor(entry.character_class)}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + (entry.character_class || '')"></div>
                   <div class="pub-card-dps" x-text="formatDps(entry.dps)"></div>
                   <div class="pub-card-meta" x-text="entry.fight_style + ' · ' + formatTime(entry.created_at)"></div>
                 </div>
               </template>
+            </div>
+            <!-- Paginacja -->
+            <div class="pagination" x-show="historyPageCount > 1">
+              <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
+              <template x-for="p in historyPages()" :key="p">
+                <button :class="{active: historyPage === p}" @click="historyPage = p" x-text="p"></button>
+              </template>
+              <button @click="historyPage < historyPageCount && historyPage++" :disabled="historyPage === historyPageCount">&raquo;</button>
             </div>
           </div>
         </template>
@@ -281,31 +221,14 @@
                 <div class="dps-value" x-text="formatDps(pubResult.dps)"></div>
                 <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
                   <span>DPS (±<span x-text="formatDps(pubResult.dps_std)"></span>)</span>
-                  <template x-if="pubJob && pubJob.charName">
-                    <a
-                      :href="armoryUrl(pubJob.realmSlug, pubJob.charName)"
-                      target="_blank"
-                      rel="noopener"
-                      :style="{
-                        background: classColor(pubJob.charClass),
-                        color: classTextColor(pubJob.charClass),
-                        padding: '.2rem .7rem',
-                        borderRadius: '999px',
-                        fontWeight: '700',
-                        fontSize: '.85rem',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '.3rem',
-                      }"
-                    >
+                  <template x-if="pubJob && pubJob.charName && armoryUrl(pubJob.realmSlug, pubJob.charName)">
+                    <a :href="armoryUrl(pubJob.realmSlug, pubJob.charName)" target="_blank" rel="noopener"
+                      :style="{background: classColor(pubJob.charClass), color: classTextColor(pubJob.charClass), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '.3rem'}">
                       <span x-text="pubJob.charName + (pubJob.charSpec || pubJob.charClass ? ' · ' + (pubJob.charSpec ? pubJob.charSpec + ' ' : '') + (pubJob.charClass || '') : '')"></span>
                       <span style="font-size:.75rem;opacity:.8">↗</span>
                     </a>
                   </template>
-                  <template x-if="!pubJob || !pubJob.charName">
-                    <span x-text="pubResult.name"></span>
-                  </template>
+                  <template x-if="!pubJob || !pubJob.charName"><span x-text="pubResult.name"></span></template>
                 </div>
               </div>
               <div class="result-grid">
@@ -313,10 +236,7 @@
                   <h2 style="margin-bottom:.6rem">Statystyki</h2>
                   <div class="stat-list">
                     <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
-                      <div class="stat-row">
-                        <span class="stat-name" x-text="formatStatName(key)"></span>
-                        <span class="stat-val"  x-text="formatStatValue(key, val)"></span>
-                      </div>
+                      <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
                     </template>
                   </div>
                 </div>
@@ -325,57 +245,30 @@
                     <h2>Breakdown spelli</h2>
                     <div style="display:flex;gap:.3rem">
                       <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                      <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                      <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                     </div>
                   </div>
-                  <template x-if="pubSortedSpells.length">
-                    <div class="spell-list">
-                      <template x-for="sp in pubSortedSpells" :key="sp.name">
-                        <div class="spell-row">
-                          <div class="spell-head">
-                            <span x-text="sp.name"></span>
-                            <span style="display:flex;gap:.6rem;align-items:center">
-                              <span x-show="spellSort==='total_dmg'">
-                                <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                                <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
-                              </span>
-                              <span x-show="spellSort==='dps'">
-                                <strong x-text="formatDps(sp.dps)"></strong> DPS
-                                <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
-                              </span>
-                              <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
-                            </span>
-                          </div>
-                          <div class="spell-bar-bg">
-                            <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div>
-                          </div>
+                  <div class="spell-list">
+                    <template x-for="sp in pubSortedSpells" :key="sp.name">
+                      <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
+                        <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
+                          <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
+                          <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
+                          <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
+                          <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                         </div>
-                      </template>
-                    </div>
-                  </template>
-                  <template x-if="!pubSortedSpells.length">
-                    <p style="color:var(--muted);font-size:.85rem">Brak danych o spellach.</p>
-                  </template>
+                        <div class="spell-head"><span x-text="sp.name"></span><span style="display:flex;gap:.6rem;align-items:center"><span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span><span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span><span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span></span></div>
+                        <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div></div>
+                      </div>
+                    </template>
+                  </div>
                 </div>
               </div>
-              <!-- DPS PIE CHART -->
-              <div class="chart-section">
-                <h2>🥧 DPS Pie Chart</h2>
-                <img
-                  class="dps-chart-img"
-                  :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()"
-                  alt="DPS Chart"
-                  @click="chartModal = $el.src"
-                  loading="lazy"
-                />
-              </div>
+              <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
               <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
                 <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
                 <span style="color:var(--border)">·</span>
-                <a :href="'/api/result/' + pubJob.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
-                <span style="color:var(--border)">·</span>
                 <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
-                <a href="/auth/login" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;margin:0;text-decoration:none">🔑 Zaloguj się aby symulować</a>
               </div>
             </div>
           </div>
@@ -385,20 +278,14 @@
     </div>
   </template>
 
-  <!-- ========================
-       APP (zalogowany)
-       ======================== -->
+  <!-- APP (zalogowany) -->
   <template x-if="sessionId">
     <div class="grid">
 
       <div class="panel">
         <h2>Postacie</h2>
-        <template x-if="loadingChars">
-          <div style="text-align:center;padding:2rem"><span class="spinner"></span></div>
-        </template>
-        <template x-if="errorChars">
-          <p style="color:#f66;font-size:.85rem" x-text="errorChars"></p>
-        </template>
+        <template x-if="loadingChars"><div style="text-align:center;padding:2rem"><span class="spinner"></span></div></template>
+        <template x-if="errorChars"><p style="color:#f66;font-size:.85rem" x-text="errorChars"></p></template>
         <template x-if="!loadingChars && !errorChars && characters.length === 0">
           <div style="text-align:center;padding:1.5rem 1rem;color:var(--muted)">
             <div style="font-size:2rem;margin-bottom:.5rem">👤</div>
@@ -434,42 +321,18 @@
             <button class="tab" :class="{active: simMode==='addon'}" @click="simMode='addon'">📋 Addon Export</button>
             <button class="tab" :class="{active: simMode==='armory'}" @click="simMode='armory'">🌐 Armory</button>
           </div>
-          <template x-if="simMode==='addon'">
-            <textarea class="addon-box" placeholder="Wklej tutaj output z addona SimulationCraft (/simc w grze)..." x-model="addonText"></textarea>
-          </template>
+          <template x-if="simMode==='addon'"><textarea class="addon-box" placeholder="Wklej tutaj output z addona SimulationCraft (/simc w grze)..." x-model="addonText"></textarea></template>
           <template x-if="simMode==='armory'">
             <div style="margin-bottom:.8rem">
-              <template x-if="selectedChar">
-                <p style="font-size:.9rem">Wybrana postać: <strong x-text="selectedChar.name + ' – ' + selectedChar.realm"></strong>
-                  <span x-show="selectedChar.class" :style="{color: classColor(selectedChar.class)}" x-text="' · ' + (selectedChar.spec ? selectedChar.spec + ' ' : '') + selectedChar.class"></span>
-                </p>
-              </template>
-              <template x-if="!selectedChar && characters.length">
-                <p style="font-size:.88rem;color:var(--muted)">← Wybierz postać z listy po lewej</p>
-              </template>
-              <template x-if="!selectedChar && !characters.length">
-                <p style="font-size:.88rem;color:var(--muted)">Brak postaci — skorzystaj z trybu <strong>Addon Export</strong>.</p>
-              </template>
+              <template x-if="selectedChar"><p style="font-size:.9rem">Wybrana postać: <strong x-text="selectedChar.name + ' – ' + selectedChar.realm"></strong><span x-show="selectedChar.class" :style="{color: classColor(selectedChar.class)}" x-text="' · ' + (selectedChar.spec ? selectedChar.spec + ' ' : '') + selectedChar.class"></span></p></template>
+              <template x-if="!selectedChar && characters.length"><p style="font-size:.88rem;color:var(--muted)">← Wybierz postać z listy po lewej</p></template>
+              <template x-if="!selectedChar && !characters.length"><p style="font-size:.88rem;color:var(--muted)">Brak postaci — skorzystaj z trybu <strong>Addon Export</strong>.</p></template>
             </div>
           </template>
           <div class="sim-options">
-            <div class="sim-option">
-              <label>Styl walki</label>
-              <select x-model="simOptions.fight_style">
-                <option value="Patchwerk">Patchwerk</option>
-                <option value="HecticAddCleave">HecticAddCleave</option>
-                <option value="LightMovement">LightMovement</option>
-                <option value="HeavyMovement">HeavyMovement</option>
-              </select>
-            </div>
-            <div class="sim-option">
-              <label>Iteracje</label>
-              <input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/>
-            </div>
-            <div class="sim-option">
-              <label>Target Error %</label>
-              <input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/>
-            </div>
+            <div class="sim-option"><label>Styl walki</label><select x-model="simOptions.fight_style"><option value="Patchwerk">Patchwerk</option><option value="HecticAddCleave">HecticAddCleave</option><option value="LightMovement">LightMovement</option><option value="HeavyMovement">HeavyMovement</option></select></div>
+            <div class="sim-option"><label>Iteracje</label><input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/></div>
+            <div class="sim-option"><label>Target Error %</label><input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/></div>
           </div>
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
             <span x-show="loadingSim" class="spinner"></span>
@@ -499,10 +362,7 @@
                 <h2 style="margin-bottom:.6rem">Statystyki</h2>
                 <div class="stat-list">
                   <template x-for="[key, val] in Object.entries(simResult.stats)" :key="key">
-                    <div class="stat-row">
-                      <span class="stat-name" x-text="formatStatName(key)"></span>
-                      <span class="stat-val"  x-text="formatStatValue(key, val)"></span>
-                    </div>
+                    <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
                   </template>
                 </div>
               </div>
@@ -511,44 +371,28 @@
                   <h2>Breakdown spelli</h2>
                   <div style="display:flex;gap:.3rem">
                     <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                    <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                    <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                   </div>
                 </div>
-                <template x-if="sortedSpells.length">
-                  <div class="spell-list">
-                    <template x-for="sp in sortedSpells" :key="sp.name">
-                      <div class="spell-row">
-                        <div class="spell-head">
-                          <span x-text="sp.name"></span>
-                          <span style="display:flex;gap:.6rem;align-items:center">
-                            <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span>
-                            <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span>
-                            <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
-                          </span>
-                        </div>
-                        <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div></div>
+                <div class="spell-list">
+                  <template x-for="sp in sortedSpells" :key="sp.name">
+                    <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
+                      <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
+                        <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
+                        <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
+                        <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
+                        <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                       </div>
-                    </template>
-                  </div>
-                </template>
-                <template x-if="!sortedSpells.length"><p style="color:var(--muted);font-size:.85rem">Brak danych o spellach (użyj trybu addon dla pełnych danych)</p></template>
+                      <div class="spell-head"><span x-text="sp.name"></span><span style="display:flex;gap:.6rem;align-items:center"><span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span><span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span><span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span></span></div>
+                      <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div></div>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
-            <!-- DPS PIE CHART -->
-            <div class="chart-section">
-              <h2>🥧 DPS Pie Chart</h2>
-              <img
-                class="dps-chart-img"
-                :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()"
-                alt="DPS Chart"
-                @click="chartModal = $el.src"
-                loading="lazy"
-              />
-            </div>
+            <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
-              <span style="color:var(--border)">·</span>
-              <a :href="'/api/result/' + job.id + '/dps-chart.png'" target="_blank" style="color:var(--muted)">Chart PNG</a>
               <span style="color:var(--border)">·</span>
               <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(job.id), job.id)" x-text="copiedJobId === job.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
             </div>
@@ -556,11 +400,18 @@
         </template>
       </div>
 
+      <!-- Historia boczna -->
       <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
-        <h2>Historia Publiczna</h2>
+        <h2>Historia</h2>
+        <!-- Sort -->
+        <div class="history-sort-bar">
+          <button :class="{active: historySort==='date'}" @click="setHistorySort('date')">Data</button>
+          <button :class="{active: historySort==='dps'}" @click="setHistorySort('dps')">DPS ↓</button>
+          <button :class="{active: historySort==='name'}" @click="setHistorySort('name')">Postać</button>
+        </div>
         <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
-        <div x-show="history.length > 0" class="history-list">
-          <template x-for="entry in history.slice(0,50)" :key="entry.job_id">
+        <div x-show="history.length > 0" class="history-list" style="flex:1">
+          <template x-for="entry in pagedHistory" :key="entry.job_id">
             <div class="history-item" :class="{active: selectedHistory === entry.job_id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
               <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
                 <div class="history-char">
@@ -574,6 +425,14 @@
               <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)" x-text="copiedJobId === entry.job_id ? '✓' : '🔗'" title="Skopiuj link"></button>
             </div>
           </template>
+        </div>
+        <!-- Paginacja -->
+        <div class="pagination" x-show="historyPageCount > 1">
+          <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
+          <template x-for="p in historyPages()" :key="p">
+            <button :class="{active: historyPage === p}" @click="historyPage = p" x-text="p"></button>
+          </template>
+          <button @click="historyPage < historyPageCount && historyPage++" :disabled="historyPage === historyPageCount">&raquo;</button>
         </div>
       </div>
 

@@ -33,6 +33,15 @@ function app() {
     spellSort: "total_dmg",
     copiedJobId: null,
     chartModal: null,
+    hoveredSpell: null,
+
+    // Historia: sort + paginacja
+    historySort: "date",       // date | dps | name
+    historyPage: 1,
+    historyPerPage: 10,
+
+    // Motyw
+    theme: localStorage.getItem("simcraft_theme") || "dark",
 
     STAT_LABELS: {
       strength:    "Strength",
@@ -62,6 +71,9 @@ function app() {
     },
 
     init() {
+      // Ustaw motyw
+      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+
       const params = new URLSearchParams(window.location.search);
       const sessionFromUrl = params.get("session");
 
@@ -81,6 +93,36 @@ function app() {
         this.loadPublicHistory();
       }
     },
+
+    toggleTheme() {
+      this.theme = this.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("simcraft_theme", this.theme);
+      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+    },
+
+    // ---- Historia: sort + paginacja ----
+    get sortedHistory() {
+      const arr = [...this.history];
+      if (this.historySort === "dps")  arr.sort((a, b) => (b.dps ?? 0) - (a.dps ?? 0));
+      else if (this.historySort === "name") arr.sort((a, b) => (a.character_name || "").localeCompare(b.character_name || ""));
+      else arr.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)); // date
+      return arr;
+    },
+    get historyPageCount() {
+      return Math.max(1, Math.ceil(this.sortedHistory.length / this.historyPerPage));
+    },
+    get pagedHistory() {
+      const start = (this.historyPage - 1) * this.historyPerPage;
+      return this.sortedHistory.slice(start, start + this.historyPerPage);
+    },
+    setHistorySort(s) {
+      this.historySort = s;
+      this.historyPage = 1;
+    },
+    historyPages() {
+      return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
+    },
+    // ------------------------------------
 
     async loadCharacters() {
       this.loadingChars = true;
@@ -113,12 +155,18 @@ function app() {
     },
 
     async loadHistory() {
-      try { this.history = await API.getHistory(); }
+      try {
+        this.history = await API.getHistory();
+        this.historyPage = 1;
+      }
       catch (e) { console.error("Failed to load history", e); }
     },
 
     async loadPublicHistory() {
-      try { this.history = await API.getPublicHistory(); }
+      try {
+        this.history = await API.getPublicHistory();
+        this.historyPage = 1;
+      }
       catch (e) { console.error("Failed to load public history", e); }
     },
 
