@@ -516,26 +516,75 @@ async def cancel_task(request: Request, job_id: str):
 
 # ---------- Appearance Settings ----------
 
+import json
+import os as os_module
+
+APPEARANCE_CONFIG_FILE = "/home/patryknowicki/simcraft-web/config/appearance.json"
+
 class AppearanceUpdate(BaseModel):
     header_title: str | None = None
     hero_title: str | None = None
     emoji: str | None = None
 
 
+def load_appearance_config():
+    """Load appearance config from JSON file."""
+    default_config = {
+        "header_title": "SimCraft Web",
+        "hero_title": "Symulator DPS dla World of Warcraft",
+        "emoji": "⚔️"
+    }
+    
+    try:
+        if os_module.path.exists(APPEARANCE_CONFIG_FILE):
+            with open(APPEARANCE_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                # Merge with defaults
+                for key, value in default_config.items():
+                    if key not in config:
+                        config[key] = value
+                return config
+        else:
+            # Create default config file
+            with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(default_config, f, indent=2, ensure_ascii=False)
+            return default_config
+    except Exception as e:
+        print(f"Error loading appearance config: {e}")
+        return default_config
+
+
+def save_appearance_config(config):
+    """Save appearance config to JSON file."""
+    try:
+        with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving appearance config: {e}")
+        return False
+
+
 @router.get("/api/appearance")
 async def get_appearance(request: Request):
     _require_admin(request)
-    return {
-        "header_title": os.environ.get("APPEARANCE_HEADER_TITLE", "SimCraft Web"),
-        "hero_title": os.environ.get("APPEARANCE_HERO_TITLE", "Symulator DPS dla World of Warcraft"),
-        "emoji": os.environ.get("APPEARANCE_EMOJI", "⚔️"),
-    }
+    config = load_appearance_config()
+    return config
 
 
 @router.post("/api/appearance")
 async def update_appearance(request: Request, data: AppearanceUpdate):
     _require_admin(request)
-    # In production, you'd save to a config file or database
-    # For now, we just return success (environment variables would need restart)
-    # You can implement persistence as needed
-    return {"ok": True, "message": "Appearance settings updated (restart server to apply)"}
+    config = load_appearance_config()
+    
+    if data.header_title is not None:
+        config["header_title"] = data.header_title
+    if data.hero_title is not None:
+        config["hero_title"] = data.hero_title
+    if data.emoji is not None:
+        config["emoji"] = data.emoji
+    
+    if save_appearance_config(config):
+        return {"ok": True, "message": "Appearance settings saved successfully"}
+    else:
+        raise HTTPException(500, "Failed to save appearance settings")

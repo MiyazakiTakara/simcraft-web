@@ -1,3 +1,5 @@
+import json
+import os
 import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -145,12 +147,37 @@ async def get_character_trend(
     }
 
 
+APPEARANCE_CONFIG_FILE = "/home/patryknowicki/simcraft-web/config/appearance.json"
+
+def load_appearance_config():
+    """Load appearance config from JSON file."""
+    default_config = {
+        "header_title": "SimCraft Web",
+        "hero_title": "Symulator DPS dla World of Warcraft",
+        "emoji": "⚔️"
+    }
+    
+    try:
+        if os.path.exists(APPEARANCE_CONFIG_FILE):
+            with open(APPEARANCE_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                # Merge with defaults
+                for key, value in default_config.items():
+                    if key not in config:
+                        config[key] = value
+                return config
+        else:
+            # Create default config file
+            with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(default_config, f, indent=2, ensure_ascii=False)
+            return default_config
+    except Exception as e:
+        print(f"Error loading appearance config: {e}")
+        return default_config
+
+
 @router.get("/api/appearance")
 async def get_appearance():
     """Public endpoint to get appearance settings."""
-    import os
-    return {
-        "header_title": os.environ.get("APPEARANCE_HEADER_TITLE", "SimCraft Web"),
-        "hero_title": os.environ.get("APPEARANCE_HERO_TITLE", "Symulator DPS dla World of Warcraft"),
-        "emoji": os.environ.get("APPEARANCE_EMOJI", "⚔️"),
-    }
+    config = load_appearance_config()
+    return config
