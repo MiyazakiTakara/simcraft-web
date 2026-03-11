@@ -5,9 +5,11 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, HistoryEntryModel
+from database import SessionLocal, HistoryEntryModel, detect_role_from_result
 
 router = APIRouter()
+
+RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
 
 
 class HistoryEntry(BaseModel):
@@ -17,6 +19,9 @@ class HistoryEntry(BaseModel):
     character_spec: Optional[str] = ""
     character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
+    hps: Optional[float] = 0.0
+    dtps: Optional[float] = 0.0
+    role: Optional[str] = None  # None = auto-detect z pliku JSON
     fight_style: Optional[str] = "Patchwerk"
     user_id: Optional[str] = None
 
@@ -29,6 +34,9 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
         "character_spec":       e.character_spec,
         "character_realm_slug": e.character_realm_slug,
         "dps":                  e.dps,
+        "hps":                  e.hps,
+        "dtps":                 e.dtps,
+        "role":                 e.role,
         "fight_style":          e.fight_style,
         "user_id":              e.user_id,
         "created_at":           e.created_at,
@@ -37,7 +45,7 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
 
 @router.get("/api/history")
 async def get_history(page: int = 1, limit: int = 50):
-    """Publiczna historia — ostatnie wpisów wszystkich użytkowników."""
+    """Publiczna historia — ostatnie wpisy wszystkich użytkowników."""
     offset = (page - 1) * limit
     with SessionLocal() as db:
         rows = (
@@ -97,6 +105,21 @@ async def add_history(entry: HistoryEntry):
     with SessionLocal() as db:
         exists = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == entry.job_id).first()
         if not exists:
+            # Auto-detect roli jeśli nie podano explicite
+            role = entry.role
+            hps = entry.hps or 0.0
+            dtps = entry.dtps or 0.0
+            if role is None:
+                result_path = os.path.join(RESULTS_DIR, f"{entry.job_id}.json")
+                try:
+                    with open(result_path) as f:
+                        result_json = json.load(f)
+                    role = detect_role_from_result(result_json)
+                    hps  = result_json.get("hps", 0.0)
+                    dtps = result_json.get("dtps", 0.0)
+                except Exception:
+                    role = "dps"
+
             row = HistoryEntryModel(
                 job_id               = entry.job_id,
                 character_name       = entry.character_name,
@@ -104,6 +127,9 @@ async def add_history(entry: HistoryEntry):
                 character_spec       = entry.character_spec,
                 character_realm_slug = entry.character_realm_slug or "",
                 dps                  = entry.dps,
+                hps                  = hps,
+                dtps                 = dtps,
+                role                 = role,
                 fight_style          = entry.fight_style,
                 user_id              = entry.user_id,
                 created_at           = int(time.time()),
@@ -121,10 +147,10 @@ async def get_character_trend(
     fight_style: str = "Patchwerk",
     limit: int = 50
 ):
-    """Pobiera dane do wykresu DPS w czasie dla konkretnej postaci."""
+    """Pobiera dane do wykresu DPS/HPS/DTPS w czasie dla konkretnej postaci."""
     if not session:
         raise HTTPException(400, "Brak session")
-    
+
     with SessionLocal() as db:
         rows = (
             db.query(HistoryEntryModel)
@@ -138,10 +164,20 @@ async def get_character_trend(
             .limit(limit)
             .all()
         )
-    
+
     return {
         "character_name": character_name,
         "character_realm_slug": character_realm_slug,
         "fight_style": fight_style,
-        "points": [{"timestamp": r.created_at, "dps": r.dps, "job_id": r.job_id} for r in rows]
+        "points": [
+            {
+                "timestamp": r.created_at,
+                "dps":  r.dps,
+                "hps":  r.hps,
+                "dtps": r.dtps,
+                "role": r.role,
+                "job_id": r.job_id,
+            }
+            for r in rows
+        ]
     }

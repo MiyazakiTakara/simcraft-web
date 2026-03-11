@@ -13,6 +13,35 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
 
+# Mapowanie spec -> rola (używane przy override w UI w przyszłości)
+SPEC_ROLE: dict[str, str] = {
+    # Healerzy
+    "Holy Priest":         "healer",
+    "Discipline Priest":   "healer",
+    "Holy Paladin":        "healer",
+    "Restoration Druid":   "healer",
+    "Restoration Shaman":  "healer",
+    "Mistweaver Monk":     "healer",
+    "Preservation Evoker": "healer",
+    # Tanki
+    "Protection Warrior":    "tank",
+    "Protection Paladin":    "tank",
+    "Blood Death Knight":    "tank",
+    "Guardian Druid":        "tank",
+    "Brewmaster Monk":       "tank",
+    "Vengeance Demon Hunter": "tank",
+}
+
+
+def detect_role_from_result(result: dict) -> str:
+    """Auto-detect roli na podstawie wyniku SimulationCraft."""
+    if result.get("hps", 0) > 0:
+        return "healer"
+    if result.get("dtps", 0) > 0 or result.get("tmi") is not None:
+        return "tank"
+    return "dps"
+
+
 class JobModel(Base):
     __tablename__ = "jobs"
 
@@ -34,6 +63,9 @@ class HistoryEntryModel(Base):
     character_spec = Column(String(64), default="")
     character_realm_slug = Column(String(128), default="")
     dps            = Column(Float, default=0.0)
+    hps            = Column(Float, default=0.0)
+    dtps           = Column(Float, default=0.0)
+    role           = Column(String(16), default="dps")
     fight_style    = Column(String(64), default="Patchwerk")
     user_id        = Column(String(64), nullable=True, index=True)
     created_at     = Column(Integer, default=0)
