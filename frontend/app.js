@@ -245,54 +245,75 @@ function app() {
        }
      },
 
-     drawDpsTrendChart(char) {
+     async drawDpsTrendChart(char) {
        const chartDiv = document.getElementById('dps-trend-chart');
        if (!chartDiv) return;
 
-       const dpsData = this.getCharDps(char.name);
-       if (!dpsData || !dpsData.chartData || dpsData.chartData.length === 0) {
+       try {
+         // Fetch trend data from API
+         const params = new URLSearchParams({
+           session: this.sessionId,
+           character_name: char.name,
+           character_realm_slug: char.realm_slug,
+           fight_style: 'Patchwerk',
+           limit: 100
+         });
+         
+         const response = await fetch(`/api/history/trend?${params}`);
+         if (!response.ok) {
+           throw new Error(`HTTP ${response.status}`);
+         }
+         
+         const data = await response.json();
+         
+         if (!data.points || data.points.length === 0) {
+           Plotly.purge(chartDiv);
+           chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
+           return;
+         }
+
+         const x = data.points.map(p => new Date(p.timestamp * 1000));
+         const y = data.points.map(p => p.dps);
+
+         const trace = {
+           x: x,
+           y: y,
+           mode: 'lines+markers',
+           type: 'scatter',
+           name: 'DPS',
+           line: { color: '#f4a01c', width: 2 },
+           marker: { size: 6, color: '#f4a01c' },
+           hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
+         };
+
+         const layout = {
+           paper_bgcolor: 'rgba(0,0,0,0)',
+           plot_bgcolor: 'rgba(0,0,0,0)',
+           margin: { l: 50, r: 20, t: 20, b: 50 },
+           xaxis: {
+             gridcolor: 'rgba(255,255,255,0.1)',
+             color: '#aaa',
+             tickformat: '%H:%M<br>%d.%m'
+           },
+           yaxis: {
+             gridcolor: 'rgba(255,255,255,0.1)',
+             color: '#aaa',
+             title: 'DPS'
+           },
+           showlegend: false
+         };
+
+         const config = {
+           responsive: true,
+           displayModeBar: false
+         };
+
+         Plotly.newPlot(chartDiv, [trace], layout, config);
+       } catch (e) {
+         console.error("Failed to load DPS trend", e);
          Plotly.purge(chartDiv);
-         chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
-         return;
+         chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f66">Błąd ładowania danych</div>';
        }
-
-       const x = dpsData.chartData.map(d => d.x);
-       const y = dpsData.chartData.map(d => d.y);
-
-       const trace = {
-         x: x,
-         y: y,
-         mode: 'lines+markers',
-         type: 'scatter',
-         name: 'DPS',
-         line: { color: '#f4a01c', width: 2 },
-         marker: { size: 6, color: '#f4a01c' },
-         hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
-       };
-
-       const layout = {
-         paper_bgcolor: 'rgba(0,0,0,0)',
-         plot_bgcolor: 'rgba(0,0,0,0)',
-         margin: { l: 50, r: 20, t: 20, b: 50 },
-         xaxis: {
-           gridcolor: 'rgba(255,255,255,0.1)',
-           color: '#aaa',
-           tickformat: '%H:%M<br>%d.%m'
-         },
-         yaxis: {
-           gridcolor: 'rgba(255,255,255,0.1)',
-           color: '#aaa',
-           title: 'DPS'
-         },
-         showlegend: false
-       };
-
-       const config = {
-         responsive: true,
-         displayModeBar: false
-       };
-
-       Plotly.newPlot(chartDiv, [trace], layout, config);
      },
 
     getItemQualityColor(quality) {
