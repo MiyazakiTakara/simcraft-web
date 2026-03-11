@@ -27,6 +27,27 @@ const Utils = {
     "Warrior":       "#C69B3A",
   },
 
+  formatTime(timestamp) {
+    if (!timestamp && timestamp !== 0) return "\u2014";
+    let date;
+    if (typeof timestamp === "string") {
+      // ISO string — może nie mieć Z na końcu (naive datetime z Pythona)
+      date = new Date(timestamp.endsWith("Z") || timestamp.includes("+") ? timestamp : timestamp + "Z");
+    } else if (typeof timestamp === "number") {
+      // Unix seconds (< 1e10) lub milisekundy
+      date = new Date(timestamp < 1e10 ? timestamp * 1000 : timestamp);
+    } else {
+      return "\u2014";
+    }
+    if (isNaN(date.getTime())) return "\u2014";
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60)    return "teraz";
+    if (diff < 3600)  return Math.floor(diff / 60) + "m temu";
+    if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
+    return date.toLocaleDateString("pl-PL");
+  },
+
   formatDps(v) {
     if (!v && v !== 0) return "\u2014";
     if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
@@ -39,17 +60,6 @@ const Utils = {
     if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
     if (v >= 1_000)     return (v / 1_000).toFixed(0) + "k";
     return String(Math.round(v));
-  },
-
-  formatTime(timestamp) {
-    if (!timestamp) return "\u2014";
-    const date = new Date(timestamp * 1000);
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000);
-    if (diff < 60) return "teraz";
-    if (diff < 3600) return Math.floor(diff / 60) + "m temu";
-    if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
-    return date.toLocaleDateString('pl-PL');
   },
 
   pctBarWidth(val, spells, key) {
