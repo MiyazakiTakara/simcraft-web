@@ -533,7 +533,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             ),
             paper_bgcolor="#12121f", plot_bgcolor="#12121f",
             font=dict(color="#cccccc", size=12),
-            width=1400, height=700,
+            width=1100, height=520,
             margin=dict(t=70, b=30, l=20, r=200),
         )
         fig.update_annotations(font=dict(size=13, color="#aaaaaa"))
