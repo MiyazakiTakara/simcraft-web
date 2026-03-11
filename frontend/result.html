@@ -75,9 +75,10 @@
 
           <!-- DPS Hero -->
           <div class="result-hero">
-            <div class="dps-value" x-text="formatDps(result.dps)"></div>
+            <div class="dps-value" x-text="formatDps(resultMetric().value)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
-              <span>DPS (±<span x-text="formatDps(result.dps_std)"></span>)</span>
+              <span class="role-badge" x-text="roleIcon(effectiveRole()) + ' ' + roleLabel(effectiveRole())" style="background:var(--accent);color:#fff;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700"></span>
+              <span x-text="'(±' + formatDps(resultMetric().std) + ')'"></span>
 
               <!-- Badge postaci z linkiem do Armory -->
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && armoryUrl()">
@@ -303,6 +304,20 @@ function resultPage() {
     get sortedSpells() {
       if (!this.result?.spells) return [];
       return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
+    },
+
+    effectiveRole() {
+      return this.result?.role || (this.result?.hps > 100 ? 'healer' : 'dps');
+    },
+
+    roleIcon(role) { return role === 'healer' ? '💚' : '⚔️'; },
+    roleLabel(role) { return role === 'healer' ? 'HPS' : 'DPS'; },
+
+    resultMetric() {
+      if (!this.result) return { value: 0, std: 0, label: 'DPS' };
+      const role = this.effectiveRole();
+      if (role === 'healer') return { value: this.result.hps ?? 0, std: this.result.hps_std ?? 0, label: 'HPS' };
+      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
     },
 
     classColor(c)     { return this.CLASS_COLORS[c] || '#aaa'; },
