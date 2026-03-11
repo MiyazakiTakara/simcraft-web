@@ -130,56 +130,57 @@
                 </template>
               </div>
             </div>
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-            <h2>Breakdown spelli</h2>
-            <div style="display:flex;gap:.3rem">
-              <div>
-                <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
-              </div>
-            </div>
-          </div>
-            <div class="spell-list">
-              <template x-for="sp in sortedSpells" :key="sp.name">
-                <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
-                  <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
-                    <div class="spell-tooltip-row">
-                      <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : 'Hits'"></span>
-                      <span class="spell-tooltip-val" x-text="sp.count > 0 ? sp.count.toLocaleString() : '—'"></span>
-                    </div>
-                    <div class="spell-tooltip-row">
-                      <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : 'Avg hit'"></span>
-                      <span class="spell-tooltip-val" x-text="sp.avg_hit > 0 ? formatDmg(sp.avg_hit) : '—'"></span>
-                    </div>
-                    <div class="spell-tooltip-row">
-                      <span class="spell-tooltip-label">Crit</span>
-                      <span class="spell-tooltip-val" x-text="sp.crit_pct > 0 ? sp.crit_pct + '%' : '—'"></span>
-                    </div>
-                    <div class="spell-tooltip-row" x-show="sp.miss_pct > 0">
-                      <span class="spell-tooltip-label">Miss/Dodge</span>
-                      <span class="spell-tooltip-val" x-text="sp.miss_pct + '%'"></span>
-                    </div>
-                  </div>
-                  <div class="spell-head">
-                    <span x-text="sp.name"></span>
-                    <span style="display:flex;gap:.6rem;align-items:center">
-                      <span x-show="spellSort==='total_dmg'">
-                        <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                        <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
-                      </span>
-                      <span x-show="spellSort==='dps'">
-                        <strong x-text="formatDps(sp.dps)"></strong> DPS
-                        <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
-                      </span>
-                      <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
-                    </span>
-                  </div>
-                  <div class="spell-bar-bg">
-                    <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+                <h2>Breakdown spelli</h2>
+                <div style="display:flex;gap:.3rem">
+                  <div>
+                    <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                    <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                   </div>
                 </div>
-              </template>
+              </div>
+              <div class="spell-list">
+                <template x-for="sp in sortedSpells" :key="sp.name">
+                  <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
+                    <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : 'Hits'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.count > 0 ? sp.count.toLocaleString() : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : 'Avg hit'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.avg_hit > 0 ? formatDmg(sp.avg_hit) : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row">
+                        <span class="spell-tooltip-label">Crit</span>
+                        <span class="spell-tooltip-val" x-text="sp.crit_pct > 0 ? sp.crit_pct + '%' : '—'"></span>
+                      </div>
+                      <div class="spell-tooltip-row" x-show="sp.miss_pct > 0">
+                        <span class="spell-tooltip-label">Miss/Dodge</span>
+                        <span class="spell-tooltip-val" x-text="sp.miss_pct + '%'"></span>
+                      </div>
+                    </div>
+                    <div class="spell-head">
+                      <span x-text="sp.name"></span>
+                      <span style="display:flex;gap:.6rem;align-items:center">
+                        <span x-show="spellSort==='total_dmg'">
+                          <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                        </span>
+                        <span x-show="spellSort==='dps'">
+                          <strong x-text="formatDps(sp.dps)"></strong> DPS
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                        </span>
+                        <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                      </span>
+                    </div>
+                    <div class="spell-bar-bg">
+                      <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
 
