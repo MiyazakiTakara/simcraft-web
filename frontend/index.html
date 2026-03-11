@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/style.css?v=6"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=3"></script>
-  <script src="/app.js?v=18"></script>
+  <script src="/app.js?v=19"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -362,14 +362,8 @@
 
       <div>
         <div class="panel" style="margin-bottom:1rem">
-          <div class="sim-tabs" x-show="sessionId">
-            <button class="tab" :class="{active: simTab==='sim'}" @click="simTab='sim'">Symulacja</button>
-            <button class="tab" :class="{active: simTab==='history'}" @click="simTab='history'; loadHistory()">Historia</button>
-          </div>
-          <template x-if="simTab==='sim' || !sessionId">
-          <div>
-            <h2>Symulacja</h2>
-            <div class="sim-tabs">
+          <h2>Symulacja</h2>
+          <div class="sim-tabs">
             <button class="tab" :class="{active: simMode==='addon'}" @click="simMode='addon'">📋 Addon Export</button>
             <button class="tab" :class="{active: simMode==='armory'}" @click="simMode='armory'">🌐 Armory</button>
           </div>
@@ -391,43 +385,7 @@
             <span x-show="!loadingSim">▶ Uruchom symulację</span>
           </button>
           <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku… (job: <span x-text="job?.id?.slice(0,8)"></span>…)</p>
-          </div>
-          </template>
-
-          <template x-if="simTab==='history' && sessionId">
-          <div class="panel">
-            <h2>Moja historia</h2>
-            <div class="history-sort-bar">
-              <button :class="{active: historySort==='date'}" @click="setHistorySort('date')">Data</button>
-              <button :class="{active: historySort==='dps'}" @click="setHistorySort('dps')">DPS ↓</button>
-              <button :class="{active: historySort==='name'}" @click="setHistorySort('name')">Postać</button>
-            </div>
-            <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
-            <div x-show="history.length > 0" class="history-list" style="max-height:400px;overflow-y:auto">
-              <template x-for="entry in pagedHistory" :key="entry.job_id">
-                <div class="history-item" :class="{active: selectedHistory === entry.job_id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
-                  <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
-                    <div class="history-char">
-                      <span x-text="entry.character_name || 'Addon Export'"></span>
-                      <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
-                    </div>
-                    <div class="history-dps" x-text="formatDps(entry.dps)"></div>
-                    <div class="history-time" x-text="formatTime(entry.created_at)"></div>
-                    <div class="history-style" x-text="entry.fight_style"></div>
-                  </div>
-                  <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)" x-text="copiedJobId === entry.job_id ? '✓' : '🔗'" title="Skopiuj link"></button>
-                </div>
-              </template>
-            </div>
-            <div class="pagination" x-show="historyPageCount > 1" style="margin-top:1rem">
-              <button @click="historyPage > 1 && historyPage--">&laquo;</button>
-              <template x-for="p in historyPages()" :key="p">
-                <button :class="{active: historyPage === p}" x-text="p" @click="historyPage = p"></button>
-              </template>
-              <button @click="historyPage < historyPageCount && historyPage++">&raquo;</button>
-            </div>
-          </div>
-          </template>
+        </div>
 
         <template x-if="simResult">
           <div class="panel">
