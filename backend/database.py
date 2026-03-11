@@ -114,6 +114,7 @@ def init_db():
         try:
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS hps FLOAT DEFAULT 0.0"))
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS dtps FLOAT DEFAULT 0.0"))
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
             db.commit()
         except Exception:
             db.rollback()
