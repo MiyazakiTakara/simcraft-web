@@ -259,7 +259,7 @@ def parse_results(json_path: str):
         hps_std = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
 
         # DTPS std dev
-        dtps_std_data = cd.get("dtps") or {}
+        dtps_std_data = cd.get("dtps") or cd.get("dmg_taken") or {}
         dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
         fl_data      = cd.get("fight_length", {})
