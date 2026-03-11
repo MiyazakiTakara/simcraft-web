@@ -34,7 +34,7 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
-  <script src="/app.js?v=21"></script>
+  <script src="/app.js?v=22"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -550,8 +550,10 @@
         <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem">Brak symulacji</div>
         <div x-show="history.length > 0" class="history-list" style="max-height:500px;overflow-y:auto">
           <template x-for="entry in pagedHistory" :key="entry.job_id">
-            <div class="history-item" :class="{active: selectedHistory === entry.job_id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
-              <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
+            <!-- PROFIL/HISTORIA: klik przenosi do /result/:jobId -->
+            <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
+                 @click="openResultPage(entry.job_id)">
+              <div style="flex:1;min-width:0">
                 <div class="history-char">
                   <span x-text="entry.character_name || 'Addon Export'"></span>
                   <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
