@@ -93,25 +93,18 @@ def _run_sim(job_id: str, simc_input: str):
     with open(inp_path, "w") as f:
         f.write(simc_input)
 
-    api_key_file = None
     try:
         blizzard_id = os.environ.get("BLIZZARD_CLIENT_ID")
         blizzard_secret = os.environ.get("BLIZZARD_CLIENT_SECRET")
         if blizzard_id and blizzard_secret:
-            import tempfile
-            fd, api_key_file = tempfile.mkstemp(prefix=".simc_apikey_", dir="/tmp")
-            os.chmod(api_key_file, 0o600)
-            with os.fdopen(fd, "w") as f:
+            api_key_path = os.path.expanduser("~/.simc_apikey")
+            with open(api_key_path, "w") as f:
                 f.write(f"{blizzard_id}:{blizzard_secret}")
-
-        cmd = [SIMC_PATH, inp_path]
-        env = os.environ.copy()
-        if api_key_file:
-            env["SIMC_APIKEY_PATH"] = api_key_file
+            os.chmod(api_key_path, 0o600)
 
         result = subprocess.run(
-            cmd,
-            capture_output=True, text=True, timeout=JOB_TIMEOUT, env=env
+            [SIMC_PATH, inp_path],
+            capture_output=True, text=True, timeout=JOB_TIMEOUT
         )
         out_path = jobs[job_id].get("json_path")
         if result.returncode != 0 or not os.path.exists(out_path):
@@ -126,11 +119,6 @@ def _run_sim(job_id: str, simc_input: str):
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"]  = str(e)
     finally:
-        if api_key_file and os.path.exists(api_key_file):
-            try:
-                os.remove(api_key_file)
-            except OSError:
-                pass
         with _running_lock:
             _running_sims -= 1
 
