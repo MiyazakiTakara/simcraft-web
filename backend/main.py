@@ -17,11 +17,7 @@ from results import router as results_router
 from history import router as history_router
 from admin import router as admin_router
 
-_id  = os.environ["BLIZZARD_CLIENT_ID"]
-_sec = os.environ["BLIZZARD_CLIENT_SECRET"]
-with open("/root/.simc_apikey", "w") as _f:
-    _f.write(f"{_id}:{_sec}")
-print(f".simc_apikey written ({os.path.getsize('/root/.simc_apikey')} bytes)", flush=True)
+
 
 # Inicjalizacja bazy danych
 init_db()

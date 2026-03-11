@@ -3,7 +3,7 @@ import time
 import uuid
 import httpx
 import secrets
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import RedirectResponse
 
 from database import SessionLocal, SessionModel
@@ -17,6 +17,8 @@ REDIRECT_URI  = os.environ.get("REDIRECT_URI", "http://localhost:8000/auth/callb
 print(f"REDIRECT_URI = {REDIRECT_URI}", flush=True)
 
 _token_cache: dict = {"token": None, "expires_at": 0}
+
+_oauth_states: dict = {}
 
 
 def _get_session(session_id: str) -> dict | None:
@@ -66,6 +68,7 @@ async def get_session_token(session_id: str) -> str:
 @router.get("/auth/login")
 async def auth_login():
     state = secrets.token_urlsafe(16)
+    _oauth_states[state] = time.time()
     url = (
         f"https://oauth.battle.net/authorize"
         f"?client_id={CLIENT_ID}"
@@ -79,6 +82,13 @@ async def auth_login():
 
 @router.get("/auth/callback")
 async def auth_callback(code: str, state: str = None):
+    if not state or state not in _oauth_states:
+        raise HTTPException(400, "Invalid state parameter")
+    
+    state_time = _oauth_states.pop(state)
+    if time.time() - state_time > 600:
+        raise HTTPException(400, "State parameter expired")
+    
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "https://oauth.battle.net/token",
