@@ -2,41 +2,53 @@
 
 Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 
+> Aplikacja jest **DPS-only** — symulacje healerów i tanków nie są obsługiwane.
+
 ## Funkcje
 
 - **Logowanie przez Battle.net** — autoryzacja OAuth2, pobieranie postaci z armory
 - **Symulacje z Armory** — automatyczne pobieranie danych postaci z API Blizzarda
 - **Symulacje z Addon Export** — możliwość wklejenia tekstu z addona SimulationCraft bez logowania
-- **Historia symulacji** — zapis wszystkich symulacji, publiczna lista ostatnich wyników
-- **Wykresy DPS** — interaktywne wykresy kołowe (plotly)
-- **Panel admina** — zarządzanie newsami, limitami, health check, zadaniami (Keycloak OAuth2)
-- **Rate limiting** — ochrona przed nadużywaniem API
+- **Historia symulacji** — zapis wszystkich symulacji, publiczna lista ostatnich wyników z paginacją
+- **Wykresy DPS** — wykresy kołowe Total DMG + DPS (Plotly/kaleido, renderowane server-side do PNG)
+- **Social sharing** — każdy wynik ma unikalny URL z OG meta tagami (podgląd na Discordzie, Twitterze itp.)
+- **Panel admina** — zarządzanie newsami, limitami symulacji, health check, lista aktywnych zadań (Keycloak OAuth2)
+- **Rate limiting** — ochrona przed nadużywaniem API (slowapi, per-IP)
+- **Watchdog** — automatyczne czyszczenie starych jobów i obsługa timeoutów
 
 ## TODO
 
 ### Funkcje społecznościowe
 
-> ⚠️ Wymagają przemyślenia systemu tożsamości użytkowników — aktualnie użytkownicy identyfikowani są przez UUID sesji Battle.net, bez żadnej nazwy wyświetlanej ani profilu. Przed implementacją poniższych funkcji warto rozważyć: czy wystarczy wyświetlać nick postaci WoW (np. `Thrall-Draenor`), czy potrzebny jest osobny profil użytkownika?
+> **Problem tożsamości użytkowników:** Użytkownicy logują się przez Battle.net OAuth i posiadają wiele postaci. Planowane podejście: przy pierwszym logowaniu użytkownik wybiera **główną postać** (main), która staje się jego profilem publicznym. Wszystkie symulacje są nadal przypisane do konta (session UUID), ale publicznie wyświetlany jest nick w formacie `Imię-Realm`.
 
-- [ ] **Profile użytkowników** — strona `/u/{battletag_lub_uuid}` z historią symulacji danej osoby, ulubionymi postaciami, statystykami
-- [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style, aktualizowana na bieżąco z historii
-- [ ] **Komentarze / reakcje** — możliwość zostawienia komentarza lub emoji-reakcji pod wynikiem symulacji (powiązanym z `job_id`)
+- [ ] **Profile użytkowników** — strona `/u/{realm}/{name}` z historią symulacji, wybrana główna postać jako awatar profilu
+- [ ] **Wybór głównej postaci** — modal przy pierwszym logowaniu lub w ustawieniach; zapis do nowej kolumny `main_character` w tabeli sesji
+- [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style, generowana z publicznej historii
+- [ ] **Komentarze / reakcje** — emoji-reakcje lub krótki komentarz pod wynikiem symulacji (per `job_id`)
 - [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji (addon text + parametry) jako publiczny link do ponownego uruchomienia
 - [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli i DPS obok siebie
-- [ ] **Obserwowanie postaci** — zapisanie postaci do "ulubionych" i śledzenie jej historii DPS na wykresie trendów
+- [ ] **śledzenie trendów** — wykres DPS w czasie dla konkretnej postaci (endpoint `/api/history/trend` już istnieje, brakuje UI)
+
+### Wielojęzyczność
+
+- [ ] **i18n frontend** — wydzielenie wszystkich stringów UI do plików tłumaczeń (np. `locales/pl.json`, `locales/en.json`); Alpine.js może obsłużyć przełączanie języka przez reaktywny store
+- [ ] **Automatyczne wykrywanie języka** — na podstawie `Accept-Language` z nagłówka HTTP lub ustawienia zapisanego w `localStorage`
+- [ ] **Angielski jako domyślny** — aktualnie UI jest po polsku; angielski powinien być domyślnym językiem dla szerszego zasięgu
+- [ ] **Lokalizacja nazw spelli** — SimulationCraft zwraca nazwy spelli po angielsku; rozważyć czy tłumaczyć czy zostawić EN (WoW gracze są przyzwyczajeni do EN nazw)
 
 ### Techniczne
 
 - [ ] **Race condition w `simulation.py`** — `out_path` czytany z `jobs[]` poza `_running_lock`; przekazać jako argument do `_run_sim()`
-- [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze`
-- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli jako CSV
+- [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze` dla reprodukowalnych buildów
+- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli (ma sens po dodaniu porównywania buildów)
 
 ## Wymagania
 
 - Python 3.10+
 - PostgreSQL
-- Docker & Docker Compose (opcjonalnie)
-- Konto deweloperskie Battle.net (OAuth)
+- Docker & Docker Compose (zalecane)
+- Konto deweloperskie Battle.net (OAuth2)
 - Keycloak (dla panelu admina)
 
 ## Uruchomienie lokalne
@@ -47,7 +59,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 cp .env.example .env
 # edytuj .env i uzupełnij zmienne środowiskowe
 
-docker-compose up --build
+docker compose up --build
 ```
 
 ### Ręcznie
@@ -65,7 +77,7 @@ pip install -r requirements.txt
 export BLIZZARD_CLIENT_ID=...
 export BLIZZARD_CLIENT_SECRET=...
 export DATABASE_URL=postgresql://simcraft:simcraft@localhost:5432/simcraft
-# ... pozostałe zmienne środowiskowe
+# ... pozostałe zmienne środowiskowe (patrz .env.example)
 
 cd backend
 uvicorn main:app --reload
@@ -73,43 +85,51 @@ uvicorn main:app --reload
 
 ## Zmienne środowiskowe
 
-| Zmienna | Opis |
-|---------|------|
-| `BLIZZARD_CLIENT_ID` | ID aplikacji OAuth Battle.net |
-| `BLIZZARD_CLIENT_SECRET` | Secret aplikacji OAuth Battle.net |
-| `REDIRECT_URI` | URL powrotny po autoryzacji Battle.net |
-| `DATABASE_URL` | Connection string PostgreSQL |
-| `KEYCLOAK_URL` | URL Keycloak (dla admina) |
-| `KEYCLOAK_REALM` | Realm Keycloak |
-| `KEYCLOAK_CLIENT_ID` | Client ID Keycloak |
-| `KEYCLOAK_CLIENT_SECRET` | Client Secret Keycloak |
-| `ADMIN_REDIRECT_URI` | URL powrotny po logowaniu admina |
-| `RESULTS_DIR` | Katalog na wyniki symulacji (domyślnie /app/results) |
-| `SIMC_PATH` | Ścieżka do binary simc (domyślnie /app/SimulationCraft/simc) |
-| `MAX_CONCURRENT_SIMS` | Maksymalna liczba równoczesnych symulacji (domyślnie 3) |
-| `JOB_TIMEOUT` | Timeout symulacji w sekundach (domyślnie 360) |
+| Zmienna | Opis | Domyślnie |
+|---------|------|----------|
+| `BLIZZARD_CLIENT_ID` | ID aplikacji OAuth Battle.net | — |
+| `BLIZZARD_CLIENT_SECRET` | Secret aplikacji OAuth Battle.net | — |
+| `REDIRECT_URI` | URL powrotny po autoryzacji Battle.net | — |
+| `DATABASE_URL` | Connection string PostgreSQL | `postgresql://simcraft:simcraft@db:5432/simcraft` |
+| `KEYCLOAK_URL` | URL Keycloak (dla admina) | — |
+| `KEYCLOAK_REALM` | Realm Keycloak | — |
+| `KEYCLOAK_CLIENT_ID` | Client ID Keycloak | — |
+| `KEYCLOAK_CLIENT_SECRET` | Client Secret Keycloak | — |
+| `ADMIN_REDIRECT_URI` | URL powrotny po logowaniu admina | — |
+| `BASE_URL` | Bazowy URL aplikacji (używany w OG meta tagach) | `https://sim.miyazakitakara.ovh` |
+| `RESULTS_DIR` | Katalog na wyniki symulacji | `/app/results` |
+| `SIMC_PATH` | Ścieżka do binary simc | `/app/SimulationCraft/simc` |
+| `MAX_CONCURRENT_SIMS` | Maks. liczba równoczesnych symulacji | `3` |
+| `JOB_TIMEOUT` | Timeout symulacji w sekundach | `360` |
+| `JOBS_TTL` | Czas życia zakończonych jobów w pamięci (sekundy) | `14400` (4h) |
+| `LOG_LEVEL` | Poziom logowania | `INFO` |
 
 ## Struktura projektu
 
 ```
 simcraft-web/
 ├── backend/
-│   ├── main.py          # FastAPI app, routing
-│   ├── auth.py          # Battle.net OAuth
-│   ├── characters.py    # API postaci Blizzarda
-│   ├── simulation.py    # Uruchamianie symulacji simc
-│   ├── results.py       # Parsowanie wyników, wykresy
-│   ├── history.py       # Historia symulacji
-│   ├── database.py      # Modele SQLAlchemy
-│   └── admin.py         # Panel admina (Keycloak)
+│   ├── main.py            # FastAPI app, routing, OG meta, startup
+│   ├── auth.py            # Battle.net OAuth2
+│   ├── characters.py      # API postaci Blizzarda (lista, media, ekwipunek, statystyki, talenty)
+│   ├── simulation.py      # Uruchamianie simc, kolejka jobów, watchdog
+│   ├── results.py         # Parsowanie wyników JSON, generowanie wykresów PNG
+│   ├── history.py         # Historia symulacji, trendy, metadane
+│   ├── database.py        # Modele SQLAlchemy, migracje inline
+│   ├── admin.py           # Panel admina (Keycloak), newsy, logi, limity
+│   └── logging_config.py  # Strukturowane logowanie (structlog)
 ├── frontend/
-│   ├── index.html       # Główna strona
-│   ├── admin.html       # Panel admina
-│   ├── result.html      # Strona wyniku (dla social sharing)
-│   ├── app.js           # Logika Alpine.js
-│   ├── api.js           # API client
-│   ├── admin.js         # Logika panelu admina
-│   └── style.css        # Style
+│   ├── index.html         # Główna strona
+│   ├── result.html        # Strona wyniku (OG meta, spell breakdown, chart)
+│   ├── admin.html         # Panel admina
+│   ├── app.js             # Logika Alpine.js (główna strona)
+│   ├── sim.js             # Logika formularza symulacji
+│   ├── chars.js           # Lista postaci, ekwipunek, talenty
+│   ├── history.js         # Widget historii
+│   ├── api.js             # API client (fetch wrapper)
+│   ├── utils.js           # Helpers (formatowanie liczb, kolorów klas itp.)
+│   ├── admin.js           # Logika panelu admina
+│   └── style.css          # Style (dark theme)
 ├── docker-compose.yml
 ├── Dockerfile
 └── requirements.txt
@@ -117,15 +137,32 @@ simcraft-web/
 
 ## API
 
+### Symulacja
 - `POST /api/simulate` — uruchomienie symulacji
-- `GET /api/job/{job_id}` — status jobu
-- `GET /api/result/{job_id}/json` — wyniki JSON
-- `GET /api/result/{job_id}/dps-chart.png` — wykres DPS
-- `GET /api/history` — publiczna historia
-- `GET /api/history/mine` — historia zalogowanego
-- `GET /api/characters` — lista postaci (wymaga sesji)
-- `GET /auth/login` — logowanie Battle.net
-- `GET /admin` — panel admina
+- `GET /api/job/{job_id}` — status jobu (`running` / `done` / `error`)
+- `GET /api/result/{job_id}/json` — wyniki w formacie JSON
+- `GET /api/result/{job_id}/dps-chart.png` — wykres DPS jako PNG
+- `GET /api/result/{job_id}/meta` — metadane symulacji (postać, klasa, fight style)
+
+### Historia
+- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`)
+- `GET /api/history/mine` — historia zalogowanego użytkownika
+- `GET /api/history/trend` — historia DPS w czasie dla konkretnej postaci
+
+### Postacie
+- `GET /api/characters` — lista postaci konta (wymaga sesji)
+- `GET /api/character-media` — awatar postaci
+- `GET /api/character/equipment` — ekwipunek postaci
+- `GET /api/character/statistics` — statystyki postaci
+- `GET /api/character/talents` — talenty postaci
+
+### Auth
+- `GET /auth/login` — redirect do Battle.net OAuth
+- `GET /auth/callback` — callback OAuth
+- `GET /auth/logout` — wylogowanie
+
+### Admin
+- `GET /admin` — panel admina (wymaga sesji Keycloak)
 - `GET /admin/api/limits` — pobierz limity systemowe
 - `PATCH /admin/api/limits` — aktualizuj limity systemowe
 - `GET /admin/api/health` — health check usług
