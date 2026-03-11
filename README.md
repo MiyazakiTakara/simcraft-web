@@ -36,7 +36,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - [x] **i18n frontend** — stringi UI wydzielone do `locales/pl.json` i `locales/en.json`; Alpine.js `$store.i18n` obsługuje reaktywne przełączanie języka
 - [x] **Automatyczne wykrywanie języka** — na podstawie `navigator.language` lub ustawienia zapisanego w `localStorage`
 - [x] **Angielski jako domyślny** — angielski jest domyślnym językiem; przełącznik PL/EN widoczny w headerze na każdej stronie
-- [ ] **Lokalizacja nazw spelli** — SimulationCraft zwraca nazwy spelli po angielsku; rozważyć czy tłumaczyć czy zostawić EN (WoW gracze są przyzwyczajeni do EN nazw)
+- [x] **Lokalizacja nazw spelli** — nazwy spelli pozostają po angielsku (SimulationCraft + WoW używają EN; gracze są do tego przyzwyczajeni)
 
 ### Techniczne
 
