@@ -36,6 +36,14 @@
     "yes": "Yes",
     "no": "No"
   },
+  "main_char": {
+    "title": "Choose your main character",
+    "subtitle": "Your main character will be shown on your public profile. You can change this at any time in settings.",
+    "skip": "Skip for now",
+    "set_as_main": "⚔️ Set as main",
+    "change": "Click to change your main character",
+    "saved": "Main character saved!"
+  },
   "home": {
     "hero_subtitle": "DPS Simulator for",
     "hero_description": "Check and compare your character's DPS powered by SimulationCraft — free, in your browser.",

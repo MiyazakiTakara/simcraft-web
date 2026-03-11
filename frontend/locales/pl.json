@@ -36,6 +36,14 @@
     "yes": "Tak",
     "no": "Nie"
   },
+  "main_char": {
+    "title": "Wybierz główną postać",
+    "subtitle": "Twoja główna postać będzie widoczna na profilu publicznym. Zawsze możesz to zmienić w ustawieniach.",
+    "skip": "Pomiń na teraz",
+    "set_as_main": "⚔️ Ustaw jako main",
+    "change": "Kliknij aby zmienić główną postać",
+    "saved": "Główna postać zapisana!"
+  },
   "home": {
     "hero_subtitle": "Symulator DPS dla",
     "hero_description": "Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.",
@@ -91,7 +99,7 @@
     "seconds_short": "s",
     "back_home": "Wróć na stronę główną",
     "simulate_cta": "Symuluj swoją postać",
-    "not_found_error": "Nie znaleziono symulacji. Link mógł wygaśnąć lub jest nieprawiđowy."
+    "not_found_error": "Nie znaleziono symulacji. Link mógł wygasńąć lub jest nieprawidłowy."
   },
   "chars": {
     "title": "Twoje postacie",
