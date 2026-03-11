@@ -593,7 +593,9 @@
             <h3 style="margin:1rem 0 .5rem">🎒 Gear</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem">
               <template x-for="item in charEquipment" :key="item.slot">
-                <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem">
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem;position:relative"
+                     @mouseenter="showItemTooltip($event, item)"
+                     @mouseleave="hideItemTooltip()">
                   <div style="color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:.2rem" x-text="item.slot"></div>
                   <div :style="{color: getItemQualityColor(item.quality)}" x-text="item.name"></div>
                   <div style="color:var(--accent);font-size:.75rem" x-text="'ilvl ' + item.level"></div>
@@ -654,5 +656,9 @@
   </template>
 
 </div>
+
+<!-- Item tooltip element -->
+<div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
+
 </body>
 </html>

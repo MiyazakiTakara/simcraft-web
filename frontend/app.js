@@ -648,12 +648,81 @@ function app() {
       if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
       return date.toLocaleDateString('pl-PL');
     },
-    getShareUrl(jobId) { return window.location.origin + "/result/" + jobId; },
-    copyToClipboard(text, jobId) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.copiedJobId = jobId || true;
-        setTimeout(() => { this.copiedJobId = null; }, 2000);
-      }).catch(() => {});
-    },
-  };
-}
+     getShareUrl(jobId) { return window.location.origin + "/result/" + jobId; },
+     copyToClipboard(text, jobId) {
+       navigator.clipboard.writeText(text).then(() => {
+         this.copiedJobId = jobId || true;
+         setTimeout(() => { this.copiedJobId = null; }, 2000);
+       }).catch(() => {});
+     },
+
+     showItemTooltip(event, item) {
+       const tooltip = document.getElementById('item-tooltip');
+       if (!tooltip) return;
+
+       let html = `
+         <div class="item-tooltip-slot">${item.slot}</div>
+         <div class="item-tooltip-title" style="color:${this.getItemQualityColor(item.quality)}">${item.name}</div>
+         <div style="color:var(--muted);font-size:.75rem;margin-bottom:.5rem">ilvl ${item.level}</div>
+       `;
+
+       // Stats
+       if (item.stats && item.stats.length > 0) {
+         html += '<div class="item-tooltip-stats">';
+         item.stats.forEach(stat => {
+           html += `<div class="item-tooltip-stat"><span>${stat.type}</span><span>${stat.value}</span></div>`;
+         });
+         html += '</div>';
+       }
+
+       // Enchant
+       if (item.enchant) {
+         html += `<div class="item-tooltip-enchant">✓ ${item.enchant}</div>`;
+       }
+
+       // Gem
+       if (item.gem) {
+         html += `<div class="item-tooltip-gem">♦ ${item.gem}</div>`;
+       }
+
+       // Spell effects
+       if (item.spells && item.spells.length > 0) {
+         item.spells.forEach(spell => {
+           html += `
+             <div class="item-tooltip-spell">
+               <div class="item-tooltip-spell-name">${spell.name}</div>
+               <div class="item-tooltip-spell-desc">${spell.description}</div>
+             </div>
+           `;
+         });
+       }
+
+       tooltip.innerHTML = html;
+       tooltip.style.display = 'block';
+
+       // Position tooltip
+       const rect = event.target.getBoundingClientRect();
+       const tooltipRect = tooltip.getBoundingClientRect();
+       
+       let top = rect.top - tooltipRect.height - 10;
+       let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+       
+       // Adjust if tooltip goes off screen
+       if (top < 10) top = rect.bottom + 10;
+       if (left < 10) left = 10;
+       if (left + tooltipRect.width > window.innerWidth - 10) {
+         left = window.innerWidth - tooltipRect.width - 10;
+       }
+       
+       tooltip.style.top = top + 'px';
+       tooltip.style.left = left + 'px';
+     },
+
+     hideItemTooltip() {
+       const tooltip = document.getElementById('item-tooltip');
+       if (tooltip) {
+         tooltip.style.display = 'none';
+       }
+     },
+   };
+ }

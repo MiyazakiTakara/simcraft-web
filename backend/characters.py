@@ -127,6 +127,7 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
             "quality": slot.get("item", {}).get("quality", {}).get("type", ""),
             "level": slot.get("level", {}).get("value", 0),
             "stats": [],
+            "spells": [],
         }
         for stat in slot.get("stats", []):
             stat_type = stat.get("type", {})
@@ -144,6 +145,20 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
         gem = slot.get("gem", {})
         if gem:
             item["gem"] = gem.get("item", {}).get("name", "")
+        
+        # Get spell effects (passive abilities, etc.)
+        if "spells" in slot:
+            for spell in slot.get("spells", []):
+                item["spells"].append({
+                    "name": spell.get("name", ""),
+                    "description": spell.get("description", ""),
+                    "icon": spell.get("icon", ""),
+                })
+        
+        # Get tooltip from item details if available
+        if "item" in slot and "tooltip" in slot.get("item", {}):
+            item["tooltip"] = slot.get("item", {}).get("tooltip", "")
+        
         equipment.append(item)
 
     return {"equipment": equipment}

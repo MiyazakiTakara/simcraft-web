@@ -250,3 +250,71 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
 .pagination button { font-size: .75rem; padding: .2rem .55rem; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
 .pagination button.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 .pagination button:disabled { opacity: .35; cursor: default; }
+
+/* Item tooltip */
+.item-tooltip {
+  position: fixed;
+  background: #1a1b22;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-width: 280px;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.item-tooltip-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.item-tooltip-slot {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.item-tooltip-stats {
+  margin-bottom: 0.5rem;
+}
+
+.item-tooltip-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.item-tooltip-spell {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.item-tooltip-spell-name {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.item-tooltip-spell-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.item-tooltip-enchant {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #4caf50;
+}
+
+.item-tooltip-gem {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #9c27b0;
+}
