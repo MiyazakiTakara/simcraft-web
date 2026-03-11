@@ -219,13 +219,9 @@ def spell_display_name(ab: dict) -> str:
 def _extract_hps_dtps(cd: dict) -> tuple[float, float, float]:
     """
     Wyciaga hps, dtps, tmi z collected_data SimC.
-    SimC trzyma:
-      - hps.mean (heal per second)
-      - dtps.mean (damage taken per second)
-      - tmi.mean (theck mitigation index — wskaznik tanka)
     """
     hps_data  = cd.get("hps") or cd.get("hpse") or {}
-    dtps_data = cd.get("dtps") or cd.get("dmg_taken") or {}
+    dtps_data = cd.get("dtps") or {}
     tmi_data  = cd.get("tmi") or {}
 
     hps  = safe_float(hps_data.get("mean") if isinstance(hps_data, dict) else hps_data)
@@ -259,7 +255,7 @@ def parse_results(json_path: str):
         hps_std = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
 
         # DTPS std dev
-        dtps_std_data = cd.get("dtps") or cd.get("dmg_taken") or {}
+        dtps_std_data = cd.get("dtps") or {}
         dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
         fl_data      = cd.get("fight_length", {})
@@ -287,8 +283,6 @@ def parse_results(json_path: str):
         # Auto-detect roli na podstawie danych
         if hps > 100:
             role = "healer"
-        elif dtps > 0 or tmi > 0:
-            role = "tank"
         else:
             role = "dps"
 
@@ -377,12 +371,9 @@ def parse_results(json_path: str):
             "dps_std":      round(dps_std, 1),
             "hps":          hps,
             "hps_std":      round(hps_std, 1),
-            "dtps":         dtps,
-            "dtps_std":     round(dtps_std, 1),
-            "tmi":          tmi,
             "role":         role,
             "fight_length": round(fight_length, 1),
-            "stats":        {**(stats or {}), "dtps": round(dtps, 1), "tmi": round(tmi, 1)},
+            "stats":        stats,
             "spells":       top_spells,
         }
 
@@ -421,15 +412,12 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             hps, dtps, tmi = _extract_hps_dtps(cd)
             if hps > 100:
                 role = "healer"
-            elif dtps > 0 or tmi > 0:
-                role = "tank"
             else:
                 role = "dps"
 
         real_dps  = safe_float(cd.get("dps",  {}).get("mean", 0))
         real_dmg  = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
         real_hps  = safe_float((cd.get("hps") or cd.get("hpse") or {}).get("mean", 0))
-        real_dtps = safe_float((cd.get("dtps") or {}).get("mean", 0))
 
         TOP_N  = 12
         COLORS = [
@@ -441,11 +429,6 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             "#00cc66", "#33cc99", "#66ffcc", "#00aa44", "#88ddaa",
             "#004d22", "#00ff88", "#009933", "#66cc88", "#33ff66",
             "#00cc55", "#88ff99", "#aaaaaa",
-        ]
-        TANK_COLORS = [
-            "#aaaaff", "#7777dd", "#5555bb", "#3333aa", "#9999ee",
-            "#bbbbff", "#4444cc", "#6666cc", "#2222aa", "#8888dd",
-            "#ccccff", "#5566dd", "#aaaaaa",
         ]
 
         def build_data(key_fn):
@@ -496,24 +479,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
                 right_names, right_vals = hps_names,  hps_vals
                 colors = HEAL_COLORS
 
-        elif role == "tank":
-            # Damage taken breakdown: total dmg taken | DTPS
-            # SimC trzyma damage taken w collected_data.dmg_taken
-            dmg_taken_data = cd.get("dmg_taken") or {}
-            real_dmg_taken = safe_float(dmg_taken_data.get("mean", 0) if isinstance(dmg_taken_data, dict) else dmg_taken_data)
-
-            # Damage zadany (dla kontekstu) — lewa strona DMG DONE
-            dmg_names, dmg_vals = build_data(ability_total_dmg)
-            dps_names, dps_vals = build_data(ability_dps)
-
-            left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
-            right_title = f"DTPS  ({fmt_dps(real_dtps)})"     if real_dtps > 0 else "DTPS"
-            chart_title = f"{player_name} \u2014 Tank Breakdown"
-            left_names, left_vals   = dmg_names, dmg_vals
-            right_names, right_vals = dps_names, dps_vals
-            colors = TANK_COLORS
-
-        elif role == "dps":
+        if role == "dps":
             dmg_names, dmg_vals = build_data(ability_total_dmg)
             dps_names, dps_vals = build_data(ability_dps)
 

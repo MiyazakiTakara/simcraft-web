@@ -120,16 +120,10 @@ async def add_history(entry: HistoryEntry):
                     if players:
                         cd = players[0].get("collected_data", {})
                         hps_data  = cd.get("hps") or cd.get("hpse") or {}
-                        dtps_data = cd.get("dtps") or cd.get("dmg_taken") or {}
-                        tmi_data  = cd.get("tmi") or {}
                         hps  = float(hps_data.get("mean",  0) if isinstance(hps_data,  dict) else hps_data)
-                        dtps = float(dtps_data.get("mean", 0) if isinstance(dtps_data, dict) else dtps_data)
-                        tmi  = float(tmi_data.get("mean",  0) if isinstance(tmi_data,  dict) else tmi_data)
                         # Auto-detect roli
                         if hps > 100:
                             role = "healer"
-                        elif dtps > 0 or tmi > 0:
-                            role = "tank"
                         else:
                             role = "dps"
                     else:

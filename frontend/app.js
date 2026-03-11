@@ -7,16 +7,10 @@ const SPEC_ROLE = {
   'Restoration Shaman':   'healer',
   'Mistweaver Monk':      'healer',
   'Preservation Evoker':  'healer',
-  'Protection Warrior':   'tank',
-  'Protection Paladin':   'tank',
-  'Blood Death Knight':   'tank',
-  'Guardian Druid':       'tank',
-  'Brewmaster Monk':      'tank',
-  'Vengeance Demon Hunter': 'tank',
 };
 
-const ROLE_ICON = { dps: '⚔️', healer: '💚', tank: '🛡️' };
-const ROLE_LABEL = { dps: 'DPS', healer: 'Healer', tank: 'Tank' };
+const ROLE_ICON = { dps: '⚔️', healer: '💚' };
+const ROLE_LABEL = { dps: 'DPS', healer: 'Healer' };
 
 function app() {
   return {
@@ -100,8 +94,6 @@ function app() {
       haste:       "Haste",
       mastery:     "Mastery",
       versatility: "Versatility",
-      dtps:        "DTPS",
-      tmi:         "TMI",
     },
 
     CLASS_COLORS: {
@@ -200,7 +192,6 @@ function app() {
       if (!result) return { value: 0, std: 0, label: 'DPS' };
       const role = result._role || this.effectiveRole();
       if (role === 'healer') return { value: result.hps ?? 0, std: result.hps_std ?? 0, label: 'HPS' };
-      if (role === 'tank')   return { value: result.dtps ?? 0, std: result.dtps_std ?? 0, label: 'DTPS' };
       return { value: result.dps ?? 0, std: result.dps_std ?? 0, label: 'DPS' };
     },
 
@@ -466,8 +457,8 @@ function app() {
               const result = await API.getResultJson(guestJobId);
               result._source = 'addon';
               this.pubResult = result;
-              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: result.hps > 100 ? 'healer' : (result.dtps > 0 || result.tmi > 0 ? 'tank' : 'dps') };
-              const guestRole = result.hps > 100 ? 'healer' : (result.dtps > 0 || result.tmi > 0 ? 'tank' : 'dps');
+              const guestRole = result.hps > 100 ? 'healer' : 'dps';
+              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: guestRole };
               await API.saveToHistory({
                 job_id:               guestJobId,
                 character_name:       "Addon Export",
@@ -476,7 +467,6 @@ function app() {
                 character_realm_slug: "",
                 dps:                  result.dps,
                 hps:                  result.hps || 0,
-                dtps:                 result.dtps || 0,
                 role:                 guestRole,
                 fight_style:          this.guestSimOptions.fight_style,
                 user_id:              null,
@@ -594,7 +584,6 @@ function app() {
             character_realm_slug: this.selectedChar?.realm_slug || "",
             dps:                  this.simResult.dps,
             hps:                  this.simResult.hps || 0,
-            dtps:                 this.simResult.dtps || 0,
             role:                 this.effectiveRole(),
             fight_style:          this.simOptions.fight_style,
             user_id:              this.sessionId || null,
