@@ -1,16 +1,9 @@
 // SPEC -> rola (mirror z backendu, używane do auto-detect przed symulacją)
 const SPEC_ROLE = {
-  'Holy Priest':          'healer',
-  'Discipline Priest':    'healer',
-  'Holy Paladin':         'healer',
-  'Restoration Druid':    'healer',
-  'Restoration Shaman':   'healer',
-  'Mistweaver Monk':      'healer',
-  'Preservation Evoker':  'healer',
 };
 
-const ROLE_ICON = { dps: '⚔️', healer: '💚' };
-const ROLE_LABEL = { dps: 'DPS', healer: 'Healer' };
+const ROLE_ICON = { dps: '⚔️' };
+const ROLE_LABEL = { dps: 'DPS' };
 
 function app() {
   return {
@@ -23,7 +16,7 @@ function app() {
     pubResult: null,
     pubJob: null,
     simMode: "armory",
-    simRole: "auto",   // auto | dps | healer | tank
+    simRole: "auto",   // auto | dps
     addonText: "",
     guestAddonText: "",
     guestSimOptions: {
@@ -47,19 +40,9 @@ function app() {
     news: [],
     loadingHistory: false,
     spellSort: "total_dmg",
-    get effectiveSpellSort() {
-      if (this.spellSort === "total_dmg" || this.spellSort === "dps") {
-        return this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
-      }
-      return this.spellSort;
-    },
     copiedJobId: null,
     chartModal: null,
     hoveredSpell: null,
-
-    get defaultSpellSort() {
-      return this.effectiveRole() === 'healer' ? 'total_heal' : 'total_dmg';
-    },
 
     historyPage: 1,
     historyPerPage: 5,
@@ -172,18 +155,15 @@ function app() {
 
     // Zwraca rolę wynikającą z aktualnie wybranego chara (dla auto-detect)
     detectedRole() {
-      if (!this.selectedChar) return 'dps';
-      const spec = this.selectedChar.spec || '';
-      return SPEC_ROLE[spec] || 'dps';
+      return 'dps';
     },
 
-    // Efektywna rola: jeśli simRole==='auto' — detect po speccu, inaczej override
     effectiveRole() {
-      return this.simRole === 'auto' ? this.detectedRole() : this.simRole;
+      return 'dps';
     },
 
-    roleIcon(role) { return ROLE_ICON[role] || '⚔️'; },
-    roleLabel(role) { return ROLE_LABEL[role] || 'DPS'; },
+    roleIcon(role) { return '⚔️'; },
+    roleLabel(role) { return 'DPS'; },
 
     // Gdy user wybiera postać — resetuj simRole do auto (żeby auto-detect zadziałał)
     selectChar(ch) {
@@ -199,8 +179,6 @@ function app() {
     // Główna metryka do pokazania w wyniku
     resultMetric(result) {
       if (!result) return { value: 0, std: 0, label: 'DPS' };
-      const role = result._role || this.effectiveRole();
-      if (role === 'healer') return { value: result.hps ?? 0, std: result.hps_std ?? 0, label: 'HPS' };
       return { value: result.dps ?? 0, std: result.dps_std ?? 0, label: 'DPS' };
     },
 
@@ -399,8 +377,6 @@ function app() {
         result._source = meta?.character_name === 'Addon Export' ? 'addon' : 'history';
         if (meta?.role) result._role = meta.role;
         this.pubResult = result;
-        if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
-        else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
         this.pubJob = {
           id:        jobId,
           charName:  meta?.character_name !== 'Addon Export' ? (meta?.character_name || null) : null,
@@ -439,7 +415,7 @@ function app() {
               const result = await API.getResultJson(guestJobId);
               result._source = 'addon';
               this.pubResult = result;
-              const guestRole = result.hps > 100 ? 'healer' : 'dps';
+              const guestRole = 'dps';
               this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: guestRole };
               await API.saveToHistory({
                 job_id:               guestJobId,
@@ -474,7 +450,7 @@ function app() {
 
     get pubSortedSpells() {
       if (!this.pubResult?.spells) return [];
-      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      const key = this.spellSort;
       return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
@@ -487,13 +463,13 @@ function app() {
 
     get sortedSpells() {
       if (!this.simResult?.spells) return [];
-      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      const key = this.spellSort;
       return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
     get pubSortedSpells() {
       if (!this.pubResult?.spells) return [];
-      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      const key = this.spellSort;
       return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
@@ -565,8 +541,6 @@ function app() {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
           this.simResult._role = this.job.role;
-          if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
-          else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
           await API.saveToHistory({
             job_id:               this.job.id,
             character_name:       this.selectedChar?.name || "Addon Export",

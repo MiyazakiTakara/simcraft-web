@@ -19,9 +19,7 @@ class HistoryEntry(BaseModel):
     character_spec: Optional[str] = ""
     character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
-    hps: Optional[float] = 0.0
-    dtps: Optional[float] = 0.0
-    role: Optional[str] = None  # None = auto-detect z pliku JSON
+    role: Optional[str] = "dps"
     fight_style: Optional[str] = "Patchwerk"
     user_id: Optional[str] = None
 
@@ -34,8 +32,6 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
         "character_spec":       e.character_spec,
         "character_realm_slug": e.character_realm_slug,
         "dps":                  e.dps,
-        "hps":                  e.hps,
-        "dtps":                 e.dtps,
         "role":                 e.role,
         "fight_style":          e.fight_style,
         "user_id":              e.user_id,
@@ -106,12 +102,6 @@ async def add_history(entry: HistoryEntry):
         exists = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == entry.job_id).first()
         if not exists:
             role = entry.role or "dps"
-            hps  = entry.hps or 0.0
-            dtps = entry.dtps or 0.0
-
-            # Użyj roli z frontend, fallback na dps
-            if not role:
-                role = "dps"
 
             row = HistoryEntryModel(
                 job_id               = entry.job_id,
@@ -120,8 +110,6 @@ async def add_history(entry: HistoryEntry):
                 character_spec       = entry.character_spec,
                 character_realm_slug = entry.character_realm_slug or "",
                 dps                  = entry.dps,
-                hps                  = round(hps, 1),
-                dtps                 = round(dtps, 1),
                 role                 = role,
                 fight_style          = entry.fight_style,
                 user_id              = entry.user_id,
@@ -166,8 +154,6 @@ async def get_character_trend(
             {
                 "timestamp": r.created_at,
                 "dps":  r.dps,
-                "hps":  r.hps,
-                "dtps": r.dtps,
                 "role": r.role,
                 "job_id": r.job_id,
             }

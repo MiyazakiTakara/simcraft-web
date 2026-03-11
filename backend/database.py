@@ -63,8 +63,6 @@ class HistoryEntryModel(Base):
     character_spec = Column(String(64), default="")
     character_realm_slug = Column(String(128), default="")
     dps            = Column(Float, default=0.0)
-    hps            = Column(Float, default=0.0)
-    dtps           = Column(Float, default=0.0)
     role           = Column(String(16), default="dps")
     fight_style    = Column(String(64), default="Patchwerk")
     user_id        = Column(String(64), nullable=True, index=True)
@@ -109,11 +107,9 @@ class LogEntryModel(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    # Migracja: dodaj brakujące kolumny do history
+    # Migracja: dodaj brakującą kolumnę role do history
     with SessionLocal() as db:
         try:
-            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS hps FLOAT DEFAULT 0.0"))
-            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS dtps FLOAT DEFAULT 0.0"))
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
             db.commit()
         except Exception:
