@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SimCraft — Panel Admina</title>
   <link rel="stylesheet" href="/admin.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
   <header>
@@ -33,14 +34,35 @@
       <div class="stat-card" data-tooltip="Łączna liczba wszystkich symulacji w bazie danych"><div class="stat-value" id="stat-total-sims">—</div><div class="stat-label">Wszystkich symulacji</div></div>
       <div class="stat-card" data-tooltip="Liczba unikalnych użytkowników, którzy wykonali co najmniej jedną symulację"><div class="stat-value" id="stat-total-users">—</div><div class="stat-label">Użytkowników</div></div>
       <div class="stat-card" data-tooltip="Liczba symulacji wykonanych w ciągu ostatnich 24 godzin"><div class="stat-value" id="stat-today-sims">—</div><div class="stat-label">Dziś</div></div>
+      <div class="stat-card" data-tooltip="Ostatnie 7 dni"><div class="stat-value" id="stat-week-sims">—</div><div class="stat-label">Ostatnie 7 dni</div></div>
+      <div class="stat-card" data-tooltip="Ostatnie 30 dni"><div class="stat-value" id="stat-month-sims">—</div><div class="stat-label">Ostatnie 30 dni</div></div>
       <div class="stat-card" data-tooltip="Liczba aktualnie uruchomionych symulacji (status: running)"><div class="stat-value" id="stat-active-jobs">—</div><div class="stat-label">Aktywne zadania</div></div>
       <div class="stat-card" data-tooltip="Obciążenie procesora w procentach"><div class="stat-value" id="stat-cpu">—</div><div class="stat-label">CPU</div></div>
       <div class="stat-card" data-tooltip="Wykorzystanie pamięci RAM w procentach"><div class="stat-value" id="stat-memory">—</div><div class="stat-label">RAM</div></div>
       <div class="stat-card" data-tooltip="Czas od uruchomienia serwera"><div class="stat-value" id="stat-uptime">—</div><div class="stat-label">Uptime</div></div>
     </div>
-    
-    <h2>Ostatnie symulacje</h2>
-    <div class="news-list" id="recent-sims"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem">
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Symulacje — ostatnie 30 dni</h3>
+        <div id="chart-trend" style="height:240px"></div>
+      </div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Rozkład klas</h3>
+        <div id="chart-classes" style="height:240px"></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem">
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Fight Style</h3>
+        <div id="chart-fightstyle" style="height:220px"></div>
+      </div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Top 10 DPS</h3>
+        <div id="chart-top10" style="font-size:0.82rem"></div>
+      </div>
+    </div>
   </div>
 
   <div class="tab-content" id="tab-news">
@@ -66,7 +88,7 @@
     <p style="color:#666;font-size:0.85rem;margin-bottom:1rem;">Lista użytkowników na podstawie historii symulacji.</p>
     <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center">
       <button class="primary" onclick="loadUsers()">Odśwież</button>
-      <input type="text" id="user-search" placeholder="Szukaj..." 
+      <input type="text" id="user-search" placeholder="Szukaj..."
              style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;"
              oninput="filterUsers()" />
     </div>
@@ -96,7 +118,7 @@
     <div class="form-box">
       <p style="color:#888;font-size:0.85rem;margin-bottom:1rem;">Usuń stare symulacje z bazy danych.</p>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-        <input type="number" id="delete-days" placeholder="Dni (np. 30)" min="1" 
+        <input type="number" id="delete-days" placeholder="Dni (np. 30)" min="1"
                style="width:120px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;margin:0" />
         <button class="primary" onclick="deleteOldSims()">Usuń starsze niż X dni</button>
         <button class="danger" onclick="deleteAllSims()" style="margin-left:auto">Usuń WSZYSTKIE</button>
@@ -150,12 +172,12 @@
     <h2>Wygląd strony</h2>
     <div class="form-box">
       <p style="color:#888;font-size:0.85rem;margin-bottom:1rem;">Dostosuj wygląd strony głównej.</p>
-      
+
       <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
         <label style="width:200px">Tytuł w headerze:</label>
         <input type="text" id="appearance-header-title" placeholder="SimCraft Web" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
       </div>
-      
+
       <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
         <label style="width:200px">Tytuł landing hero:</label>
         <input type="text" id="appearance-hero-title" placeholder="World of Warcraft" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
@@ -166,7 +188,7 @@
         <p style="color:#666;font-size:0.8rem;margin-bottom:0.5rem">Jeśli wpiszesz tekst poniżej, zastąpi on cały domyślny blok hero (tytuł, opis i przyciski). Zostaw puste, żeby wyświetlał się domyślny layout.</p>
         <textarea id="appearance-hero-custom" placeholder="Np. Witaj na naszym serwerze!&#10;Tu możesz symulować DPS." style="width:100%;min-height:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;font-family:inherit;font-size:0.9rem;box-sizing:border-box"></textarea>
       </div>
-      
+
       <div style="margin-bottom:1rem">
         <label style="display:block;margin-bottom:0.5rem">Ikona strony (emoji):</label>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="emoji-picker">
@@ -182,7 +204,7 @@
           <button class="emoji-btn" data-emoji="🏆">🏆</button>
         </div>
       </div>
-      
+
       <button class="primary" onclick="saveAppearance()">Zapisz wygląd</button>
       <p id="appearance-result" style="margin-top:0.75rem;font-size:0.85rem;"></p>
     </div>

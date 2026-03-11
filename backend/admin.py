@@ -17,7 +17,7 @@ router = APIRouter(prefix="/admin")
 ADMIN_COOKIE = "admin_session"
 SESSION_TTL  = 60 * 60 * 8  # 8 godzin
 
-_SIMC_GH_BRANCH = "midnight"  # domyslna galaz simulationcraft/simc
+_SIMC_GH_BRANCH = "midnight"
 
 
 def _cfg():
@@ -63,11 +63,6 @@ _SIMC_VERSION_CACHE_TTL = 3600
 
 
 def _get_local_simc_version(simc_path: str) -> str | None:
-    """
-    Uruchamia 'simc --version', wyciaga numer w formacie MAJOR-MINOR
-    pasujacy do SC_MAJOR_VERSION-SC_MINOR_VERSION z config.hpp.
-    Przyklad: 'SimulationCraft 1201-01 ...' -> '1201-01'
-    """
     import subprocess
     try:
         r = subprocess.run([simc_path, "--version"], capture_output=True, text=True, timeout=5)
@@ -79,54 +74,35 @@ def _get_local_simc_version(simc_path: str) -> str | None:
 
 
 async def _get_latest_simc_version() -> dict:
-    """
-    Pobiera rownoczesnie:
-      1. engine/config.hpp z gałęzi midnight -> SC_MAJOR_VERSION + SC_MINOR_VERSION
-      2. ostatni commit na gałęzi midnight -> sha + data
-    Cache: 1h.
-    Zwraca dict: {version, last_commit_sha, last_commit_date, last_commit_url}
-    """
     now = time.time()
     if _simc_version_cache["data"] and now - _simc_version_cache["ts"] < _SIMC_VERSION_CACHE_TTL:
         return _simc_version_cache["data"]
 
-    headers = {"Accept": "application/vnd.github+json"}
+    headers  = {"Accept": "application/vnd.github+json"}
     base_url = "https://api.github.com/repos/simulationcraft/simc"
 
     try:
         async with httpx.AsyncClient(timeout=8) as client:
-            config_task = client.get(
-                f"{base_url}/contents/engine/config.hpp?ref={_SIMC_GH_BRANCH}",
-                headers=headers,
-            )
-            commit_task = client.get(
-                f"{base_url}/commits/{_SIMC_GH_BRANCH}",
-                headers=headers,
-            )
-            # Rownoczesne zapytania
             import asyncio
-            config_resp, commit_resp = await asyncio.gather(config_task, commit_task)
+            config_resp, commit_resp = await asyncio.gather(
+                client.get(f"{base_url}/contents/engine/config.hpp?ref={_SIMC_GH_BRANCH}", headers=headers),
+                client.get(f"{base_url}/commits/{_SIMC_GH_BRANCH}", headers=headers),
+            )
             config_resp.raise_for_status()
             commit_resp.raise_for_status()
 
-        # Parsuj wersję z config.hpp (zakodowana w base64)
         import base64
         content = base64.b64decode(config_resp.json()["content"]).decode("utf-8")
-        major = re.search(r'#define SC_MAJOR_VERSION\s+"([\d]+)"', content)
-        minor = re.search(r'#define SC_MINOR_VERSION\s+"([\d]+)"', content)
+        major   = re.search(r'#define SC_MAJOR_VERSION\s+"([\d]+)"', content)
+        minor   = re.search(r'#define SC_MINOR_VERSION\s+"([\d]+)"', content)
         version = f"{major.group(1)}-{minor.group(1)}" if major and minor else None
 
-        # Ostatni commit
-        commit_data   = commit_resp.json()
-        commit_sha    = commit_data["sha"]
-        commit_date   = commit_data["commit"]["committer"]["date"]  # ISO 8601
-        commit_url    = commit_data["html_url"]
-
+        commit_data = commit_resp.json()
         result = {
             "version":          version,
-            "last_commit_sha":  commit_sha[:7],
-            "last_commit_date": commit_date,
-            "last_commit_url":  commit_url,
+            "last_commit_sha":  commit_data["sha"][:7],
+            "last_commit_date": commit_data["commit"]["committer"]["date"],
+            "last_commit_url":  commit_data["html_url"],
         }
     except Exception as e:
         result = {"version": None, "error": str(e)}
@@ -185,21 +161,13 @@ async def admin_callback(code: str, state: str = None):
 
     with SessionLocal() as db:
         db.query(AdminSessionModel).filter(AdminSessionModel.expires_at < time.time()).delete()
-        db.add(AdminSessionModel(
-            session_id=session_id,
-            username=username,
-            expires_at=expires_at,
-        ))
+        db.add(AdminSessionModel(session_id=session_id, username=username, expires_at=expires_at))
         db.commit()
 
     response = RedirectResponse("/admin", status_code=302)
     response.set_cookie(
-        key=ADMIN_COOKIE,
-        value=session_id,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=SESSION_TTL,
+        key=ADMIN_COOKIE, value=session_id,
+        httponly=True, secure=True, samesite="lax", max_age=SESSION_TTL,
     )
     return response
 
@@ -235,6 +203,8 @@ async def get_dashboard(request: Request):
 
     now      = datetime.utcnow()
     last_24h = now - timedelta(hours=24)
+    last_7d  = now - timedelta(days=7)
+    last_30d = now - timedelta(days=30)
 
     with SessionLocal() as db:
         total_sims  = db.query(func.count(HistoryEntryModel.id)).scalar() or 0
@@ -244,15 +214,41 @@ async def get_dashboard(request: Request):
             HistoryEntryModel.created_at >= last_24h
         ).scalar() or 0
 
-        daily_stats = db.query(
-            func.date_trunc('hour', HistoryEntryModel.created_at).label('hour'),
+        week_sims = db.query(func.count(HistoryEntryModel.id)).filter(
+            HistoryEntryModel.created_at >= last_7d
+        ).scalar() or 0
+
+        month_sims = db.query(func.count(HistoryEntryModel.id)).filter(
+            HistoryEntryModel.created_at >= last_30d
+        ).scalar() or 0
+
+        # Trend per dzień — ostatnie 30 dni
+        monthly_trend_rows = db.query(
+            func.date_trunc('day', HistoryEntryModel.created_at).label('day'),
             func.count(HistoryEntryModel.id).label('count'),
         ).filter(
-            HistoryEntryModel.created_at >= last_24h
-        ).group_by('hour').order_by('hour').all()
+            HistoryEntryModel.created_at >= last_30d
+        ).group_by('day').order_by('day').all()
 
-        recent_sims = db.query(HistoryEntryModel).order_by(
-            HistoryEntryModel.created_at.desc()
+        # Rozkład klas
+        class_rows = db.query(
+            HistoryEntryModel.character_class,
+            func.count(HistoryEntryModel.id).label('count'),
+        ).group_by(HistoryEntryModel.character_class).order_by(
+            func.count(HistoryEntryModel.id).desc()
+        ).all()
+
+        # Rozkład fight style
+        fs_rows = db.query(
+            HistoryEntryModel.fight_style,
+            func.count(HistoryEntryModel.id).label('count'),
+        ).group_by(HistoryEntryModel.fight_style).order_by(
+            func.count(HistoryEntryModel.id).desc()
+        ).all()
+
+        # Top 10 DPS
+        top10_rows = db.query(HistoryEntryModel).order_by(
+            HistoryEntryModel.dps.desc()
         ).limit(10).all()
 
         total_jobs  = db.query(func.count(JobModel.job_id)).scalar() or 0
@@ -266,23 +262,38 @@ async def get_dashboard(request: Request):
 
     return {
         "stats": {
-            "total_simulations": total_sims,
-            "total_users":       total_users,
-            "today_simulations": today_sims,
-            "total_jobs":        total_jobs,
-            "active_jobs":       active_jobs,
-            "cpu_percent":       psutil.cpu_percent(),
-            "memory_percent":    psutil.virtual_memory().percent,
-            "uptime":            uptime_str,
+            "total_simulations":  total_sims,
+            "total_users":        total_users,
+            "today_simulations":  today_sims,
+            "week_simulations":   week_sims,
+            "month_simulations":  month_sims,
+            "total_jobs":         total_jobs,
+            "active_jobs":        active_jobs,
+            "cpu_percent":        psutil.cpu_percent(),
+            "memory_percent":     psutil.virtual_memory().percent,
+            "uptime":             uptime_str,
         },
-        "daily_trend":  [{"hour": str(h), "count": c} for h, c in daily_stats],
-        "recent_sims": [{
-            "job_id":          s.job_id,
-            "character_name":  s.character_name,
-            "character_class": s.character_class,
-            "dps":             s.dps,
-            "created_at":      s.created_at.isoformat() if s.created_at else None,
-        } for s in recent_sims],
+        "monthly_trend": [
+            {"day": str(row.day)[:10], "count": row.count}
+            for row in monthly_trend_rows
+        ],
+        "class_distribution": [
+            {"character_class": row.character_class or "Unknown", "count": row.count}
+            for row in class_rows
+        ],
+        "fight_style_distribution": [
+            {"fight_style": row.fight_style or "Unknown", "count": row.count}
+            for row in fs_rows
+        ],
+        "top_dps": [{
+            "job_id":          r.job_id,
+            "character_name":  r.character_name,
+            "character_class": r.character_class,
+            "character_spec":  r.character_spec,
+            "dps":             r.dps,
+            "fight_style":     r.fight_style,
+            "created_at":      r.created_at.isoformat() if r.created_at else None,
+        } for r in top10_rows],
     }
 
 
@@ -418,11 +429,7 @@ async def list_users(request: Request, limit: int = 50):
                 users_map[user_id]["avg_dps"]   = round(avg_dps, 0) if avg_dps else 0
                 users_map[user_id]["last_sim"]   = last_sim.isoformat() if last_sim else None
 
-    users = sorted(
-        users_map.values(),
-        key=lambda x: x["last_sim"] or "",
-        reverse=True,
-    )[:limit]
+    users = sorted(users_map.values(), key=lambda x: x["last_sim"] or "", reverse=True)[:limit]
     return users
 
 
@@ -539,10 +546,9 @@ async def health_check(request: Request):
     health_status["results_dir"] = "ok" if (os.path.exists(results_dir) and os.access(results_dir, os.W_OK)) \
         else f"error: not writable at {results_dir}"
 
-    # --- SimC version check ---
-    local_version = _get_local_simc_version(simc_path) if health_status["simc_binary"] == "ok" else None
-    latest        = await _get_latest_simc_version()
-    latest_version = latest.get("version")  # z config.hpp, np. "1201-01"
+    local_version  = _get_local_simc_version(simc_path) if health_status["simc_binary"] == "ok" else None
+    latest         = await _get_latest_simc_version()
+    latest_version = latest.get("version")
 
     if local_version and latest_version:
         up_to_date = local_version.strip() == latest_version.strip()
