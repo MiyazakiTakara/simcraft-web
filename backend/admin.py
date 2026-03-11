@@ -517,9 +517,11 @@ async def cancel_task(request: Request, job_id: str):
 # ---------- Appearance Settings ----------
 
 import json
-import os as os_module
+from pathlib import Path
 
-APPEARANCE_CONFIG_FILE = "/home/patryknowicki/simcraft-web/config/appearance.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
+APPEARANCE_CONFIG_FILE = BASE_DIR / "config" / "appearance.json"
+
 
 class AppearanceUpdate(BaseModel):
     header_title: str | None = None
@@ -536,16 +538,15 @@ def load_appearance_config():
     }
     
     try:
-        if os_module.path.exists(APPEARANCE_CONFIG_FILE):
+        APPEARANCE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if APPEARANCE_CONFIG_FILE.exists():
             with open(APPEARANCE_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                # Merge with defaults
                 for key, value in default_config.items():
                     if key not in config:
                         config[key] = value
                 return config
         else:
-            # Create default config file
             with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, indent=2, ensure_ascii=False)
             return default_config
@@ -557,6 +558,7 @@ def load_appearance_config():
 def save_appearance_config(config):
     """Save appearance config to JSON file."""
     try:
+        APPEARANCE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
         return True
