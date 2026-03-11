@@ -45,17 +45,67 @@ def _get_admin_session(session_id: str) -> dict | None:
 
 
 def _require_admin(request: Request) -> dict:
-    """Zwraca dane sesji lub rzuca RedirectResponse do /admin/login."""
+    """Zwraca dane sesji lub rzuca redirect do /admin/login."""
     session_id = request.cookies.get(ADMIN_COOKIE)
     if session_id:
         session = _get_admin_session(session_id)
         if session:
             return session
-    # Zamiast HTTPException(302) — prawdziwy redirect
     raise HTTPException(
         status_code=302,
         headers={"Location": "/admin/login"},
     )
+
+
+# ---------- SimC version check (z cache 1h) ----------
+
+_simc_version_cache: dict = {"ts": 0, "data": None}
+_SIMC_VERSION_CACHE_TTL = 3600  # sekund
+
+
+def _get_local_simc_version(simc_path: str) -> str | None:
+    """Uruchamia 'simc --version' i zwraca string wersji, np. '1100-01' lub None."""
+    import subprocess
+    try:
+        r = subprocess.run([simc_path, "--version"], capture_output=True, text=True, timeout=5)
+        # Wyjscie wyglada np.: "SimulationCraft 1100-01 for World of Warcraft 11.0.5..."
+        # Szukamy wzorca XYYY-ZZ
+        import re
+        m = re.search(r"SimulationCraft\s+([\d]+-\d+)", r.stdout + r.stderr)
+        return m.group(1) if m else (r.stdout.strip() or r.stderr.strip())[:40]
+    except Exception:
+        return None
+
+
+async def _get_latest_simc_version() -> dict:
+    """
+    Pobiera najnowszy release z github.com/simulationcraft/simc.
+    Wynik cache'owany przez SIMC_VERSION_CACHE_TTL sekund.
+    Zwraca dict: {tag, published_at, url}
+    """
+    now = time.time()
+    if _simc_version_cache["data"] and now - _simc_version_cache["ts"] < _SIMC_VERSION_CACHE_TTL:
+        return _simc_version_cache["data"]
+
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.get(
+                "https://api.github.com/repos/simulationcraft/simc/releases/latest",
+                headers={"Accept": "application/vnd.github+json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        result = {
+            "tag":          data.get("tag_name", "?"),
+            "published_at": data.get("published_at", ""),
+            "url":          data.get("html_url", ""),
+        }
+    except Exception as e:
+        result = {"tag": None, "error": str(e)}
+
+    _simc_version_cache["ts"]   = now
+    _simc_version_cache["data"] = result
+    return result
 
 
 # ---------- auth routes ----------
@@ -420,6 +470,7 @@ async def health_check(request: Request):
         "keycloak":     "unknown",
         "simc_binary":  "unknown",
         "results_dir":  "unknown",
+        "simc_version": {},
     }
 
     try:
@@ -451,12 +502,41 @@ async def health_check(request: Request):
         health_status["keycloak"] = f"error: {str(e)}"
 
     simc_path = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
-    health_status["simc_binary"] = "ok" if (os.path.exists(simc_path) and os.access(simc_path, os.X_OK)) \
-        else f"error: not found or not executable at {simc_path}"
+    if os.path.exists(simc_path) and os.access(simc_path, os.X_OK):
+        health_status["simc_binary"] = "ok"
+    else:
+        health_status["simc_binary"] = f"error: not found or not executable at {simc_path}"
 
     results_dir = os.environ.get("RESULTS_DIR", "/app/results")
     health_status["results_dir"] = "ok" if (os.path.exists(results_dir) and os.access(results_dir, os.W_OK)) \
         else f"error: not writable at {results_dir}"
+
+    # --- SimC version check ---
+    local_version  = _get_local_simc_version(simc_path) if health_status["simc_binary"] == "ok" else None
+    latest_release = await _get_latest_simc_version()
+    latest_tag     = latest_release.get("tag")  # np. "1100-01" lub None przy blędzie
+
+    # Normalizacja: tag na GitHubie może miec prefiks "simc-" lub "v", np. "simc-1100-01"
+    latest_clean = latest_tag
+    if latest_clean:
+        for prefix in ("simc-", "v"):
+            if latest_clean.lower().startswith(prefix):
+                latest_clean = latest_clean[len(prefix):]
+                break
+
+    if local_version and latest_clean:
+        up_to_date = local_version.strip() == latest_clean.strip()
+    else:
+        up_to_date = None  # nie można porównać
+
+    health_status["simc_version"] = {
+        "local":        local_version,
+        "latest":       latest_tag,
+        "up_to_date":   up_to_date,
+        "release_url":  latest_release.get("url"),
+        "published_at": latest_release.get("published_at"),
+        "cache_age_s":  int(time.time() - _simc_version_cache["ts"]),
+    }
 
     return health_status
 
@@ -553,9 +633,9 @@ async def get_appearance(request: Request):
 async def update_appearance(request: Request, data: AppearanceUpdate):
     _require_admin(request)
     config = load_appearance_config()
-    if data.header_title    is not None: config["header_title"]    = data.header_title
-    if data.hero_title      is not None: config["hero_title"]      = data.hero_title
-    if data.emoji           is not None: config["emoji"]           = data.emoji
+    if data.header_title     is not None: config["header_title"]     = data.header_title
+    if data.hero_title       is not None: config["hero_title"]       = data.hero_title
+    if data.emoji            is not None: config["emoji"]            = data.emoji
     if data.hero_custom_text is not None: config["hero_custom_text"] = data.hero_custom_text
     if save_appearance_config(config):
         return {"ok": True, "message": "Appearance settings saved successfully"}
