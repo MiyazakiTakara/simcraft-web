@@ -81,6 +81,9 @@ def init_db():
 
 def create_job(job_id: str, json_path: str):
     with SessionLocal() as db:
+        existing = db.query(JobModel).filter(JobModel.job_id == job_id).first()
+        if existing:
+            return
         job = JobModel(job_id=job_id, status="running", json_path=json_path)
         db.add(job)
         db.commit()
