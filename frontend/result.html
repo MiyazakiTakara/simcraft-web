@@ -308,7 +308,7 @@ function resultPage() {
     },
 
     effectiveRole() {
-      return this.result?.role || (this.result?.hps > 100 ? 'healer' : 'dps');
+      return this.result?.role || 'dps';
     },
 
     roleIcon(role) { return role === 'healer' ? '💚' : '⚔️'; },
