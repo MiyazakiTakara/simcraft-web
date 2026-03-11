@@ -105,31 +105,13 @@ async def add_history(entry: HistoryEntry):
     with SessionLocal() as db:
         exists = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == entry.job_id).first()
         if not exists:
-            role = entry.role
+            role = entry.role or "dps"
             hps  = entry.hps or 0.0
             dtps = entry.dtps or 0.0
 
-            if role is None:
-                # POPRAWIONA sciezka: wyniki sa w {RESULTS_DIR}/{job_id}/output.json
-                result_path = os.path.join(RESULTS_DIR, entry.job_id, "output.json")
-                try:
-                    with open(result_path) as f:
-                        raw_simc = json.load(f)
-                    # Wyciagnij hps/dtps z SimC JSON (collected_data gracza)
-                    players = raw_simc.get("sim", {}).get("players", [])
-                    if players:
-                        cd = players[0].get("collected_data", {})
-                        hps_data  = cd.get("hps") or cd.get("hpse") or {}
-                        hps  = float(hps_data.get("mean",  0) if isinstance(hps_data,  dict) else hps_data)
-                        # Auto-detect roli
-                        if hps > 100:
-                            role = "healer"
-                        else:
-                            role = "dps"
-                    else:
-                        role = "dps"
-                except Exception:
-                    role = "dps"
+            # Użyj roli z frontend, fallback na dps
+            if not role:
+                role = "dps"
 
             row = HistoryEntryModel(
                 job_id               = entry.job_id,
