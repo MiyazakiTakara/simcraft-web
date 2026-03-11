@@ -105,18 +105,35 @@ async def add_history(entry: HistoryEntry):
     with SessionLocal() as db:
         exists = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == entry.job_id).first()
         if not exists:
-            # Auto-detect roli jeśli nie podano explicite
             role = entry.role
-            hps = entry.hps or 0.0
+            hps  = entry.hps or 0.0
             dtps = entry.dtps or 0.0
+
             if role is None:
-                result_path = os.path.join(RESULTS_DIR, f"{entry.job_id}.json")
+                # POPRAWIONA sciezka: wyniki sa w {RESULTS_DIR}/{job_id}/output.json
+                result_path = os.path.join(RESULTS_DIR, entry.job_id, "output.json")
                 try:
                     with open(result_path) as f:
-                        result_json = json.load(f)
-                    role = detect_role_from_result(result_json)
-                    hps  = result_json.get("hps", 0.0)
-                    dtps = result_json.get("dtps", 0.0)
+                        raw_simc = json.load(f)
+                    # Wyciagnij hps/dtps z SimC JSON (collected_data gracza)
+                    players = raw_simc.get("sim", {}).get("players", [])
+                    if players:
+                        cd = players[0].get("collected_data", {})
+                        hps_data  = cd.get("hps") or cd.get("hpse") or {}
+                        dtps_data = cd.get("dtps") or {}
+                        tmi_data  = cd.get("tmi") or {}
+                        hps  = float(hps_data.get("mean",  0) if isinstance(hps_data,  dict) else hps_data)
+                        dtps = float(dtps_data.get("mean", 0) if isinstance(dtps_data, dict) else dtps_data)
+                        tmi  = float(tmi_data.get("mean",  0) if isinstance(tmi_data,  dict) else tmi_data)
+                        # Auto-detect roli
+                        if hps > 100:
+                            role = "healer"
+                        elif dtps > 0 or tmi > 0:
+                            role = "tank"
+                        else:
+                            role = "dps"
+                    else:
+                        role = "dps"
                 except Exception:
                     role = "dps"
 
@@ -127,8 +144,8 @@ async def add_history(entry: HistoryEntry):
                 character_spec       = entry.character_spec,
                 character_realm_slug = entry.character_realm_slug or "",
                 dps                  = entry.dps,
-                hps                  = hps,
-                dtps                 = dtps,
+                hps                  = round(hps, 1),
+                dtps                 = round(dtps, 1),
                 role                 = role,
                 fight_style          = entry.fight_style,
                 user_id              = entry.user_id,

@@ -23,7 +23,6 @@ def safe_float(v, default=0.0):
 
 
 def _get_count(block: dict) -> float:
-    """block['count'] moze byc liczba LUB slownikiem {sum, mean, ...}"""
     c = block.get("count", 0)
     if isinstance(c, dict):
         return safe_float(c.get("sum", c.get("mean", 0)))
@@ -56,10 +55,44 @@ def ability_total_dmg(ab: dict) -> float:
     return 0.0
 
 
+def ability_hps(ab: dict) -> float:
+    """Heal per second z portion_aps (heal spelle) lub children."""
+    pa = ab.get("portion_aps")
+    if isinstance(pa, dict):
+        v = safe_float(pa.get("mean"))
+        if v > 0:
+            return v
+    children = ab.get("children", [])
+    if isinstance(children, list) and children:
+        total = sum(ability_hps(c) for c in children if isinstance(c, dict))
+        if total > 0:
+            return total
+    return 0.0
+
+
+def ability_total_heal(ab: dict) -> float:
+    """Total healing z compound_amount lub heal_results."""
+    v = safe_float(ab.get("compound_amount", 0))
+    if v > 0:
+        return v
+    hr = ab.get("heal_results") or ab.get("direct_results", {})
+    if isinstance(hr, dict):
+        for key, block in hr.items():
+            if isinstance(block, dict):
+                aa = block.get("actual_amount", {})
+                cnt = _get_count(block)
+                mean = safe_float(aa.get("mean", 0)) if isinstance(aa, dict) else 0.0
+                if mean > 0 and cnt > 0:
+                    return mean * cnt
+    children = ab.get("children", [])
+    if isinstance(children, list) and children:
+        total = sum(ability_total_heal(c) for c in children if isinstance(c, dict))
+        if total > 0:
+            return total
+    return 0.0
+
+
 def _stats_from_results(results: dict):
-    """
-    Zwraca (crit_pct, hit_count, miss_pct, avg_hit) z direct_results lub tick_results.
-    """
     if not isinstance(results, dict) or not results:
         return None
 
@@ -110,7 +143,6 @@ def _collect_stats(ab: dict):
 
 
 def _weighted_stats(ab: dict):
-    """Zwraca (crit_pct, miss_pct, avg_hit) wazone po hit_count."""
     parts = _collect_stats(ab)
     if not parts:
         return 0.0, 0.0, 0
@@ -124,7 +156,6 @@ def _weighted_stats(ab: dict):
 
 
 def _hit_count_from_results(ab: dict) -> float:
-    """Suma hit+crit count z direct/tick_results (i children) — fallback dla count."""
     total = 0.0
     for key in ("direct_results", "tick_results"):
         r = ab.get(key)
@@ -141,13 +172,11 @@ def _hit_count_from_results(ab: dict) -> float:
 
 
 def _has_only_ticks(ab: dict) -> bool:
-    """True jezeli spell nie ma direct_results (ani w sobie ani w dzieciach), tylko tick_results."""
     if ab.get("direct_results"):
         return False
     for child in ab.get("children", []):
         if isinstance(child, dict) and not _has_only_ticks(child):
             return False
-    # przynajmniej jedno tick_results gdzies w drzewie
     if ab.get("tick_results"):
         return True
     for child in ab.get("children", []):
@@ -157,10 +186,6 @@ def _has_only_ticks(ab: dict) -> bool:
 
 
 def ability_count(ab: dict) -> tuple[int, bool]:
-    """
-    Zwraca (count, is_channel).
-    is_channel=True gdy count pochodzi z tick fallbacku (AoE/channel).
-    """
     ne = ab.get("num_executes")
     executes = 0
     if isinstance(ne, dict):
@@ -171,17 +196,14 @@ def ability_count(ab: dict) -> tuple[int, bool]:
     if executes > 0:
         return executes, False
 
-    # Fallback 1: zsumuj dzieci
     child_counts = [
         ability_count(c) for c in ab.get("children", []) if isinstance(c, dict)
     ]
     child_sum = sum(c[0] for c in child_counts)
     if child_sum > 0:
-        # is_channel = True jezeli wszystkie dzieci sa channel
         is_ch = all(c[1] for c in child_counts)
         return child_sum, is_ch
 
-    # Fallback 2: hit_count z results
     hc = _hit_count_from_results(ab)
     return int(hc), True
 
@@ -192,6 +214,24 @@ def spell_display_name(ab: dict) -> str:
         return spell_name
     raw = ab.get("name", "?")
     return raw.replace("_", " ").title()
+
+
+def _extract_hps_dtps(cd: dict) -> tuple[float, float, float]:
+    """
+    Wyciaga hps, dtps, tmi z collected_data SimC.
+    SimC trzyma:
+      - hps.mean (heal per second)
+      - dtps.mean (damage taken per second)
+      - tmi.mean (theck mitigation index — wskaznik tanka)
+    """
+    hps_data  = cd.get("hps") or cd.get("hpse") or {}
+    dtps_data = cd.get("dtps") or {}
+    tmi_data  = cd.get("tmi") or {}
+
+    hps  = safe_float(hps_data.get("mean") if isinstance(hps_data, dict) else hps_data)
+    dtps = safe_float(dtps_data.get("mean") if isinstance(dtps_data, dict) else dtps_data)
+    tmi  = safe_float(tmi_data.get("mean") if isinstance(tmi_data, dict) else tmi_data)
+    return round(hps, 1), round(dtps, 1), round(tmi, 1)
 
 
 def parse_results(json_path: str):
@@ -211,6 +251,16 @@ def parse_results(json_path: str):
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
+
+        hps, dtps, tmi = _extract_hps_dtps(cd)
+
+        # HPS std dev
+        hps_std_data = cd.get("hps") or cd.get("hpse") or {}
+        hps_std = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
+
+        # DTPS std dev
+        dtps_std_data = cd.get("dtps") or {}
+        dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
         fl_data      = cd.get("fight_length", {})
         fight_length = safe_float(fl_data.get("mean", 1)) or 1.0
@@ -233,6 +283,14 @@ def parse_results(json_path: str):
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             abilities = []
+
+        # Auto-detect roli na podstawie danych
+        if hps > 100:
+            role = "healer"
+        elif dtps > 0 or tmi > 0:
+            role = "tank"
+        else:
+            role = "dps"
 
         spells = []
         for ab in abilities:
@@ -303,6 +361,12 @@ def parse_results(json_path: str):
             "name":         player.get("name", "?"),
             "dps":          round(dps_mean, 1),
             "dps_std":      round(dps_std, 1),
+            "hps":          hps,
+            "hps_std":      round(hps_std, 1),
+            "dtps":         dtps,
+            "dtps_std":     round(dtps_std, 1),
+            "tmi":          tmi,
+            "role":         role,
             "fight_length": round(fight_length, 1),
             "stats":        stats,
             "spells":       top_spells,
@@ -313,7 +377,12 @@ def parse_results(json_path: str):
         return {"error": str(e), "trace": traceback.format_exc()}
 
 
-def generate_dps_chart(json_path: str) -> str:
+def generate_dps_chart(json_path: str, role: str = None) -> str:
+    """
+    Generuje wykres pie chart.
+    role: 'dps' | 'healer' | 'tank' | None (auto-detect)
+    Healer -> healing breakdown, tank -> damage taken, dps -> damage breakdown.
+    """
     try:
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
@@ -333,14 +402,36 @@ def generate_dps_chart(json_path: str) -> str:
         if not isinstance(abilities, list):
             return None
 
-        real_dps = safe_float(cd.get("dps", {}).get("mean", 0))
-        real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
+        # Auto-detect roli jesli nie podano
+        if role is None:
+            hps, dtps, tmi = _extract_hps_dtps(cd)
+            if hps > 100:
+                role = "healer"
+            elif dtps > 0 or tmi > 0:
+                role = "tank"
+            else:
+                role = "dps"
+
+        real_dps  = safe_float(cd.get("dps",  {}).get("mean", 0))
+        real_dmg  = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
+        real_hps  = safe_float((cd.get("hps") or cd.get("hpse") or {}).get("mean", 0))
+        real_dtps = safe_float((cd.get("dtps") or {}).get("mean", 0))
 
         TOP_N  = 12
         COLORS = [
             "#f0027f", "#386cb0", "#fdc086", "#7fc97f", "#beaed4",
             "#bf5b17", "#999999", "#1b9e77", "#d95f02", "#7570b3",
             "#e7298a", "#66a61e", "#aaaaaa",
+        ]
+        HEAL_COLORS = [
+            "#00cc66", "#33cc99", "#66ffcc", "#00aa44", "#88ddaa",
+            "#004d22", "#00ff88", "#009933", "#66cc88", "#33ff66",
+            "#00cc55", "#88ff99", "#aaaaaa",
+        ]
+        TANK_COLORS = [
+            "#aaaaff", "#7777dd", "#5555bb", "#3333aa", "#9999ee",
+            "#bbbbff", "#4444cc", "#6666cc", "#2222aa", "#8888dd",
+            "#ccccff", "#5566dd", "#aaaaaa",
         ]
 
         def build_data(key_fn):
@@ -363,74 +454,94 @@ def generate_dps_chart(json_path: str) -> str:
                 )
             return df["name"].tolist(), df["value"].tolist()
 
-        dmg_names, dmg_vals = build_data(ability_total_dmg)
-        dps_names, dps_vals = build_data(ability_dps)
-
-        if not dmg_vals and not dps_vals:
-            return None
-
-        player_name = player.get("name", "?")
-
         def fmt_dmg(v):
-            if v >= 1_000_000:
-                return f"{v / 1_000_000:.1f}M"
-            if v >= 1_000:
-                return f"{v / 1_000:.0f}k"
+            if v >= 1_000_000: return f"{v/1_000_000:.1f}M"
+            if v >= 1_000:     return f"{v/1_000:.0f}k"
             return str(int(v))
 
         def fmt_dps(v):
-            if v >= 1_000_000:
-                return f"{v / 1_000_000:.2f}M"
-            if v >= 1_000:
-                return f"{v / 1_000:.1f}k"
+            if v >= 1_000_000: return f"{v/1_000_000:.2f}M"
+            if v >= 1_000:     return f"{v/1_000:.1f}k"
             return str(int(v))
 
-        dmg_title = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
-        dps_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
+        player_name = player.get("name", "?")
+
+        if role == "healer":
+            # Healing breakdown: total heal | HPS
+            heal_names, heal_vals = build_data(ability_total_heal)
+            hps_names,  hps_vals  = build_data(ability_hps)
+
+            if not heal_vals and not hps_vals:
+                # Fallback do damage jesli nie ma heal data
+                role = "dps"
+            else:
+                left_title  = f"Total Heal  ({fmt_dmg(real_hps * safe_float(cd.get('fight_length', {}).get('mean', 1)))})" if real_hps > 0 else "Total Heal"
+                right_title = f"HPS  ({fmt_dps(real_hps)})" if real_hps > 0 else "HPS"
+                chart_title = f"{player_name} \u2014 Healing Breakdown"
+                left_names, left_vals   = heal_names, heal_vals
+                right_names, right_vals = hps_names,  hps_vals
+                colors = HEAL_COLORS
+
+        if role == "tank":
+            # Damage taken breakdown: total dmg taken | DTPS
+            # SimC trzyma damage taken w collected_data.dmg_taken
+            dmg_taken_data = cd.get("dmg_taken") or {}
+            real_dmg_taken = safe_float(dmg_taken_data.get("mean", 0) if isinstance(dmg_taken_data, dict) else dmg_taken_data)
+
+            # Damage zadany (dla kontekstu) — lewa strona DMG DONE
+            dmg_names, dmg_vals = build_data(ability_total_dmg)
+            dps_names, dps_vals = build_data(ability_dps)
+
+            left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
+            right_title = f"DTPS  ({fmt_dps(real_dtps)})"     if real_dtps > 0 else "DTPS"
+            chart_title = f"{player_name} \u2014 Tank Breakdown"
+            left_names, left_vals   = dmg_names, dmg_vals
+            right_names, right_vals = dps_names, dps_vals
+            colors = TANK_COLORS
+
+        if role == "dps":
+            dmg_names, dmg_vals = build_data(ability_total_dmg)
+            dps_names, dps_vals = build_data(ability_dps)
+
+            if not dmg_vals and not dps_vals:
+                return None
+
+            left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
+            right_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
+            chart_title = f"{player_name} \u2014 Damage Breakdown"
+            left_names, left_vals   = dmg_names, dmg_vals
+            right_names, right_vals = dps_names, dps_vals
+            colors = COLORS
 
         fig = make_subplots(
             rows=1, cols=2,
             specs=[[{"type": "pie"}, {"type": "pie"}]],
-            subplot_titles=[dmg_title, dps_title],
+            subplot_titles=[left_title, right_title],
         )
 
         fig.add_trace(go.Pie(
-            labels=dmg_names,
-            values=dmg_vals,
-            hole=0.38,
-            textinfo="percent",
-            textfont_size=11,
-            marker=dict(colors=COLORS[:len(dmg_names)], line=dict(color="#0d0d1a", width=1.5)),
-            name="Total DMG",
-            showlegend=True,
+            labels=left_names, values=left_vals,
+            hole=0.38, textinfo="percent", textfont_size=11,
+            marker=dict(colors=colors[:len(left_names)], line=dict(color="#0d0d1a", width=1.5)),
+            name=left_title, showlegend=True,
         ), row=1, col=1)
 
         fig.add_trace(go.Pie(
-            labels=dps_names,
-            values=dps_vals,
-            hole=0.38,
-            textinfo="percent",
-            textfont_size=11,
-            marker=dict(colors=COLORS[:len(dps_names)], line=dict(color="#0d0d1a", width=1.5)),
-            name="DPS",
-            showlegend=False,
+            labels=right_names, values=right_vals,
+            hole=0.38, textinfo="percent", textfont_size=11,
+            marker=dict(colors=colors[:len(right_names)], line=dict(color="#0d0d1a", width=1.5)),
+            name=right_title, showlegend=False,
         ), row=1, col=2)
 
         fig.update_layout(
-            title=dict(
-                text=f"{player_name} \u2014 Damage Breakdown",
-                font=dict(size=17, color="#ffffff"),
-                x=0.5, xanchor="center",
-            ),
+            title=dict(text=chart_title, font=dict(size=17, color="#ffffff"), x=0.5, xanchor="center"),
             legend=dict(
-                orientation="v",
-                yanchor="middle", y=0.5,
-                xanchor="left",   x=1.01,
+                orientation="v", yanchor="middle", y=0.5,
+                xanchor="left", x=1.01,
                 font=dict(size=11, color="#cccccc"),
                 bgcolor="rgba(0,0,0,0)",
             ),
-            paper_bgcolor="#12121f",
-            plot_bgcolor="#12121f",
+            paper_bgcolor="#12121f", plot_bgcolor="#12121f",
             font=dict(color="#cccccc", size=12),
             width=1100, height=520,
             margin=dict(t=70, b=30, l=20, r=200),
@@ -456,11 +567,11 @@ async def get_result_json(job_id: str):
 
 
 @router.get("/api/result/{job_id}/dps-chart.png")
-async def get_dps_chart(job_id: str):
+async def get_dps_chart(job_id: str, role: str = None):
     job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
-    png = generate_dps_chart(job["json_path"])
+    png = generate_dps_chart(job["json_path"], role=role)
     if not png or not os.path.exists(png):
         raise HTTPException(500, "Chart generation failed")
     return FileResponse(png, media_type="image/png")
@@ -528,13 +639,17 @@ async def get_result_debug(job_id: str):
                 return [strip_timeseries(i, depth + 1) for i in obj]
             return obj
 
+        cd = player.get("collected_data", {})
+        hps, dtps, tmi = _extract_hps_dtps(cd)
+
         return {
             "player_name": player.get("name"),
             "player_keys": list(player.keys()),
             "stats_type": type(stats_raw).__name__,
             "stats_len": len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
             "first_3_abilities": strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
-            "collected_data_keys": list(player.get("collected_data", {}).keys()),
+            "collected_data_keys": list(cd.keys()),
+            "hps": hps, "dtps": dtps, "tmi": tmi,
         }
     except Exception as e:
         import traceback
