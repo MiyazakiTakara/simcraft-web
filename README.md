@@ -24,6 +24,12 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 
 - [ ] **Persist widoku po refresh** — przy odświeżeniu strony użytkownik powinien trafić z powrotem do tego samego widoku (home/symulacje/profil). Aktualnie zawsze wraca na `home`. Proponowane rozwiązanie: zapis aktywnej zakładki w `localStorage` lub URL hash (`#symulacje`) i odczyt w `init()`.
 
+### Historia symulacji
+
+- [ ] **Ukrycie wyników symulacji gości z publicznej historii** — symulacje wykonane bez logowania (addon export na stronie głównej) nie powinny pojawiać się w publicznej liście historii na stronie głównej ani nigdzie indziej. Wynik powinien być nadal dostępny bezpośrednio przez link `/result/{job_id}` (np. do udostępnienia znajomym). Wymagane zmiany:
+  - Backend: przy zapisie do historii dodać flagę `is_guest: bool` (lub `user_id IS NULL` jako wyznacznik); endpoint `GET /api/history` powinien filtrować wpisy gdzie `is_guest = true`
+  - Frontend: `startGuestSim()` w `sim.js` może w ogóle nie wywoływać `API.saveToHistory()`, albo przekazywać flagę gościa — do ustalenia
+
 ### Funkcje społecznościowe
 
 > **Problem tożsamości użytkowników:** Użytkownicy logują się przez Battle.net OAuth i posiadają wiele postaci. Planowane podejście: przy pierwszym logowaniu użytkownik wybiera **główną postać** (main), która staje się jego profilem publicznym. Wszystkie symulacje są nadal przypisane do konta (session UUID), ale publicznie wyświetlany jest nick w formacie `Imię-Realm`.
@@ -169,7 +175,7 @@ Frontend używa **Alpine.js** z wzorcem mixinów. Ważne zasady:
 - `GET /api/result/{job_id}/meta` — metadane symulacji (postać, klasa, fight style)
 
 ### Historia
-- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`)
+- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`); nie zawiera symulacji gości
 - `GET /api/history/mine` — historia zalogowanego użytkownika
 - `GET /api/history/trend` — historia DPS w czasie dla konkretnej postaci
 
