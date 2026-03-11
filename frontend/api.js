@@ -53,16 +53,16 @@ const API = {
   },
 
   // Historia zalogowanego uzytkownika
-  async getHistory(session) {
+  async getHistory(session, page = 1, limit = 20) {
     if (session) {
-      return this._fetch(`/api/history/mine?session=${encodeURIComponent(session)}`);
+      return this._fetch(`/api/history/mine?session=${encodeURIComponent(session)}&page=${page}&limit=${limit}`);
     }
-    return this._fetch("/api/history");
+    return this._fetch(`/api/history?page=${page}&limit=${limit}`);
   },
 
   // Publiczna historia (gosc)
-  async getPublicHistory() {
-    return this._fetch("/api/history");
+  async getPublicHistory(page = 1, limit = 50) {
+    return this._fetch(`/api/history?page=${page}&limit=${limit}`);
   },
 
   async saveToHistory(payload) {

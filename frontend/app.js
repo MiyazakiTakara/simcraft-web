@@ -207,15 +207,15 @@ function app() {
 
     async loadHistory() {
       try {
-        this.history = await API.getHistory(this.sessionId);
-        this.historyPage = 1;
+        const data = await API.getHistory(this.sessionId, this.historyPage, this.historyPerPage);
+        this.history = data.items || [];
       } catch (e) { console.error("Failed to load history", e); }
     },
 
     async loadPublicHistory() {
       try {
-        this.history = await API.getPublicHistory();
-        this.historyPage = 1;
+        const data = await API.getPublicHistory(this.historyPage, this.historyPerPage);
+        this.history = data.items || [];
       } catch (e) { console.error("Failed to load public history", e); }
     },
 

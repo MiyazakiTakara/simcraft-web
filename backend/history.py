@@ -34,32 +34,50 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
 
 
 @router.get("/api/history")
-async def get_history():
-    """Publiczna historia — ostatnie 50 wpisow wszystkich uzytkownikow."""
+async def get_history(page: int = 1, limit: int = 50):
+    """Publiczna historia — ostatnie wpisow wszystkich uzytkownikow."""
+    offset = (page - 1) * limit
     with SessionLocal() as db:
         rows = (
             db.query(HistoryEntryModel)
             .order_by(HistoryEntryModel.created_at.desc())
-            .limit(50)
+            .offset(offset)
+            .limit(limit)
             .all()
         )
-    return [_entry_to_dict(r) for r in rows]
+        total = db.query(HistoryEntryModel).count()
+    return {
+        "items": [_entry_to_dict(r) for r in rows],
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": (total + limit - 1) // limit
+    }
 
 
 @router.get("/api/history/mine")
-async def get_my_history(session: str):
+async def get_my_history(session: str, page: int = 1, limit: int = 20):
     """Historia zalogowanego uzytkownika — filtrowana po session_id."""
     if not session:
         raise HTTPException(400, "Brak session")
+    offset = (page - 1) * limit
     with SessionLocal() as db:
+        query = db.query(HistoryEntryModel).filter(HistoryEntryModel.user_id == session)
         rows = (
-            db.query(HistoryEntryModel)
-            .filter(HistoryEntryModel.user_id == session)
+            query
             .order_by(HistoryEntryModel.created_at.desc())
-            .limit(200)
+            .offset(offset)
+            .limit(limit)
             .all()
         )
-    return [_entry_to_dict(r) for r in rows]
+        total = query.count()
+    return {
+        "items": [_entry_to_dict(r) for r in rows],
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": (total + limit - 1) // limit
+    }
 
 
 @router.get("/api/result/{job_id}/meta")
