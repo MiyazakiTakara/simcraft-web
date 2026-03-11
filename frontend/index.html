@@ -30,37 +30,11 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="/style.css?v=6"/>
+  <link rel="stylesheet" href="/style.css?v=7"/>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
   <script src="/app.js?v=23"></script>
-
-  <style>
-    .chart-section { margin-top: 1.2rem; text-align: center; width: 100%; }
-    .chart-section h2 { margin-bottom: .6rem; text-align: left; }
-    .dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
-    .chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
-    .chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
-    .pub-history-card { cursor: pointer; }
-    .pub-history-card:hover { border-color: var(--accent); }
-    .app-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
-    .app-tab { padding: .5rem 1.2rem; border-radius: 6px; font-size: .95rem; background: transparent; color: var(--muted); border: none; cursor: pointer; transition: all .2s; }
-    .app-tab:hover { background: var(--bg); color: var(--text); }
-    .app-tab.active { background: var(--accent); color: #fff; }
-    .char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .char-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; cursor: pointer; transition: border-color .2s; }
-    .char-card:hover { border-color: var(--accent); }
-    .char-card-header { display: flex; align-items: center; gap: .8rem; margin-bottom: .8rem; }
-    .char-card-avatar { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
-    .char-card-info { flex: 1; }
-    .char-card-name { font-weight: 600; font-size: 1.05rem; }
-    .char-card-meta { font-size: .82rem; color: var(--muted); }
-    .char-card-dps { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-    .char-card-dps-small { font-size: .85rem; color: var(--muted); }
-    .hero-custom-text { font-size: 1.15rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; text-align: center; max-width: 680px; margin: 0 auto; padding: 1rem 0; }
-    .role-badge { display: inline-block; font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; background: var(--bg2, #2a2a2a); color: var(--muted); margin-left: .3rem; vertical-align: middle; }
-  </style>
 </head>
 <body>
 <div x-data="app()" x-init="init()" class="container">
@@ -390,7 +364,6 @@
             <div class="sim-option"><label>Styl walki</label><select x-model="simOptions.fight_style"><option value="Patchwerk">Patchwerk</option><option value="HecticAddCleave">HecticAddCleave</option><option value="LightMovement">LightMovement</option><option value="HeavyMovement">HeavyMovement</option></select></div>
             <div class="sim-option"><label>Iteracje</label><input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/></div>
             <div class="sim-option"><label>Target Error %</label><input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/></div>
-
           </div>
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
             <span x-show="loadingSim" class="spinner"></span>

@@ -280,56 +280,84 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   line-height: 1.4;
   display: none;
 }
-
 .item-tooltip-title {
   font-weight: 700;
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
-
 .item-tooltip-slot {
   font-size: 0.7rem;
   color: var(--muted);
   text-transform: uppercase;
   margin-bottom: 0.5rem;
 }
-
 .item-tooltip-stats {
   margin-bottom: 0.5rem;
 }
-
 .item-tooltip-stat {
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
 }
-
 .item-tooltip-spell {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
 }
-
 .item-tooltip-spell-name {
   font-weight: 600;
   color: var(--accent);
   font-size: 0.85rem;
 }
-
 .item-tooltip-spell-desc {
   font-size: 0.8rem;
   color: var(--muted);
   margin-top: 0.25rem;
 }
-
 .item-tooltip-enchant {
   margin-top: 0.5rem;
   font-size: 0.8rem;
   color: #4caf50;
 }
-
 .item-tooltip-gem {
   margin-top: 0.5rem;
   font-size: 0.8rem;
   color: #9c27b0;
 }
+
+/* =====================
+   CHART & MODALS
+   ===================== */
+.chart-section { margin-top: 1.2rem; text-align: center; width: 100%; }
+.chart-section h2 { margin-bottom: .6rem; text-align: left; }
+.dps-chart-img { width: 100%; max-width: 800px; border-radius: 10px; border: 1px solid var(--border); cursor: zoom-in; }
+.chart-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
+.chart-modal-overlay img { max-width: 95vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.7); }
+
+/* =====================
+   TABS (app)
+   ===================== */
+.app-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
+.app-tab { padding: .5rem 1.2rem; border-radius: 6px; font-size: .95rem; background: transparent; color: var(--muted); border: none; cursor: pointer; transition: all .2s; }
+.app-tab:hover { background: var(--bg); color: var(--text); }
+.app-tab.active { background: var(--accent); color: #fff; }
+
+/* =====================
+   CHAR CARDS (profil)
+   ===================== */
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.char-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; cursor: pointer; transition: border-color .2s; }
+.char-card:hover { border-color: var(--accent); }
+.char-card-header { display: flex; align-items: center; gap: .8rem; margin-bottom: .8rem; }
+.char-card-avatar { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+.char-card-info { flex: 1; }
+.char-card-name { font-weight: 600; font-size: 1.05rem; }
+.char-card-meta { font-size: .82rem; color: var(--muted); }
+.char-card-dps { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+.char-card-dps-small { font-size: .85rem; color: var(--muted); }
+
+/* =====================
+   MISC
+   ===================== */
+.hero-custom-text { font-size: 1.15rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; text-align: center; max-width: 680px; margin: 0 auto; padding: 1rem 0; }
+.role-badge { display: inline-block; font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; background: var(--bg2, #2a2a2a); color: var(--muted); margin-left: .3rem; vertical-align: middle; }
