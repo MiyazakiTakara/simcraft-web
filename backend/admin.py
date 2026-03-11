@@ -402,7 +402,7 @@ async def get_limits(request: Request):
     _require_admin(request)
     return {
         "max_concurrent_sims": int(os.environ.get("MAX_CONCURRENT_SIMS", "3")),
-        "rate_limit_per_minute": 5,  # Hardcoded in simulation.py
+        "rate_limit_per_minute": 5,
         "job_timeout": int(os.environ.get("JOB_TIMEOUT", "360")),
     }
 
@@ -410,8 +410,6 @@ async def get_limits(request: Request):
 @router.patch("/api/limits")
 async def update_limits(request: Request, data: LimitsUpdate):
     _require_admin(request)
-    # Note: In a real app, you'd persist these to a config file or database
-    # For now, we'll just return success (implementation depends on how you want to store config)
     return {"ok": True, "message": "Limits updated (not persisted in this demo)"}
 
 
@@ -430,7 +428,6 @@ async def health_check(request: Request):
         "results_dir": "unknown",
     }
     
-    # Check database
     try:
         from sqlalchemy import text
         with SessionLocal() as db:
@@ -439,7 +436,6 @@ async def health_check(request: Request):
     except Exception as e:
         health_status["database"] = f"error: {str(e)}"
     
-    # Check Blizzard API
     try:
         from auth import get_blizzard_token
         token = await get_blizzard_token()
@@ -447,14 +443,11 @@ async def health_check(request: Request):
     except Exception as e:
         health_status["blizzard_api"] = f"error: {str(e)}"
     
-    # Check Keycloak
     try:
         cfg = _cfg()
         async with httpx.AsyncClient() as client:
-            # Check OIDC configuration endpoint (public, no auth required)
             url = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
             resp = await client.get(url, timeout=5)
-            # 200 = ok, 401/403 = configured but requires auth (ok), other errors = problem
             if resp.status_code == 200:
                 health_status["keycloak"] = "ok"
             elif resp.status_code in (401, 403):
@@ -464,14 +457,12 @@ async def health_check(request: Request):
     except Exception as e:
         health_status["keycloak"] = f"error: {str(e)}"
     
-    # Check SimulationCraft binary
     simc_path = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
     if os.path.exists(simc_path) and os.access(simc_path, os.X_OK):
         health_status["simc_binary"] = "ok"
     else:
         health_status["simc_binary"] = f"error: not found or not executable at {simc_path}"
     
-    # Check results directory
     results_dir = os.environ.get("RESULTS_DIR", "/app/results")
     if os.path.exists(results_dir) and os.access(results_dir, os.W_OK):
         health_status["results_dir"] = "ok"
@@ -506,7 +497,6 @@ async def cancel_task(request: Request, job_id: str):
     from simulation import jobs
     
     if job_id in jobs:
-        # Mark job as cancelled (implementation depends on how you handle cancellation)
         jobs[job_id]["status"] = "cancelled"
         jobs[job_id]["error"] = "Cancelled by admin"
         return {"ok": True, "message": f"Task {job_id} cancelled"}
@@ -527,14 +517,16 @@ class AppearanceUpdate(BaseModel):
     header_title: str | None = None
     hero_title: str | None = None
     emoji: str | None = None
+    hero_custom_text: str | None = None
 
 
 def load_appearance_config():
     """Load appearance config from JSON file."""
     default_config = {
         "header_title": "SimCraft Web",
-        "hero_title": "Symulator DPS dla World of Warcraft",
-        "emoji": "⚔️"
+        "hero_title": "World of Warcraft",
+        "emoji": "⚔️",
+        "hero_custom_text": ""
     }
     
     try:
@@ -585,6 +577,8 @@ async def update_appearance(request: Request, data: AppearanceUpdate):
         config["hero_title"] = data.hero_title
     if data.emoji is not None:
         config["emoji"] = data.emoji
+    if data.hero_custom_text is not None:
+        config["hero_custom_text"] = data.hero_custom_text
     
     if save_appearance_config(config):
         return {"ok": True, "message": "Appearance settings saved successfully"}

@@ -34,7 +34,7 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
-  <script src="/app.js?v=20"></script>
+  <script src="/app.js?v=21"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -58,6 +58,7 @@
     .char-card-meta { font-size: .82rem; color: var(--muted); }
     .char-card-dps { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
     .char-card-dps-small { font-size: .85rem; color: var(--muted); }
+    .hero-custom-text { font-size: 1.15rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; text-align: center; max-width: 680px; margin: 0 auto; padding: 1rem 0; }
   </style>
 </head>
 <body>
@@ -89,24 +90,34 @@
     </div>
   </header>
 
-  <!-- HOME VIEW (default for both logged in and out) -->
+  <!-- HOME VIEW -->
   <template x-if="currentView === 'home'">
     <div class="landing">
 
       <div class="landing-hero">
-        <h1 class="landing-hero-title"><span x-text="appearance.emoji">⚔️</span> Symulator DPS<br/>dla <span x-text="appearance.hero_title">World of Warcraft</span></h1>
-        <p class="landing-hero-sub">Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.</p>
-        <div class="landing-hero-btns">
-          <template x-if="!sessionId">
-            <a href="/auth/login" class="btn btn-login">🔑 Zaloguj przez Battle.net</a>
-          </template>
-          <template x-if="sessionId">
-            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Szybka symulacja z addona ↓</button>
-          </template>
-          <template x-if="!sessionId">
-            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Spróbuj bez logowania ↓</button>
-          </template>
-        </div>
+        <!-- Własny tekst hero (jeśli ustawiony w adminie) -->
+        <template x-if="appearance.hero_custom_text">
+          <div class="hero-custom-text" x-text="appearance.hero_custom_text"></div>
+        </template>
+
+        <!-- Domyślny layout hero -->
+        <template x-if="!appearance.hero_custom_text">
+          <div>
+            <h1 class="landing-hero-title"><span x-text="appearance.emoji">⚔️</span> Symulator DPS<br/>dla <span x-text="appearance.hero_title">World of Warcraft</span></h1>
+            <p class="landing-hero-sub">Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.</p>
+            <div class="landing-hero-btns">
+              <template x-if="!sessionId">
+                <a href="/auth/login" class="btn btn-login">🔑 Zaloguj przez Battle.net</a>
+              </template>
+              <template x-if="sessionId">
+                <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Szybka symulacja z addona ↓</button>
+              </template>
+              <template x-if="!sessionId">
+                <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Spróbuj bez logowania ↓</button>
+              </template>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- Addon Export -->
@@ -144,6 +155,7 @@
                 <div class="stat-list">
                   <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
                     <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
+
                   </template>
                 </div>
               </div>
@@ -589,7 +601,6 @@
 
         <template x-if="!loadingCharDetails && !charDetailsError">
           <div>
-            <!-- Gear -->
             <h3 style="margin:1rem 0 .5rem">🎒 Gear</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem">
               <template x-for="item in charEquipment" :key="item.slot">
@@ -609,7 +620,6 @@
               </template>
             </div>
 
-            <!-- Talents -->
             <template x-if="charTalents.length > 0">
               <div>
                 <h3 style="margin:1rem 0 .5rem">✨ Talenty</h3>
@@ -628,7 +638,6 @@
               </div>
             </template>
 
-            <!-- DPS Trend Chart -->
             <div>
               <h3 style="margin:1rem 0 .5rem">📈 DPS w czasie</h3>
               <div id="dps-trend-chart" style="width:100%;height:300px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"></div>
@@ -645,7 +654,6 @@
 
 </div>
 
-<!-- Item tooltip element -->
 <div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
 
 </body>
