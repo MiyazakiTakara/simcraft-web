@@ -379,7 +379,7 @@ def parse_results(json_path: str):
             "name":         player.get("name", "?"),
             "dps":          round(dps_mean, 1),
             "dps_std":      round(dps_std, 1),
-            "hps":          hps,
+            "hps":          main_hps,
             "hps_std":      round(hps_std, 1),
             "role":         role,
             "fight_length": round(fight_length, 1),
