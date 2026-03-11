@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime
+from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ.get(
@@ -109,6 +109,14 @@ class LogEntryModel(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Migracja: dodaj brakujące kolumny do history
+    with SessionLocal() as db:
+        try:
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS hps FLOAT DEFAULT 0.0"))
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS dtps FLOAT DEFAULT 0.0"))
+            db.commit()
+        except Exception:
+            db.rollback()
 
 
 def create_job(job_id: str, json_path: str):
