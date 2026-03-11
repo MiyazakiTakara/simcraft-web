@@ -79,7 +79,8 @@ async function loadDashboard() {
   document.getElementById('stat-memory').textContent      = s.memory_percent + '%';
   document.getElementById('stat-uptime').textContent      = s.uptime;
 
-  renderCharts(data);
+  // defer rendering so Plotly gets fully laid-out containers
+  setTimeout(() => renderCharts(data), 0);
 }
 
 function renderCharts(data) {
