@@ -218,7 +218,8 @@ async def get_character_statistics(session: str, realm_slug: str, name: str):
 
     def get_stat_val(v):
         if isinstance(v, dict):
-            return v.get("value", v.get("base", "?"))
+            # Prefer effective value over base value for main stats
+            return v.get("effective", v.get("value", v.get("base", "?")))
         return v if v is not None else "?"
 
     for key, label in stat_map.items():
