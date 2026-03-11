@@ -474,7 +474,7 @@ function app() {
 
     get pubSortedSpells() {
       if (!this.pubResult?.spells) return [];
-      const key = this.spellSort;
+      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
       return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
@@ -487,8 +487,14 @@ function app() {
 
     get sortedSpells() {
       if (!this.simResult?.spells) return [];
-      const key = this.spellSort;
+      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
       return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+    },
+
+    get pubSortedSpells() {
+      if (!this.pubResult?.spells) return [];
+      const key = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
     classColor(className) { return this.CLASS_COLORS[className] || "#aaa"; },

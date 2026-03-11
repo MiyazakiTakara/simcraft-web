@@ -143,6 +143,15 @@
                   </template>
                   <template x-if="effectiveRole() !== 'healer'">
                     <div>
+                      <button class="tab" :class="{active: spellSort==='total_dmg' || effectiveRole() === 'healer'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                      <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+                  </template>
+                  <template x-if="effectiveRole() !== 'healer'">
+                    <div>
                       <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
                       <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                     </div>
@@ -155,25 +164,32 @@
                     <div class="spell-head">
                       <span x-text="sp.name"></span>
                       <span style="display:flex;gap:.6rem;align-items:center">
-                        <span x-show="effectiveRole() === 'healer' && spellSort==='total_heal'">
-                          <strong x-text="formatDmg(sp.total_heal)"></strong>
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span>
-                        </span>
-                        <span x-show="effectiveRole() === 'healer' && spellSort==='hps'">
-                          <strong x-text="formatDps(sp.hps)"></strong> HPS
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span>
-                        </span>
-                        <span x-show="effectiveRole() !== 'healer' && spellSort==='total_dmg'">
-                          <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
-                        </span>
-                        <span x-show="effectiveRole() !== 'healer' && spellSort==='dps'">
-                          <strong x-text="formatDps(sp.dps)"></strong> DPS
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
-                        </span>
-                        <span x-show="effectiveRole() !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                        <template x-if="effectiveRole() === 'healer'">
+                          <span>
+                            <span x-show="spellSort==='total_heal'">
+                              <strong x-text="formatDmg(sp.total_heal)"></strong>
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span>
+                            </span>
+                            <span x-show="spellSort==='hps'">
+                              <strong x-text="formatDps(sp.hps)"></strong> HPS
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span>
+                            </span>
+                          </span>
+                        </template>
+                        <template x-if="effectiveRole() !== 'healer'">
+                          <span>
+                            <span x-show="spellSort==='total_dmg'">
+                              <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                            </span>
+                            <span x-show="spellSort==='dps'">
+                              <strong x-text="formatDps(sp.dps)"></strong> DPS
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                            </span>
+                            <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                          </span>
+                        </template>
                       </span>
-
                     </div>
                     <div class="spell-bar-bg">
                       <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
@@ -304,7 +320,8 @@ function resultPage() {
 
     get sortedSpells() {
       if (!this.result?.spells) return [];
-      return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
+      const sortKey = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      return [...this.result.spells].sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0));
     },
 
     effectiveRole() {
