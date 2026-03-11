@@ -104,7 +104,6 @@ const CharsMixin = {
       return;
     }
     const x    = charData.chartData.map(p => p.x);
-    // Wartości /1000 — ładniejsza oś Y, ticksuffix "k"
     const dpsY = charData.chartData.map(p => +(p.dps / 1000).toFixed(2));
     const hpsY = charData.chartData.map(p => +(p.hps / 1000).toFixed(2));
     const hasHps = hpsY.some(v => v > 0);
@@ -129,7 +128,6 @@ const CharsMixin = {
         gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa',
         title: hasHps ? 'DPS / HPS' : 'DPS',
         ticksuffix: 'k',
-        // wyłącza SI-prefix (k, M) — Plotly nie będzie sam skracał liczb
         tickformat: ',.2f',
         exponentformat: 'none',
       },
@@ -192,13 +190,6 @@ const CharsMixin = {
       const db = this._parseDate(b.created_at);
       return (db?.getTime() ?? 0) - (da?.getTime() ?? 0);
     });
-  },
-
-  get filteredChars() {
-    const q = this.charFilter.toLowerCase();
-    return this.characters.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
-    );
   },
 
   showItemTooltip(event, item) {

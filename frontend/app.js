@@ -10,7 +10,7 @@ function app() {
     // Pierwsza sesja / main char
     isFirstLogin:         false,
     showMainCharModal:    false,
-    mainChar:             null,   // { name, realm }
+    mainChar:             null,
     savingMainChar:       false,
     mainCharSaved:        false,
 
@@ -53,6 +53,14 @@ function app() {
     ...CharsMixin,
     ...HistoryMixin,
 
+    // getter MUSI byc tutaj, po spreadach — inaczej Alpine ewaluuje go przed inicjalizacja stanu
+    get filteredChars() {
+      const q = (this.charFilter || '').toLowerCase();
+      return (this.characters || []).filter(
+        (c) => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
+      );
+    },
+
     async init() {
       this.applyTheme();
       if (this.sessionId) {
@@ -91,10 +99,10 @@ function app() {
         const res = await fetch(`/auth/session/main-character?session=${this.sessionId}`, {
           method:  'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ name: char.name, realm: char.realm_slug }),
+          body:    JSON.stringify({ name: char.name, realm: char.realm_slug || char.realm }),
         });
         if (res.ok) {
-          this.mainChar          = { name: char.name, realm: char.realm_slug };
+          this.mainChar          = { name: char.name, realm: char.realm_slug || char.realm };
           this.mainCharSaved     = true;
           this.showMainCharModal = false;
           this.isFirstLogin      = false;
