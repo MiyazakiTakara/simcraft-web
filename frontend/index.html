@@ -249,7 +249,7 @@
             </template>
             <div class="landing-history-grid">
               <template x-for="entry in pagedHistory" :key="entry.job_id">
-                <div class="pub-history-card" @click="loadPubResult(entry.job_id)">
+                <div class="pub-history-card" @click="window.location.href = '/result/' + entry.job_id">
                   <div class="pub-card-name">
                     <span x-text="entry.character_name || 'Addon Export'"></span>
                     <span class="role-badge" x-text="roleIcon(entry.role || 'dps') + ' ' + roleLabel(entry.role || 'dps')"></span>
