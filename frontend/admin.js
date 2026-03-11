@@ -376,6 +376,10 @@ async function loadAppearance() {
     
     document.getElementById('appearance-header-title').value = data.header_title || '';
     document.getElementById('appearance-hero-title').value = data.hero_title || '';
+
+    // BUGFIX: wczytaj hero_custom_text do textarea
+    const customTextEl = document.getElementById('appearance-hero-custom');
+    if (customTextEl) customTextEl.value = data.hero_custom_text || '';
     
     // Select emoji
     const selectedEmoji = data.emoji || '⚔️';
@@ -395,12 +399,21 @@ async function saveAppearance() {
   const heroTitle = document.getElementById('appearance-hero-title').value;
   const selectedEmojiBtn = document.querySelector('.emoji-btn.selected');
   const emoji = selectedEmojiBtn ? selectedEmojiBtn.dataset.emoji : '⚔️';
+
+  // BUGFIX: dołącz hero_custom_text do payloadu
+  const customTextEl = document.getElementById('appearance-hero-custom');
+  const heroCustomText = customTextEl ? customTextEl.value : '';
   
   try {
     const res = await fetch('/admin/api/appearance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ header_title: headerTitle, hero_title: heroTitle, emoji: emoji })
+      body: JSON.stringify({
+        header_title: headerTitle,
+        hero_title: heroTitle,
+        emoji: emoji,
+        hero_custom_text: heroCustomText,
+      })
     });
     
     const result = await res.json();
