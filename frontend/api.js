@@ -52,8 +52,8 @@ const API = {
     return this._fetch(`/api/result/${jobId}/meta`);
   },
 
-  // Historia zalogowanego uzytkownika
-  async getHistory(session, page = 1, limit = 20) {
+  // Historia zalogowanego uzytkownika (pelna historia w profilu - 10 na strone)
+  async getHistory(session, page = 1, limit = 10) {
     if (session) {
       return this._fetch(`/api/history/mine?session=${encodeURIComponent(session)}&page=${page}&limit=${limit}`);
     }
