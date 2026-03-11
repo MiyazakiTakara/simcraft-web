@@ -10,19 +10,14 @@ from slowapi.errors import RateLimitExceeded
 
 def get_client_ip(request):
     """Get client IP address, respecting Cloudflare headers."""
-    # Cloudflare sends the real client IP in CF-Connecting-IP
     forwarded = request.headers.get("CF-Connecting-IP")
     if forwarded:
         return forwarded
-    
-    # Fallback to X-Forwarded-For (first IP in the chain)
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        # X-Forwarded-For can contain multiple IPs, take the first one
         return forwarded.split(",")[0].strip()
-    
-    # Fallback to default behavior
     return request.client.host if request.client else "unknown"
+
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from logging_config import setup_logging
@@ -32,7 +27,7 @@ from characters import router as characters_router
 from simulation import router as sim_router, RESULTS_DIR, jobs, create_job
 from results import router as results_router
 from history import router as history_router
-from admin import router as admin_router
+from admin import router as admin_router, load_appearance_config
 
 log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
@@ -50,9 +45,6 @@ def _validate_env():
 
 _validate_env()
 
-
-
-# Inicjalizacja bazy danych
 init_db()
 log.info("database-initialized")
 
@@ -91,6 +83,14 @@ app.include_router(sim_router)
 app.include_router(results_router)
 app.include_router(history_router)
 app.include_router(admin_router)
+
+
+# ---------- Publiczny endpoint appearance (bez autoryzacji) ----------
+
+@app.get("/api/appearance")
+async def get_appearance_public():
+    """Publiczny endpoint do pobierania ustawień wyglądu przez frontend."""
+    return load_appearance_config()
 
 
 BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")

@@ -50,7 +50,7 @@
 
   <!-- Header -->
   <header class="header">
-    <a href="/" class="header-logo" style="text-decoration:none">⚔️ SimCraft Web</a>
+    <a href="/" class="header-logo" style="text-decoration:none" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</a>
     <a href="/" class="btn btn-ghost" style="font-size:.85rem">← Strona główna</a>
   </header>
 
@@ -154,6 +154,7 @@
                         </span>
                         <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                       </span>
+
                     </div>
                     <div class="spell-bar-bg">
                       <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
@@ -209,7 +210,7 @@
               @click="copyShare()"
               x-text="copied ? '✓ Skopiowano link' : '🔗 Kopiuj link'"
             ></button>
-            <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none">⚔️ Symuluj swoją postać</a>
+            <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none" x-text="appearance.emoji + ' Symuluj swoją postać'">⚔️ Symuluj swoją postać</a>
           </div>
         </div>
       </div>
@@ -231,6 +232,12 @@ function resultPage() {
     copied: false,
     ts: Date.now(),
 
+    appearance: {
+      header_title: 'SimCraft Web',
+      hero_title: 'Symulator DPS dla World of Warcraft',
+      emoji: '⚔️',
+    },
+
     STAT_LABELS: {
       strength: 'Strength', agility: 'Agility', stamina: 'Stamina',
       intellect: 'Intellect', crit: 'Critical Strike', haste: 'Haste',
@@ -244,26 +251,20 @@ function resultPage() {
     },
 
     async init() {
-      // Load appearance settings
-      try {
-        const res = await fetch('/api/appearance');
-        if (res.ok) {
-          const data = await res.json();
-          const headerLogo = document.querySelector('.header-logo');
-          if (headerLogo) headerLogo.innerHTML = data.emoji + ' ' + data.header_title;
-          const titleEl = document.querySelector('title');
-          if (titleEl) titleEl.textContent = data.header_title + ' — ' + data.hero_title;
-        }
-      } catch (e) {
-        console.error('Failed to load appearance:', e);
-      }
+      // Ładuj appearance i dane symulacji równolegle
+      const appearancePromise = fetch('/api/appearance')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) this.appearance = data; })
+        .catch(() => {});
 
       this.jobId = window.location.pathname.split('/').filter(Boolean).pop();
       if (!this.jobId) { this.error = 'Brak ID symulacji.'; this.loading = false; return; }
+
       try {
         const [result, meta] = await Promise.all([
           API.getResultJson(this.jobId),
           API.getResultMeta(this.jobId),
+          appearancePromise,
         ]);
         this.result = result;
         this.meta   = meta;
