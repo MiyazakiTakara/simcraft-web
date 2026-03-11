@@ -368,3 +368,22 @@ async def get_user_simulations(request: Request, user_id: str, limit: int = 20):
         "fight_style": r.fight_style,
         "created_at": r.created_at,
     } for r in rows]
+
+
+@router.delete("/api/simulations")
+async def delete_simulations(request: Request, older_than_days: int = None, user_id: str = None):
+    _require_admin(request)
+    
+    with SessionLocal() as db:
+        query = db.query(HistoryEntryModel)
+        
+        if user_id:
+            query = query.filter(HistoryEntryModel.user_id == user_id)
+        elif older_than_days:
+            cutoff = int(time.time()) - (older_than_days * 24 * 60 * 60)
+            query = query.filter(HistoryEntryModel.created_at < cutoff)
+        
+        deleted = query.delete()
+        db.commit()
+    
+    return {"deleted": deleted}

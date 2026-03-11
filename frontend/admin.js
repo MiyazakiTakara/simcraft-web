@@ -232,4 +232,27 @@ document.getElementById('user-modal').addEventListener('click', function(e) {
   if (e.target === this) closeUserModal();
 });
 
+async function deleteOldSims() {
+  const days = parseInt(document.getElementById('delete-days').value);
+  if (!days || days < 1) { toast('Podaj liczbę dni!', '#e88'); return; }
+  if (!confirm(`Na pewno usunąć wszystkie symulacje starsze niż ${days} dni?`)) return;
+  
+  const res = await fetch(`/admin/api/simulations?older_than_days=${days}`, { method: 'DELETE' });
+  const data = await res.json();
+  document.getElementById('delete-result').textContent = `Usunięto ${data.deleted} symulacji.`;
+  document.getElementById('delete-result').style.color = '#4c4';
+  loadDashboard();
+}
+
+async function deleteAllSims() {
+  if (!confirm('Na pewno usunąć WSZYSTKIE symulacje? To nieodwracalne!')) return;
+  if (!confirm('Jesteś PEWNY? Wszystkie dane zostaną utracone!')) return;
+  
+  const res = await fetch('/admin/api/simulations', { method: 'DELETE' });
+  const data = await res.json();
+  document.getElementById('delete-result').textContent = `Usunięto ${data.deleted} symulacji.`;
+  document.getElementById('delete-result').style.color = '#e55';
+  loadDashboard();
+}
+
 loadDashboard();
