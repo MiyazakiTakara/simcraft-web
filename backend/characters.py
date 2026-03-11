@@ -120,15 +120,19 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
 
     equipment = []
     for slot in data.get("equipped_items", []):
+        item_data = slot.get("item", {})
         item = {
             "slot": slot.get("slot", {}).get("name", ""),
-            "name": slot.get("item", {}).get("name", ""),
-            "icon": slot.get("item", {}).get("media", {}).get("id", ""),
-            "quality": slot.get("item", {}).get("quality", {}).get("type", ""),
+            "name": item_data.get("name", ""),
+            "icon": item_data.get("media", {}).get("id", ""),
+            "quality": item_data.get("quality", {}).get("type", ""),
             "level": slot.get("level", {}).get("value", 0),
             "stats": [],
             "spells": [],
+            "description": item_data.get("description", ""),
         }
+        
+        # Parse stats
         for stat in slot.get("stats", []):
             stat_type = stat.get("type", {})
             if isinstance(stat_type, dict):
@@ -139,14 +143,18 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
                 "type": stat_label,
                 "value": stat.get("value", 0),
             })
+        
+        # Enchant
         enchant = slot.get("enchant", {})
         if enchant:
             item["enchant"] = enchant.get("display_string", "")
+        
+        # Gem
         gem = slot.get("gem", {})
         if gem:
             item["gem"] = gem.get("item", {}).get("name", "")
         
-        # Get spell effects (passive abilities, etc.)
+        # Spell effects (passive abilities, etc.)
         if "spells" in slot:
             for spell in slot.get("spells", []):
                 item["spells"].append({
@@ -154,10 +162,6 @@ async def get_character_equipment(session: str, realm_slug: str, name: str):
                     "description": spell.get("description", ""),
                     "icon": spell.get("icon", ""),
                 })
-        
-        # Get tooltip from item details if available
-        if "item" in slot and "tooltip" in slot.get("item", {}):
-            item["tooltip"] = slot.get("item", {}).get("tooltip", "")
         
         equipment.append(item)
 

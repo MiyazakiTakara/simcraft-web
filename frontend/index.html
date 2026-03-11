@@ -598,6 +598,9 @@
                      @mouseleave="hideItemTooltip()">
                   <div style="color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:.2rem" x-text="item.slot"></div>
                   <div :style="{color: getItemQualityColor(item.quality)}" x-text="item.name"></div>
+                  <template x-if="item.description">
+                    <div style="font-size:.7rem;color:var(--muted);font-style:italic;margin-top:.2rem" x-text="item.description"></div>
+                  </template>
                   <div style="color:var(--accent);font-size:.75rem" x-text="'ilvl ' + item.level"></div>
                   <template x-for="stat in item.stats.slice(0,3)" :key="stat.type">
                     <div style="font-size:.7rem;color:var(--muted)" x-text="stat.type + ': ' + stat.value"></div>

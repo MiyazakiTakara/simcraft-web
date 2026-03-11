@@ -669,11 +669,16 @@ function app() {
          <div style="color:var(--muted);font-size:.75rem;margin-bottom:.5rem">ilvl ${item.level}</div>
        `;
 
+       // Description (additional effects)
+       if (item.description) {
+         html += `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic">${item.description}</div>`;
+       }
+
        // Stats
        if (item.stats && item.stats.length > 0) {
          html += '<div class="item-tooltip-stats">';
          item.stats.forEach(stat => {
-           html += `<div class="item-tooltip-stat"><span>${stat.type}</span><span>${stat.value}</span></div>`;
+           html += `<div class="item-tooltip-stat"><span>${stat.type}</span><span>${stat.value > 0 ? '+' : ''}${stat.value}</span></div>`;
          });
          html += '</div>';
        }
