@@ -6,7 +6,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     const tabId = 'tab-' + tab.dataset.tab;
     document.getElementById(tabId).classList.add('active');
     
-    // Load data for specific tabs
     if (tab.dataset.tab === 'news') loadNews();
     if (tab.dataset.tab === 'limits') loadLimits();
     if (tab.dataset.tab === 'health') loadHealth();
@@ -23,11 +22,14 @@ function toast(msg, color = '#eee') {
 }
 
 function fmt(ts) {
-  return new Date(ts * 1000).toLocaleString('pl-PL');
+  if (!ts) return '—';
+  // ts moze byc ISO string (po migracji DateTime) lub unix timestamp (legacy)
+  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+  return d.toLocaleString('pl-PL');
 }
 
 function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 async function loadDashboard() {
@@ -189,10 +191,7 @@ function renderUsers(users) {
 
 function filterUsers() {
   const query = document.getElementById('user-search').value.toLowerCase().trim();
-  if (!query) {
-    renderUsers(allUsers);
-    return;
-  }
+  if (!query) { renderUsers(allUsers); return; }
   const filtered = allUsers.filter(u => 
     (u.user_id && u.user_id.toLowerCase().includes(query)) ||
     (u.character_name && u.character_name.toLowerCase().includes(query))
@@ -267,7 +266,6 @@ async function loadLimits() {
   const res = await fetch('/admin/api/limits');
   if (!res.ok) { toast('Błąd ładowania limitów', '#e88'); return; }
   const data = await res.json();
-  
   document.getElementById('limit-concurrent').value = data.max_concurrent_sims;
   document.getElementById('limit-rate').value = data.rate_limit_per_minute;
   document.getElementById('limit-timeout').value = data.job_timeout;
@@ -275,17 +273,15 @@ async function loadLimits() {
 
 async function saveLimits() {
   const payload = {
-    max_concurrent_sims: parseInt(document.getElementById('limit-concurrent').value),
+    max_concurrent_sims:   parseInt(document.getElementById('limit-concurrent').value),
     rate_limit_per_minute: parseInt(document.getElementById('limit-rate').value),
-    job_timeout: parseInt(document.getElementById('limit-timeout').value),
+    job_timeout:           parseInt(document.getElementById('limit-timeout').value),
   };
-  
   const res = await fetch('/admin/api/limits', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  
   const result = document.getElementById('limits-result');
   if (res.ok) {
     result.textContent = 'Limity zapisane (nie trwałe w demo).';
@@ -297,6 +293,59 @@ async function saveLimits() {
 }
 
 // ---------- Health Check ----------
+
+function _renderHealthRow(key, val) {
+  // Specjalny renderer dla simc_version (obiekt)
+  if (key === 'simc_version' && val && typeof val === 'object') {
+    const v       = val;
+    const local   = v.local   || '—';
+    const latest  = v.latest  || '—';
+    const upToDate = v.up_to_date;
+
+    let badge, badgeColor;
+    if (upToDate === true) {
+      badge = '✓ aktualna';  badgeColor = '#4c4';
+    } else if (upToDate === false) {
+      badge = '✗ nieaktualna'; badgeColor = '#e55';
+    } else {
+      badge = '? nie sprawdzono'; badgeColor = '#aaa';
+    }
+
+    const releaseLink = v.release_url
+      ? ` <a href="${escHtml(v.release_url)}" target="_blank" style="color:#7af;font-size:0.8rem">→ release</a>`
+      : '';
+    const publishedAt = v.published_at
+      ? `<span style="color:#666;font-size:0.78rem"> (${v.published_at.slice(0,10)})</span>`
+      : '';
+    const cacheAge = typeof v.cache_age_s === 'number'
+      ? `<span style="color:#555;font-size:0.75rem"> cache: ${v.cache_age_s}s</span>`
+      : '';
+
+    return `
+      <div style="padding:0.4rem 0;border-bottom:1px solid #222">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:#aaa">simc_version</span>
+          <span style="color:${badgeColor};font-weight:600">${badge}</span>
+        </div>
+        <div style="font-size:0.82rem;color:#888;margin-top:0.2rem;display:flex;flex-wrap:wrap;gap:0.6rem">
+          <span>lokalna: <b style="color:#ccc">${escHtml(local)}</b></span>
+          <span>najnowsza: <b style="color:#ccc">${escHtml(latest)}</b>${publishedAt}${releaseLink}</span>
+          ${cacheAge}
+        </div>
+      </div>`;
+  }
+
+  // Domyslny renderer dla string/bool
+  const strVal  = String(val);
+  const isOk    = strVal === 'ok' || strVal.startsWith('ok');
+  const color   = isOk ? '#4c4' : '#e55';
+  const icon    = isOk ? '✓' : '✗';
+  return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #222">
+    <span>${escHtml(key)}</span>
+    <span style="color:${color}">${icon} ${escHtml(strVal)}</span>
+  </div>`;
+}
+
 async function loadHealth() {
   const container = document.getElementById('health-status');
   container.innerHTML = '<p class="empty">Ładowanie...</p>';
@@ -305,17 +354,8 @@ async function loadHealth() {
   if (!res.ok) { container.innerHTML = '<p class="empty">Błąd ładowania.</p>'; return; }
   const data = await res.json();
   
-  const statusHtml = Object.entries(data).map(([key, val]) => {
-    const isOk = val === 'ok' || (typeof val === 'string' && val.startsWith('ok'));
-    const color = isOk ? '#4c4' : '#e55';
-    const icon = isOk ? '✓' : '✗';
-    return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #222">
-      <span>${key}</span>
-      <span style="color:${color}">${icon} ${val}</span>
-    </div>`;
-  }).join('');
-  
-  container.innerHTML = `<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem">${statusHtml}</div>`;
+  const html = Object.entries(data).map(([k, v]) => _renderHealthRow(k, v)).join('');
+  container.innerHTML = `<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem">${html}</div>`;
 }
 
 // ---------- Task Management ----------
@@ -347,7 +387,6 @@ async function loadTasks() {
 
 async function cancelTask(jobId) {
   if (!confirm(`Na pewno anulować zadanie ${jobId}?`)) return;
-  
   const res = await fetch(`/admin/api/tasks/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
   if (res.ok) {
     toast('Zadanie anulowane', '#4c4');
@@ -373,21 +412,14 @@ async function loadAppearance() {
       window.location = '/admin/login'; return;
     }
     const data = await res.json();
-    
     document.getElementById('appearance-header-title').value = data.header_title || '';
     document.getElementById('appearance-hero-title').value = data.hero_title || '';
-
-    // BUGFIX: wczytaj hero_custom_text do textarea
     const customTextEl = document.getElementById('appearance-hero-custom');
     if (customTextEl) customTextEl.value = data.hero_custom_text || '';
-    
-    // Select emoji
     const selectedEmoji = data.emoji || '⚔️';
     document.querySelectorAll('.emoji-btn').forEach(btn => {
       btn.classList.remove('selected');
-      if (btn.dataset.emoji === selectedEmoji) {
-        btn.classList.add('selected');
-      }
+      if (btn.dataset.emoji === selectedEmoji) btn.classList.add('selected');
     });
   } catch (e) {
     console.error('Error loading appearance:', e);
@@ -396,11 +428,9 @@ async function loadAppearance() {
 
 async function saveAppearance() {
   const headerTitle = document.getElementById('appearance-header-title').value;
-  const heroTitle = document.getElementById('appearance-hero-title').value;
+  const heroTitle   = document.getElementById('appearance-hero-title').value;
   const selectedEmojiBtn = document.querySelector('.emoji-btn.selected');
   const emoji = selectedEmojiBtn ? selectedEmojiBtn.dataset.emoji : '⚔️';
-
-  // BUGFIX: dołącz hero_custom_text do payloadu
   const customTextEl = document.getElementById('appearance-hero-custom');
   const heroCustomText = customTextEl ? customTextEl.value : '';
   
@@ -408,14 +438,8 @@ async function saveAppearance() {
     const res = await fetch('/admin/api/appearance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        header_title: headerTitle,
-        hero_title: heroTitle,
-        emoji: emoji,
-        hero_custom_text: heroCustomText,
-      })
+      body: JSON.stringify({ header_title: headerTitle, hero_title: heroTitle, emoji, hero_custom_text: heroCustomText }),
     });
-    
     const result = await res.json();
     if (res.ok) {
       document.getElementById('appearance-result').textContent = 'Zapisano!';
@@ -431,7 +455,6 @@ async function saveAppearance() {
   }
 }
 
-// Load appearance when tab is clicked
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     if (tab.dataset.tab === 'appearance') loadAppearance();
