@@ -56,17 +56,17 @@ class JobModel(Base):
 class HistoryEntryModel(Base):
     __tablename__ = "history"
 
-    id             = Column(Integer, primary_key=True, autoincrement=True)
-    job_id         = Column(String(64), unique=True, nullable=False, index=True)
-    character_name = Column(String(128), default="Unknown")
-    character_class= Column(String(64), default="")
-    character_spec = Column(String(64), default="")
+    id                   = Column(Integer, primary_key=True, autoincrement=True)
+    job_id               = Column(String(64), unique=True, nullable=False, index=True)
+    character_name       = Column(String(128), default="Unknown")
+    character_class      = Column(String(64), default="")
+    character_spec       = Column(String(64), default="")
     character_realm_slug = Column(String(128), default="")
-    dps            = Column(Float, default=0.0)
-    role           = Column(String(16), default="dps")
-    fight_style    = Column(String(64), default="Patchwerk")
-    user_id        = Column(String(64), nullable=True, index=True)
-    created_at     = Column(Integer, default=0)
+    dps                  = Column(Float, default=0.0)
+    role                 = Column(String(16), default="dps")
+    fight_style          = Column(String(64), default="Patchwerk")
+    user_id              = Column(String(64), nullable=True, index=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)  # było Integer (unix ts)
 
 
 class SessionModel(Base):
@@ -92,25 +92,48 @@ class NewsModel(Base):
     title      = Column(String(256), nullable=False)
     body       = Column(Text, nullable=False)
     published  = Column(Boolean, default=True)
-    created_at = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)  # było Integer (unix ts)
 
 
 class LogEntryModel(Base):
     __tablename__ = "admin_logs"
 
-    id        = Column(Integer, primary_key=True, autoincrement=True)
-    level     = Column(String(8), nullable=False)
-    message   = Column(Text, nullable=False)
-    context   = Column(Text)
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    level      = Column(String(8), nullable=False)
+    message    = Column(Text, nullable=False)
+    context    = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    # Migracja: dodaj brakującą kolumnę role do history
     with SessionLocal() as db:
         try:
+            # Migracja 1: dodaj kolumnę role jeśli brakuje
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
+            # Migracja 2: zmień created_at z INTEGER na TIMESTAMP w history
+            # USING konwertuje istniejące unix timestamps na DateTime
+            db.execute(text("""
+                DO $$ BEGIN
+                    IF (SELECT data_type FROM information_schema.columns
+                        WHERE table_name='history' AND column_name='created_at') = 'integer' THEN
+                        ALTER TABLE history
+                            ALTER COLUMN created_at TYPE TIMESTAMP
+                            USING to_timestamp(created_at);
+                    END IF;
+                END $$;
+            """))
+            # Migracja 3: zmień created_at z INTEGER na TIMESTAMP w news
+            db.execute(text("""
+                DO $$ BEGIN
+                    IF (SELECT data_type FROM information_schema.columns
+                        WHERE table_name='news' AND column_name='created_at') = 'integer' THEN
+                        ALTER TABLE news
+                            ALTER COLUMN created_at TYPE TIMESTAMP
+                            USING to_timestamp(created_at);
+                    END IF;
+                END $$;
+            """))
             db.commit()
         except Exception:
             db.rollback()
