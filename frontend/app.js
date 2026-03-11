@@ -464,7 +464,8 @@ function app() {
               const result = await API.getResultJson(guestJobId);
               result._source = 'addon';
               this.pubResult = result;
-              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: 'dps' };
+              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: result.hps > 100 ? 'healer' : (result.dtps > 0 || result.tmi > 0 ? 'tank' : 'dps') };
+              const guestRole = result.hps > 100 ? 'healer' : (result.dtps > 0 || result.tmi > 0 ? 'tank' : 'dps');
               await API.saveToHistory({
                 job_id:               guestJobId,
                 character_name:       "Addon Export",
@@ -472,6 +473,9 @@ function app() {
                 character_spec:       "",
                 character_realm_slug: "",
                 dps:                  result.dps,
+                hps:                  result.hps || 0,
+                dtps:                 result.dtps || 0,
+                role:                 guestRole,
                 fight_style:          this.guestSimOptions.fight_style,
                 user_id:              null,
               });
@@ -587,6 +591,9 @@ function app() {
             character_spec:       this.selectedChar?.spec || "",
             character_realm_slug: this.selectedChar?.realm_slug || "",
             dps:                  this.simResult.dps,
+            hps:                  this.simResult.hps || 0,
+            dtps:                 this.simResult.dtps || 0,
+            role:                 this.effectiveRole(),
             fight_style:          this.simOptions.fight_style,
             user_id:              this.sessionId || null,
           });

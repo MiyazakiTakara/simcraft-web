@@ -191,7 +191,7 @@
             <h2>🥧 DPS Pie Chart</h2>
             <img
               class="dps-chart-img"
-              :src="'/api/result/' + jobId + '/dps-chart.png?t=' + ts"
+              :src="'/api/result/' + jobId + '/dps-chart.png?role=' + effectiveRole() + '&t=' + ts"
               alt="DPS Chart"
               @click="chartModal = $el.src"
               loading="lazy"
