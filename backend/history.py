@@ -109,3 +109,37 @@ async def add_history(entry: HistoryEntry):
             db.add(row)
             db.commit()
     return {"ok": True}
+
+
+@router.get("/api/history/trend")
+async def get_character_trend(
+    session: str,
+    character_name: str,
+    character_realm_slug: str,
+    fight_style: str = "Patchwerk",
+    limit: int = 50
+):
+    """Pobiera dane do wykresu DPS w czasie dla konkretnej postaci."""
+    if not session:
+        raise HTTPException(400, "Brak session")
+    
+    with SessionLocal() as db:
+        rows = (
+            db.query(HistoryEntryModel)
+            .filter(
+                HistoryEntryModel.user_id == session,
+                HistoryEntryModel.character_name == character_name,
+                HistoryEntryModel.character_realm_slug == character_realm_slug,
+                HistoryEntryModel.fight_style == fight_style,
+            )
+            .order_by(HistoryEntryModel.created_at.asc())
+            .limit(limit)
+            .all()
+        )
+    
+    return {
+        "character_name": character_name,
+        "character_realm_slug": character_realm_slug,
+        "fight_style": fight_style,
+        "points": [{"timestamp": r.created_at, "dps": r.dps, "job_id": r.job_id} for r in rows]
+    }

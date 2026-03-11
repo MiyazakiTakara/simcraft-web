@@ -221,28 +221,79 @@ function app() {
       } catch (e) { console.error("Failed to load public history", e); }
     },
 
-    async loadCharDetails(char) {
-      this.loadingCharDetails = true;
-      this.charDetailsError = null;
-      this.charEquipment = [];
-      this.charStatistics = {};
-      this.charTalents = [];
-      try {
-        const [eq, stats, talents] = await Promise.all([
-          API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
-          API.getCharacterStatistics(this.sessionId, char.realm_slug, char.name),
-          API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
-        ]);
-        this.charEquipment = eq.equipment || [];
-        this.charStatistics = stats.statistics || {};
-        this.charTalents = talents.talents || [];
-      } catch (e) {
-        this.charDetailsError = e.message;
-        console.error("Failed to load char details", e);
-      } finally {
-        this.loadingCharDetails = false;
-      }
-    },
+     async loadCharDetails(char) {
+       this.loadingCharDetails = true;
+       this.charDetailsError = null;
+       this.charEquipment = [];
+       this.charStatistics = {};
+       this.charTalents = [];
+       try {
+         const [eq, stats, talents] = await Promise.all([
+           API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
+           API.getCharacterStatistics(this.sessionId, char.realm_slug, char.name),
+           API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
+         ]);
+         this.charEquipment = eq.equipment || [];
+         this.charStatistics = stats.statistics || {};
+         this.charTalents = talents.talents || [];
+       } catch (e) {
+         this.charDetailsError = e.message;
+         console.error("Failed to load char details", e);
+       } finally {
+         this.loadingCharDetails = false;
+         this.$nextTick(() => this.drawDpsTrendChart(char));
+       }
+     },
+
+     drawDpsTrendChart(char) {
+       const chartDiv = document.getElementById('dps-trend-chart');
+       if (!chartDiv) return;
+
+       const dpsData = this.getCharDps(char.name);
+       if (!dpsData || !dpsData.chartData || dpsData.chartData.length === 0) {
+         Plotly.purge(chartDiv);
+         chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
+         return;
+       }
+
+       const x = dpsData.chartData.map(d => d.x);
+       const y = dpsData.chartData.map(d => d.y);
+
+       const trace = {
+         x: x,
+         y: y,
+         mode: 'lines+markers',
+         type: 'scatter',
+         name: 'DPS',
+         line: { color: '#f4a01c', width: 2 },
+         marker: { size: 6, color: '#f4a01c' },
+         hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
+       };
+
+       const layout = {
+         paper_bgcolor: 'rgba(0,0,0,0)',
+         plot_bgcolor: 'rgba(0,0,0,0)',
+         margin: { l: 50, r: 20, t: 20, b: 50 },
+         xaxis: {
+           gridcolor: 'rgba(255,255,255,0.1)',
+           color: '#aaa',
+           tickformat: '%H:%M<br>%d.%m'
+         },
+         yaxis: {
+           gridcolor: 'rgba(255,255,255,0.1)',
+           color: '#aaa',
+           title: 'DPS'
+         },
+         showlegend: false
+       };
+
+       const config = {
+         responsive: true,
+         displayModeBar: false
+       };
+
+       Plotly.newPlot(chartDiv, [trace], layout, config);
+     },
 
     getItemQualityColor(quality) {
       const colors = {
@@ -494,26 +545,33 @@ function app() {
       return Array.from(charMap.values()).sort((a, b) => b.created_at - a.created_at);
     },
 
-    getCharDps(charName) {
-      const charSims = this.history.filter(h => h.character_name === charName);
-      if (charSims.length === 0) return null;
-      const dpsList = charSims.sort((a, b) => a.created_at - b.created_at).map(h => h.dps);
-      const latest = dpsList[dpsList.length - 1];
-      const first = dpsList[0];
-      const diff = latest - first;
-      const trend = dpsList.length > 1 
-        ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
-        : '1 symulacja';
-      return {
-        latest,
-        first,
-        diff,
-        trend,
-        count: dpsList.length,
-        lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
-        dpsList,
-      };
-    },
+     getCharDps(charName) {
+       const charSims = this.history.filter(h => h.character_name === charName);
+       if (charSims.length === 0) return null;
+       const sortedSims = charSims.sort((a, b) => a.created_at - b.created_at);
+       const dpsList = sortedSims.map(h => h.dps);
+       const latest = dpsList[dpsList.length - 1];
+       const first = dpsList[0];
+       const diff = latest - first;
+       const trend = dpsList.length > 1 
+         ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
+         : '1 symulacja';
+       return {
+         latest,
+         first,
+         diff,
+         trend,
+         count: dpsList.length,
+         lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
+         dpsList,
+         // Data for chart
+         chartData: sortedSims.map(h => ({
+           x: new Date(h.created_at * 1000),
+           y: h.dps,
+           job_id: h.job_id
+         }))
+       };
+     },
 
     getCharAvatar(name) {
       const ch = this.characters.find(c => c.name === name);
