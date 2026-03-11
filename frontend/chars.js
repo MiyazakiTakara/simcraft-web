@@ -104,27 +104,35 @@ const CharsMixin = {
       return;
     }
     const x    = charData.chartData.map(p => p.x);
-    const dpsY = charData.chartData.map(p => p.dps);
-    const hpsY = charData.chartData.map(p => p.hps);
+    // Wartości /1000 — ładniejsza oś Y, ticksuffix "k"
+    const dpsY = charData.chartData.map(p => +(p.dps / 1000).toFixed(2));
+    const hpsY = charData.chartData.map(p => +(p.hps / 1000).toFixed(2));
     const hasHps = hpsY.some(v => v > 0);
     const traceDps = {
       x, y: dpsY, mode: 'lines+markers', type: 'scatter', name: 'DPS',
       line: { color: '#f4a01c', width: 2 }, marker: { size: 6, color: '#f4a01c' },
-      hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
+      hovertemplate: '%{y:.2f}k DPS<extra></extra>'
     };
     const traces = [traceDps];
     if (hasHps) {
       traces.push({
         x, y: hpsY, mode: 'lines+markers', type: 'scatter', name: 'HPS',
         line: { color: '#3399ff', width: 2 }, marker: { size: 6, color: '#3399ff' },
-        hovertemplate: 'Czas: %{x}<br>HPS: %{y:.0f}<extra></extra>'
+        hovertemplate: '%{y:.2f}k HPS<extra></extra>'
       });
     }
     Plotly.newPlot(chartDiv, traces, {
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { l: 50, r: 20, t: 20, b: 50 },
+      margin: { l: 55, r: 20, t: 20, b: 50 },
       xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
-      yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: hasHps ? 'DPS / HPS' : 'DPS' },
+      yaxis: {
+        gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa',
+        title: hasHps ? 'DPS / HPS' : 'DPS',
+        ticksuffix: 'k',
+        // wyłącza SI-prefix (k, M) — Plotly nie będzie sam skracał liczb
+        tickformat: ',.2f',
+        exponentformat: 'none',
+      },
       showlegend: true,
       legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { color: '#aaa' } }
     }, { responsive: true, displayModeBar: false });
