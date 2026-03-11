@@ -3,6 +3,7 @@ import time
 import uuid
 import secrets
 import httpx
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
@@ -149,58 +150,58 @@ async def admin_panel(request: Request):
 @router.get("/api/dashboard")
 async def get_dashboard(request: Request):
     _require_admin(request)
-    import platform
     import psutil
-    
+
+    # created_at jest teraz DateTime — porownujemy przez datetime, nie int
+    now       = datetime.utcnow()
+    last_24h  = now - timedelta(hours=24)
+
     with SessionLocal() as db:
-        total_sims = db.query(func.count(HistoryEntryModel.id)).scalar() or 0
+        total_sims  = db.query(func.count(HistoryEntryModel.id)).scalar() or 0
         total_users = db.query(HistoryEntryModel.user_id).distinct().count() or 0
-        
-        today_start = int(time.time()) - (24 * 60 * 60)
+
         today_sims = db.query(func.count(HistoryEntryModel.id)).filter(
-            HistoryEntryModel.created_at >= today_start
+            HistoryEntryModel.created_at >= last_24h
         ).scalar() or 0
-        
-        last_24h = int(time.time()) - (24 * 60 * 60)
+
         daily_stats = db.query(
-            func.date_trunc('hour', func.to_timestamp(HistoryEntryModel.created_at)).label('hour'),
+            func.date_trunc('hour', HistoryEntryModel.created_at).label('hour'),
             func.count(HistoryEntryModel.id).label('count'),
         ).filter(
             HistoryEntryModel.created_at >= last_24h
         ).group_by('hour').order_by('hour').all()
-        
+
         recent_sims = db.query(HistoryEntryModel).order_by(
             HistoryEntryModel.created_at.desc()
         ).limit(10).all()
-        
-        total_jobs = db.query(func.count(JobModel.job_id)).scalar() or 0
+
+        total_jobs  = db.query(func.count(JobModel.job_id)).scalar() or 0
         active_jobs = db.query(func.count(JobModel.job_id)).filter(
             JobModel.status == 'running'
         ).scalar() or 0
-    
-    import datetime
-    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
-    uptime = datetime.datetime.now() - boot_time
+
+    boot_time  = datetime.fromtimestamp(psutil.boot_time())
+    uptime     = datetime.now() - boot_time
     uptime_str = f"{uptime.days}d {uptime.seconds//3600}h {(uptime.seconds%3600)//60}m"
-    
+
     return {
         "stats": {
             "total_simulations": total_sims,
-            "total_users": total_users,
+            "total_users":       total_users,
             "today_simulations": today_sims,
-            "total_jobs": total_jobs,
-            "active_jobs": active_jobs,
-            "cpu_percent": psutil.cpu_percent(),
-            "memory_percent": psutil.virtual_memory().percent,
-            "uptime": uptime_str,
+            "total_jobs":        total_jobs,
+            "active_jobs":       active_jobs,
+            "cpu_percent":       psutil.cpu_percent(),
+            "memory_percent":    psutil.virtual_memory().percent,
+            "uptime":            uptime_str,
         },
-        "daily_trend": [{"hour": str(h), "count": c} for h, c in daily_stats],
+        "daily_trend":  [{"hour": str(h), "count": c} for h, c in daily_stats],
         "recent_sims": [{
-            "job_id": s.job_id,
-            "character_name": s.character_name,
-            "character_class": s.character_class,
-            "dps": s.dps,
-            "created_at": s.created_at,
+            "job_id":           s.job_id,
+            "character_name":   s.character_name,
+            "character_class":  s.character_class,
+            "dps":              s.dps,
+            "created_at":       s.created_at.isoformat() if s.created_at else None,
         } for s in recent_sims],
     }
 
@@ -225,7 +226,8 @@ async def list_news(request: Request):
     with SessionLocal() as db:
         rows = db.query(NewsModel).order_by(NewsModel.created_at.desc()).all()
     return [{"id": r.id, "title": r.title, "body": r.body,
-             "published": r.published, "created_at": r.created_at} for r in rows]
+             "published": r.published,
+             "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]
 
 
 @router.post("/api/news", status_code=201)
@@ -236,7 +238,7 @@ async def create_news(request: Request, data: NewsCreate):
             title=data.title,
             body=data.body,
             published=data.published,
-            created_at=int(time.time()),
+            # created_at ma default=datetime.utcnow w modelu — nie trzeba ustawiać ręcznie
         )
         db.add(entry)
         db.commit()
@@ -281,7 +283,12 @@ async def public_news():
                 .filter(NewsModel.published == True)
                 .order_by(NewsModel.created_at.desc())
                 .limit(20).all())
-    return [{"id": r.id, "title": r.title, "body": r.body, "created_at": r.created_at} for r in rows]
+    return [{
+        "id": r.id,
+        "title": r.title,
+        "body": r.body,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    } for r in rows]
 
 
 @router.get("/api/logs")
@@ -312,20 +319,20 @@ async def list_users(request: Request, limit: int = 50):
             .distinct()
             .all()
         )
-        
+
         users_map = {}
         for user_id, char_name, char_class, char_spec in rows:
             if user_id not in users_map:
                 users_map[user_id] = {
-                    "user_id": user_id,
+                    "user_id":        user_id,
                     "character_name": char_name,
-                    "character_class": char_class,
+                    "character_class":char_class,
                     "character_spec": char_spec,
-                    "sim_count": 0,
-                    "total_dps": 0,
-                    "last_sim": 0,
+                    "sim_count":      0,
+                    "total_dps":      0,
+                    "last_sim":       None,
                 }
-        
+
         stats = (
             db.query(
                 HistoryEntryModel.user_id,
@@ -337,14 +344,18 @@ async def list_users(request: Request, limit: int = 50):
             .group_by(HistoryEntryModel.user_id)
             .all()
         )
-        
+
         for user_id, sim_count, avg_dps, last_sim in stats:
             if user_id in users_map:
                 users_map[user_id]["sim_count"] = sim_count
-                users_map[user_id]["avg_dps"] = round(avg_dps, 0) if avg_dps else 0
-                users_map[user_id]["last_sim"] = last_sim
-    
-    users = sorted(users_map.values(), key=lambda x: x["last_sim"] or 0, reverse=True)[:limit]
+                users_map[user_id]["avg_dps"]   = round(avg_dps, 0) if avg_dps else 0
+                users_map[user_id]["last_sim"]   = last_sim
+
+    users = sorted(
+        users_map.values(),
+        key=lambda x: x["last_sim"] or datetime.min,
+        reverse=True
+    )[:limit]
     return users
 
 
@@ -360,32 +371,33 @@ async def get_user_simulations(request: Request, user_id: str, limit: int = 20):
             .all()
         )
     return [{
-        "job_id": r.job_id,
-        "character_name": r.character_name,
+        "job_id":          r.job_id,
+        "character_name":  r.character_name,
         "character_class": r.character_class,
-        "character_spec": r.character_spec,
-        "dps": r.dps,
-        "fight_style": r.fight_style,
-        "created_at": r.created_at,
+        "character_spec":  r.character_spec,
+        "dps":             r.dps,
+        "fight_style":     r.fight_style,
+        "created_at":      r.created_at.isoformat() if r.created_at else None,
     } for r in rows]
 
 
 @router.delete("/api/simulations")
 async def delete_simulations(request: Request, older_than_days: int = None, user_id: str = None):
     _require_admin(request)
-    
+
     with SessionLocal() as db:
         query = db.query(HistoryEntryModel)
-        
+
         if user_id:
             query = query.filter(HistoryEntryModel.user_id == user_id)
         elif older_than_days:
-            cutoff = int(time.time()) - (older_than_days * 24 * 60 * 60)
-            query = query.filter(HistoryEntryModel.created_at < cutoff)
-        
+            # created_at to teraz DateTime — odejmujemy timedelta
+            cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+            query  = query.filter(HistoryEntryModel.created_at < cutoff)
+
         deleted = query.delete()
         db.commit()
-    
+
     return {"deleted": deleted}
 
 
@@ -401,9 +413,9 @@ class LimitsUpdate(BaseModel):
 async def get_limits(request: Request):
     _require_admin(request)
     return {
-        "max_concurrent_sims": int(os.environ.get("MAX_CONCURRENT_SIMS", "3")),
+        "max_concurrent_sims":   int(os.environ.get("MAX_CONCURRENT_SIMS", "3")),
         "rate_limit_per_minute": 5,
-        "job_timeout": int(os.environ.get("JOB_TIMEOUT", "360")),
+        "job_timeout":           int(os.environ.get("JOB_TIMEOUT", "360")),
     }
 
 
@@ -418,16 +430,15 @@ async def update_limits(request: Request, data: LimitsUpdate):
 @router.get("/api/health")
 async def health_check(request: Request):
     _require_admin(request)
-    import subprocess
-    
+
     health_status = {
-        "database": "ok",
+        "database":     "ok",
         "blizzard_api": "unknown",
-        "keycloak": "unknown",
-        "simc_binary": "unknown",
-        "results_dir": "unknown",
+        "keycloak":     "unknown",
+        "simc_binary":  "unknown",
+        "results_dir":  "unknown",
     }
-    
+
     try:
         from sqlalchemy import text
         with SessionLocal() as db:
@@ -435,18 +446,18 @@ async def health_check(request: Request):
         health_status["database"] = "ok"
     except Exception as e:
         health_status["database"] = f"error: {str(e)}"
-    
+
     try:
         from auth import get_blizzard_token
         token = await get_blizzard_token()
         health_status["blizzard_api"] = "ok" if token else "error: no token"
     except Exception as e:
         health_status["blizzard_api"] = f"error: {str(e)}"
-    
+
     try:
         cfg = _cfg()
         async with httpx.AsyncClient() as client:
-            url = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
+            url  = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
             resp = await client.get(url, timeout=5)
             if resp.status_code == 200:
                 health_status["keycloak"] = "ok"
@@ -456,19 +467,19 @@ async def health_check(request: Request):
                 health_status["keycloak"] = f"error: {resp.status_code}"
     except Exception as e:
         health_status["keycloak"] = f"error: {str(e)}"
-    
+
     simc_path = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
     if os.path.exists(simc_path) and os.access(simc_path, os.X_OK):
         health_status["simc_binary"] = "ok"
     else:
         health_status["simc_binary"] = f"error: not found or not executable at {simc_path}"
-    
+
     results_dir = os.environ.get("RESULTS_DIR", "/app/results")
     if os.path.exists(results_dir) and os.access(results_dir, os.W_OK):
         health_status["results_dir"] = "ok"
     else:
         health_status["results_dir"] = f"error: not writable at {results_dir}"
-    
+
     return health_status
 
 
@@ -478,30 +489,36 @@ async def health_check(request: Request):
 async def list_tasks(request: Request):
     _require_admin(request)
     from simulation import jobs
-    
-    active_tasks = []
-    for job_id, job_info in jobs.items():
-        if job_info.get("status") == "running":
-            active_tasks.append({
-                "job_id": job_id,
-                "status": "running",
-                "started_at": job_info.get("started_at"),
-            })
-    
+
+    active_tasks = [
+        {
+            "job_id":     job_id,
+            "status":     "running",
+            "started_at": job_info.get("started_at"),
+        }
+        for job_id, job_info in jobs.items()
+        if job_info.get("status") == "running"
+    ]
     return {"active_tasks": active_tasks, "total_active": len(active_tasks)}
 
 
 @router.delete("/api/tasks/{job_id}")
 async def cancel_task(request: Request, job_id: str):
     _require_admin(request)
-    from simulation import jobs
-    
-    if job_id in jobs:
-        jobs[job_id]["status"] = "cancelled"
-        jobs[job_id]["error"] = "Cancelled by admin"
-        return {"ok": True, "message": f"Task {job_id} cancelled"}
-    else:
+    from simulation import jobs, _release_slot
+    from database import update_job_status
+
+    if job_id not in jobs:
         raise HTTPException(404, "Task not found")
+
+    jobs[job_id]["status"] = "cancelled"
+    jobs[job_id]["error"]  = "Cancelled by admin"
+
+    # Zwolnij slot w puli symulacji i zaktualizuj DB
+    _release_slot(job_id)
+    update_job_status(job_id, "error", error="Cancelled by admin")
+
+    return {"ok": True, "message": f"Task {job_id} cancelled"}
 
 
 # ---------- Appearance Settings ----------
@@ -521,14 +538,12 @@ class AppearanceUpdate(BaseModel):
 
 
 def load_appearance_config():
-    """Load appearance config from JSON file."""
     default_config = {
-        "header_title": "SimCraft Web",
-        "hero_title": "World of Warcraft",
-        "emoji": "⚔️",
+        "header_title":    "SimCraft Web",
+        "hero_title":      "World of Warcraft",
+        "emoji":           "⚔️",
         "hero_custom_text": ""
     }
-    
     try:
         APPEARANCE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         if APPEARANCE_CONFIG_FILE.exists():
@@ -548,7 +563,6 @@ def load_appearance_config():
 
 
 def save_appearance_config(config):
-    """Save appearance config to JSON file."""
     try:
         APPEARANCE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
@@ -562,15 +576,14 @@ def save_appearance_config(config):
 @router.get("/api/appearance")
 async def get_appearance(request: Request):
     _require_admin(request)
-    config = load_appearance_config()
-    return config
+    return load_appearance_config()
 
 
 @router.post("/api/appearance")
 async def update_appearance(request: Request, data: AppearanceUpdate):
     _require_admin(request)
     config = load_appearance_config()
-    
+
     if data.header_title is not None:
         config["header_title"] = data.header_title
     if data.hero_title is not None:
@@ -579,7 +592,7 @@ async def update_appearance(request: Request, data: AppearanceUpdate):
         config["emoji"] = data.emoji
     if data.hero_custom_text is not None:
         config["hero_custom_text"] = data.hero_custom_text
-    
+
     if save_appearance_config(config):
         return {"ok": True, "message": "Appearance settings saved successfully"}
     else:
