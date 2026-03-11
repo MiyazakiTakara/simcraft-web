@@ -27,18 +27,27 @@ function app() {
     charTalents:      [],
 
     // Symulacja
-    addonText:    '',
-    simMode:      'armory',
-    simRole:      'auto',
-    fightStyle:   'Patchwerk',
-    iterations:   1000,
-    targetError:  0.5,
-    job:          null,
-    simResult:    null,
-    simError:     null,
-    pollTimer:    null,
-    chartModal:   null,
-    copiedShare:  null,
+    addonText:       '',
+    simMode:         'armory',
+    simRole:         'auto',
+    fightStyle:      'Patchwerk',
+    iterations:      1000,
+    targetError:     0.5,
+    job:             null,
+    simResult:       null,
+    simError:        null,
+    pollTimer:       null,
+    chartModal:      null,
+    copiedShare:     null,
+    loadingSim:      false,
+    spellSort:       'dps',
+    pubResult:       null,
+    pubJob:          null,
+    guestAddonText:  '',
+    guestLoadingSim: false,
+    guestSimError:   null,
+    simOptions:      { fight_style: 'Patchwerk', iterations: 1000, target_error: 0.5 },
+    guestSimOptions: { fight_style: 'Patchwerk', iterations: 1000, target_error: 0.5 },
 
     // Historia
     history:        [],
@@ -55,8 +64,8 @@ function app() {
 
     // -------------------------------------------------------
     // WSZYSTKIE GETTERY MUSZA BYC TUTAJ, po spreadach mixinow.
-    // Alpine ewaluuje gettery natychmiast przy budowaniu obiektu
-    // x-data — jesli sa w mixinie, this.* jest jeszcze undefined.
+    // Alpine ewaluuje gettery natychmiast przy budowaniu proxy
+    // reaktywnosci — jesli sa w mixinie, this.* jest undefined.
     // -------------------------------------------------------
 
     get filteredChars() {
@@ -77,6 +86,17 @@ function app() {
     get sortedHistory() { return [...(this.history || [])]; },
     get historyPageCount() { return 1; },
     get pagedHistory() { return this.sortedHistory.slice(0, 5); },
+
+    get sortedSpells() {
+      if (!(this.simResult && this.simResult.spells)) return [];
+      const key = this.spellSort || 'dps';
+      return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+    },
+    get pubSortedSpells() {
+      if (!(this.pubResult && this.pubResult.spells)) return [];
+      const key = this.spellSort || 'dps';
+      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+    },
 
     // -------------------------------------------------------
 
@@ -161,6 +181,16 @@ function app() {
     },
     applyTheme() {
       document.documentElement.setAttribute('data-theme', this.theme === 'light' ? 'light' : 'dark');
+    },
+
+    effectiveRole() {
+      if (this.simRole && this.simRole !== 'auto') return this.simRole;
+      if (this.selectedChar?.spec) {
+        const s = this.selectedChar.spec.toLowerCase();
+        if (s.includes('heal')) return 'heal';
+        if (s.includes('tank')) return 'tank';
+      }
+      return 'dps';
     },
 
     getItemQualityColor(q) { return Utils.getItemQualityColor(q); },

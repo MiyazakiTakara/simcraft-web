@@ -154,15 +154,5 @@ const SimMixin = {
     }
   },
 
-  get pubSortedSpells() {
-    if (!this.pubResult?.spells) return [];
-    const key = this.spellSort;
-    return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
-  },
-
-  get sortedSpells() {
-    if (!this.simResult?.spells) return [];
-    const key = this.spellSort;
-    return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
-  },
+  // gettery przeniesione do app() — nie umieszczaj ich tutaj!
 };
