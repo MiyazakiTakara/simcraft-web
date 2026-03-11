@@ -144,7 +144,7 @@
           <div>
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Nowa symulacja</button>
             <div class="result-hero" style="padding:.8rem 0">
-              <div class="dps-value" x-text="formatDps(resultMetric(pubResult).value)"></div>
+              <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(pubResult).value)"></div>
               <div class="dps-label" x-text="resultMetric(pubResult).label + ' (±' + formatDps(resultMetric(pubResult).std) + ') · ' + (pubResult.name || '')"></div>
             </div>
             <div class="result-grid">
@@ -275,7 +275,7 @@
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Powrót do listy</button>
             <div class="panel">
               <div class="result-hero">
-                <div class="dps-value" x-text="formatDps(resultMetric(pubResult).value)"></div>
+                <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(pubResult).value)"></div>
                 <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
                   <span x-text="resultMetric(pubResult).label + ' (±' + formatDps(resultMetric(pubResult).std) + ')'"></span>
                   <template x-if="pubJob && pubJob.charName && armoryUrl(pubJob.realmSlug, pubJob.charName)">
@@ -424,7 +424,7 @@
         <template x-if="simResult">
           <div class="panel">
             <div class="result-hero">
-              <div class="dps-value" x-text="formatDps(resultMetric(simResult).value)"></div>
+              <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(simResult).value)"></div>
               <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
                 <span x-text="resultMetric(simResult).label + ' (±' + formatDps(resultMetric(simResult).std) + ')'"></span>
                 <template x-if="job.charName">

@@ -75,7 +75,7 @@
 
           <!-- DPS Hero -->
           <div class="result-hero">
-            <div class="dps-value" x-text="formatDps(resultMetric().value)"></div>
+            <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric().value)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
               <span class="role-badge" x-text="roleIcon(effectiveRole()) + ' ' + roleLabel(effectiveRole())" style="background:var(--accent);color:#fff;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700"></span>
               <span x-text="'(±' + formatDps(resultMetric().std) + ')'"></span>
