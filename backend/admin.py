@@ -285,3 +285,25 @@ async def list_users(request: Request, limit: int = 50):
     
     users = sorted(users_map.values(), key=lambda x: x["last_sim"] or 0, reverse=True)[:limit]
     return users
+
+
+@router.get("/api/users/{user_id}/simulations")
+async def get_user_simulations(request: Request, user_id: str, limit: int = 20):
+    _require_admin(request)
+    with SessionLocal() as db:
+        rows = (
+            db.query(HistoryEntryModel)
+            .filter(HistoryEntryModel.user_id == user_id)
+            .order_by(HistoryEntryModel.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+    return [{
+        "job_id": r.job_id,
+        "character_name": r.character_name,
+        "character_class": r.character_class,
+        "character_spec": r.character_spec,
+        "dps": r.dps,
+        "fight_style": r.fight_style,
+        "created_at": r.created_at,
+    } for r in rows]

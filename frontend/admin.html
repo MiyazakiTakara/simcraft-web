@@ -130,6 +130,36 @@
       pointer-events: none;
     }
     #toast.show { opacity: 1; }
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      max-width: 700px; width: 95%;
+      max-height: 80vh; overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .modal h3 { margin-bottom: 1rem; }
+    .modal-close {
+      float: right; background: none; border: none;
+      color: #888; font-size: 1.5rem; cursor: pointer;
+    }
+    .modal-close:hover { color: #fff; }
+    .sim-item {
+      padding: 0.6rem; border-bottom: 1px solid #222;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .sim-item:hover { background: #151515; }
+    .sim-link {
+      color: #f4a01c; text-decoration: none; font-size: 0.85rem;
+    }
+    .sim-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -191,6 +221,14 @@
   </div>
 
   <div id="toast"></div>
+
+  <div id="user-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <button class="modal-close" onclick="closeUserModal()">&times;</button>
+      <h3>Symulacje użytkownika</h3>
+      <div id="user-sim-list"></div>
+    </div>
+  </div>
 
   <script>
     document.querySelectorAll('.tab').forEach(tab => {
@@ -322,7 +360,7 @@
         return;
       }
       list.innerHTML = users.map(u => `
-        <div class="news-card">
+        <div class="news-card" onclick="openUserModal('${escHtml(u.user_id)}')" style="cursor:pointer">
           <div class="info">
             <h3>${escHtml(u.user_id || 'Nieznany')}</h3>
             <p>${escHtml(u.character_name || '—')} ${u.character_class ? '<span style="color:#f4a01c">' + escHtml((u.character_spec ? u.character_spec + ' ' : '') + u.character_class) + '</span>' : ''}</p>
@@ -334,6 +372,45 @@
         </div>
       `).join('');
     }
+
+    async function openUserModal(userId) {
+      const modal = document.getElementById('user-modal');
+      const list = document.getElementById('user-sim-list');
+      modal.classList.remove('hidden');
+      list.innerHTML = '<p class="empty">Ładowanie...</p>';
+      
+      const res = await fetch('/admin/api/users/' + encodeURIComponent(userId) + '/simulations');
+      if (!res.ok) { list.innerHTML = '<p class="empty">Błąd ładowania.</p>'; return; }
+      const sims = await res.json();
+      
+      if (!sims.length) {
+        list.innerHTML = '<p class="empty">Brak symulacji.</p>';
+        return;
+      }
+      list.innerHTML = sims.map(s => `
+        <div class="sim-item">
+          <div>
+            <div style="font-weight:600">${escHtml(s.character_name || '—')}</div>
+            <div style="font-size:0.8rem;color:#888">
+              ${s.character_class ? '<span style="color:#f4a01c">' + escHtml((s.character_spec ? s.character_spec + ' ' : '') + s.character_class) + '</span> · ' : ''}
+              ${s.fight_style} · ${fmt(s.created_at)}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:#f4a01c;font-size:1.1rem">${Number(s.dps).toLocaleString()} DPS</div>
+            <a class="sim-link" href="/result/${s.job_id}" target="_blank">Zobacz wynik ↗</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function closeUserModal() {
+      document.getElementById('user-modal').classList.add('hidden');
+    }
+
+    document.getElementById('user-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeUserModal();
+    });
 
     loadNews();
   </script>
