@@ -1,116 +1,169 @@
-// Glowny Alpine.js store — laczy wszystkie mixiny
+// Główny moduł Alpine — stan + init + nawigacja
+// Metody biznesowe są w: utils.js, sim.js, chars.js, history.js
+
+function mergeMixins(target, ...mixins) {
+  for (const mixin of mixins) {
+    const descs = Object.getOwnPropertyDescriptors(mixin);
+    Object.defineProperties(target, descs);
+  }
+  return target;
+}
+
 function app() {
-  return {
-    // Stan
-    sessionId:    localStorage.getItem('simcraft_session'),
-    theme:        localStorage.getItem('simcraft_theme') || 'dark',
-    currentView:  'home',
-    appearance:   { emoji: '\u2694\ufe0f', header_title: 'SimCraft Web' },
-
-    // Pierwsza sesja / main char
-    isFirstLogin:         false,
-    showMainCharModal:    false,
-    mainChar:             null,
-    savingMainChar:       false,
-    mainCharSaved:        false,
-
-    // Postacie
-    characters:       [],
-    selectedChar:     null,
-    charFilter:       '',
-    loadingChars:     false,
-    errorChars:       null,
-    charDetailsModal: null,
+  const state = {
+    sessionId: localStorage.getItem('simcraft_session'),
+    characters: [],
+    charFilter: "",
+    selectedChar: null,
+    job: null,
+    simResult: null,
+    pubResult: null,
+    pubJob: null,
+    simMode: "armory",
+    simRole: "auto",
+    addonText: "",
+    guestAddonText: "",
+    guestSimOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
+    guestLoadingSim: false,
+    guestSimError: null,
+    _guestPollInterval: null,
+    simOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
+    loadingChars: false,
+    loadingSim: false,
+    errorChars: null,
+    _pollInterval: null,
+    history: [],
+    news: [],
+    loadingHistory: false,
+    spellSort: "total_dmg",
+    copiedJobId: null,
+    chartModal: null,
+    hoveredSpell: null,
+    historyPage: 1,
+    historyPerPage: 5,
+    profileTab: "chars",
+    newsPage: 1,
+    newsPerPage: 5,
+    expandedNews: null,
+    activeTab: "symulacje",
+    currentView: "home",
+    charEquipment: [],
+    charTalents: [],
     loadingCharDetails: false,
     charDetailsError: null,
-    charEquipment:    [],
-    charTalents:      [],
-
-    // Symulacja
-    addonText:       '',
-    simMode:         'armory',
-    simRole:         'auto',
-    fightStyle:      'Patchwerk',
-    iterations:      1000,
-    targetError:     0.5,
-    job:             null,
-    simResult:       null,
-    simError:        null,
-    pollTimer:       null,
-    chartModal:      null,
-    copiedShare:     null,
-    loadingSim:      false,
-    spellSort:       'dps',
-    pubResult:       null,
-    pubJob:          null,
-    guestAddonText:  '',
-    guestLoadingSim: false,
-    guestSimError:   null,
-    simOptions:      { fight_style: 'Patchwerk', iterations: 1000, target_error: 0.5 },
-    guestSimOptions: { fight_style: 'Patchwerk', iterations: 1000, target_error: 0.5 },
-
-    // Historia
-    history:        [],
-    historyPage:    1,
-    historyPerPage: 5,
-    news:           [],
-    newsPage:       1,
-    newsPerPage:    3,
-    expandedNews:   null,
-
-    ...SimMixin,
-    ...CharsMixin,
-    ...HistoryMixin,
-
-    // -------------------------------------------------------
-    // WSZYSTKIE GETTERY MUSZA BYC TUTAJ, po spreadach mixinow.
-    // Alpine ewaluuje gettery natychmiast przy budowaniu proxy
-    // reaktywnosci — jesli sa w mixinie, this.* jest undefined.
-    // -------------------------------------------------------
-
-    get filteredChars() {
-      const q = (this.charFilter || '').toLowerCase();
-      return (this.characters || []).filter(
-        (c) => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
-      );
+    charDetailsModal: null,
+    _viewCache: {},
+    appearance: {
+      header_title: "SimCraft Web",
+      hero_title: "World of Warcraft",
+      emoji: "⚔️",
+      hero_custom_text: ""
     },
+    theme: localStorage.getItem("simcraft_theme") || "dark",
 
-    get newsPageCount() {
-      return Math.max(1, Math.ceil((this.news || []).length / (this.newsPerPage || 3)));
-    },
-    get pagedNews() {
-      const start = (this.newsPage - 1) * this.newsPerPage;
-      return (this.news || []).slice(start, start + this.newsPerPage);
-    },
+    // Main char modal
+    isFirstLogin:      false,
+    showMainCharModal: false,
+    mainChar:          null,
+    savingMainChar:    false,
+    mainCharSaved:     false,
 
-    get sortedHistory() { return [...(this.history || [])]; },
-    get historyPageCount() { return 1; },
-    get pagedHistory() { return this.sortedHistory.slice(0, 5); },
+    // Utils — delegaty
+    formatDps(v)                  { return Utils.formatDps(v); },
+    formatDmg(v)                  { return Utils.formatDmg(v); },
+    formatTime(ts)                { return Utils.formatTime(ts); },
+    pctBarWidth(val, spells, key) { return Utils.pctBarWidth(val, spells, key); },
+    formatStatName(key)           { return Utils.formatStatName(key); },
+    formatStatValue(key, val)     { return Utils.formatStatValue(key, val); },
+    getShareUrl(jobId)            { return Utils.getShareUrl(jobId); },
+    classColor(className)         { return Utils.classColor(className); },
+    classTextColor(className)     { return Utils.classTextColor(className); },
+    armoryUrl(realmSlug, name)    { return Utils.armoryUrl(realmSlug, name); },
+    getItemQualityColor(quality)  { return Utils.getItemQualityColor(quality); },
+    copyToClipboard(text, jobId)  { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
 
-    get sortedSpells() {
-      if (!(this.simResult && this.simResult.spells)) return [];
-      const key = this.spellSort || 'dps';
-      return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
-    },
-    get pubSortedSpells() {
-      if (!(this.pubResult && this.pubResult.spells)) return [];
-      const key = this.spellSort || 'dps';
-      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
-    },
-
-    // -------------------------------------------------------
-
-    async init() {
-      this.applyTheme();
-      if (this.sessionId) {
-        await this.loadCharacters();
-        await this.loadHistory();
-        await this.checkFirstLogin();
-      } else {
-        await this.loadPublicHistory();
+    // Role
+    detectedRole()  { return 'dps'; },
+    effectiveRole() {
+      if (this.simRole && this.simRole !== 'auto') return this.simRole;
+      if (this.selectedChar?.spec) {
+        const s = this.selectedChar.spec.toLowerCase();
+        if (s.includes('heal')) return 'heal';
+        if (s.includes('tank')) return 'tank';
       }
-      await this.loadNews();
-      await this.loadAppearance();
+      return 'dps';
+    },
+    roleIcon()  { return '⚔️'; },
+    roleLabel() { return 'DPS'; },
+
+    // View loader
+    async loadView(name) {
+      const container = document.getElementById('view-container');
+      if (!container) return;
+      if (this._viewCache[name]) {
+        container.innerHTML = this._viewCache[name];
+      } else {
+        try {
+          const res = await fetch('/views/' + name + '.html?v=4');
+          if (!res.ok) throw new Error('View not found: ' + name);
+          const html = await res.text();
+          this._viewCache[name] = html;
+          container.innerHTML = html;
+        } catch (e) {
+          console.error('loadView failed:', e);
+          container.innerHTML = '<p style="color:#f66;padding:2rem">Błąd ładowania widoku: ' + name + '</p>';
+          return;
+        }
+      }
+      this.$nextTick(() => Alpine.initTree(container));
+    },
+
+    navigateTo(name) {
+      this.currentView = name;
+      this.activeTab = name;
+      this._viewCache = {}; // bust view cache przy nawigacji
+      this.loadView(name);
+    },
+
+    handleHash() {
+      const hash = window.location.hash.slice(1);
+      if (hash === "symulacje" || hash === "profil") {
+        this.navigateTo(hash);
+      } else {
+        this.navigateTo("home");
+      }
+    },
+
+    toggleTheme() {
+      this.theme = this.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("simcraft_theme", this.theme);
+      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+    },
+
+    logout() {
+      localStorage.removeItem("simcraft_session");
+      localStorage.removeItem("simcraft_last_char");
+      this.sessionId = null;
+      this.characters = [];
+      this.selectedChar = null;
+      this.simResult = null;
+      window.location.href = API.logoutUrl();
+    },
+
+    async loadAppearance() {
+      try {
+        const res = await fetch('/api/appearance');
+        if (res.ok) {
+          const data = await res.json();
+          this.appearance.header_title     = data.header_title     ?? this.appearance.header_title;
+          this.appearance.hero_title       = data.hero_title       ?? this.appearance.hero_title;
+          this.appearance.emoji            = data.emoji            ?? this.appearance.emoji;
+          this.appearance.hero_custom_text = data.hero_custom_text ?? "";
+          document.title = this.appearance.emoji + ' ' + this.appearance.header_title;
+        }
+      } catch (e) {
+        console.error('Failed to load appearance:', e);
+      }
     },
 
     async checkFirstLogin() {
@@ -162,44 +215,37 @@ function app() {
       } catch (e) {}
     },
 
-    navigateTo(view) { this.currentView = view; },
+    init() {
+      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+      this.loadAppearance();
 
-    logout() {
-      const s = this.sessionId;
-      localStorage.removeItem('simcraft_session');
-      localStorage.removeItem('simcraft_last_char');
-      this.sessionId  = null;
-      this.characters = [];
-      this.history    = [];
-      window.location.href = '/auth/logout' + (s ? '?session=' + s : '');
-    },
-
-    toggleTheme() {
-      this.theme = this.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('simcraft_theme', this.theme);
-      this.applyTheme();
-    },
-    applyTheme() {
-      document.documentElement.setAttribute('data-theme', this.theme === 'light' ? 'light' : 'dark');
-    },
-
-    effectiveRole() {
-      if (this.simRole && this.simRole !== 'auto') return this.simRole;
-      if (this.selectedChar?.spec) {
-        const s = this.selectedChar.spec.toLowerCase();
-        if (s.includes('heal')) return 'heal';
-        if (s.includes('tank')) return 'tank';
+      const params = new URLSearchParams(window.location.search);
+      const sessionFromUrl = params.get("session");
+      if (sessionFromUrl) {
+        this.sessionId = sessionFromUrl;
+        localStorage.setItem("simcraft_session", sessionFromUrl);
+        history.replaceState({}, "", "/");
+      } else {
+        const saved = localStorage.getItem("simcraft_session");
+        if (saved) this.sessionId = saved;
       }
-      return 'dps';
-    },
 
-    getItemQualityColor(q) { return Utils.getItemQualityColor(q); },
+      if (this.sessionId) {
+        this.loadCharacters();
+        this.loadHistory();
+        this.loadNews();
+        this.checkFirstLogin();
+      } else {
+        this.loadPublicHistory();
+        this.loadNews();
+      }
 
-    async loadAppearance() {
-      try {
-        const res = await fetch('/admin/api/appearance');
-        if (res.ok) this.appearance = await res.json();
-      } catch (e) {}
+      this.loadView('home');
     },
   };
+
+  // Kopiuj gettery z miksy zachowując deskryptory (Object.assign / spread tego nie robi poprawnie)
+  mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
+
+  return state;
 }
