@@ -143,6 +143,7 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="news">Newsy</button>
+    <button class="tab" data-tab="users">Użytkownicy</button>
     <button class="tab" data-tab="logs">Logi</button>
   </div>
 
@@ -160,6 +161,15 @@
 
     <h2>Newsy</h2>
     <div class="news-list" id="news-list">
+      <p class="empty">Ładowanie...</p>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-users">
+    <h2>Użytkownicy</h2>
+    <p style="color:#666;font-size:0.85rem;margin-bottom:1rem;">Lista użytkowników na podstawie historii symulacji.</p>
+    <button class="primary" onclick="loadUsers()" style="margin-bottom:1rem;">Odśwież</button>
+    <div class="news-list" id="user-list">
       <p class="empty">Ładowanie...</p>
     </div>
   </div>
@@ -296,6 +306,31 @@
           <span class="level ${l.level}">${l.level}</span>
           <span class="msg">${escHtml(l.message)}</span>
           ${l.context ? `<div class="ctx">${escHtml(l.context)}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/admin/api/users?limit=50');
+      if (res.status === 302 || res.redirected) {
+        window.location = '/admin/login'; return;
+      }
+      const users = await res.json();
+      const list = document.getElementById('user-list');
+      if (!users.length) {
+        list.innerHTML = '<p class="empty">Brak użytkowników.</p>';
+        return;
+      }
+      list.innerHTML = users.map(u => `
+        <div class="news-card">
+          <div class="info">
+            <h3>${escHtml(u.user_id || 'Nieznany')}</h3>
+            <p>${escHtml(u.character_name || '—')} ${u.character_class ? '<span style="color:#f4a01c">' + escHtml((u.character_spec ? u.character_spec + ' ' : '') + u.character_class) + '</span>' : ''}</p>
+            <div class="meta">
+              ${u.sim_count} symulacji · śr. DPS: ${u.avg_dps ? Number(u.avg_dps).toLocaleString() : '—'} · 
+              ${u.last_sim ? 'ostatnia: ' + fmt(u.last_sim) : 'brak'}
+            </div>
+          </div>
         </div>
       `).join('');
     }

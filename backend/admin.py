@@ -6,8 +6,9 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
+from sqlalchemy import func
 
-from database import SessionLocal, AdminSessionModel, NewsModel, LogEntryModel, get_logs
+from database import SessionLocal, AdminSessionModel, NewsModel, LogEntryModel, get_logs, HistoryEntryModel
 
 router = APIRouter(prefix="/admin")
 
@@ -233,3 +234,54 @@ async def list_logs(request: Request, limit: int = 100, level: str = None):
         "context": l.context,
         "created_at": l.created_at.isoformat() if l.created_at else None,
     } for l in logs]
+
+
+@router.get("/api/users")
+async def list_users(request: Request, limit: int = 50):
+    _require_admin(request)
+    with SessionLocal() as db:
+        rows = (
+            db.query(
+                HistoryEntryModel.user_id,
+                HistoryEntryModel.character_name,
+                HistoryEntryModel.character_class,
+                HistoryEntryModel.character_spec,
+            )
+            .filter(HistoryEntryModel.user_id.isnot(None))
+            .distinct()
+            .all()
+        )
+        
+        users_map = {}
+        for user_id, char_name, char_class, char_spec in rows:
+            if user_id not in users_map:
+                users_map[user_id] = {
+                    "user_id": user_id,
+                    "character_name": char_name,
+                    "character_class": char_class,
+                    "character_spec": char_spec,
+                    "sim_count": 0,
+                    "total_dps": 0,
+                    "last_sim": 0,
+                }
+        
+        stats = (
+            db.query(
+                HistoryEntryModel.user_id,
+                func.count(HistoryEntryModel.id).label("sim_count"),
+                func.avg(HistoryEntryModel.dps).label("avg_dps"),
+                func.max(HistoryEntryModel.created_at).label("last_sim"),
+            )
+            .filter(HistoryEntryModel.user_id.isnot(None))
+            .group_by(HistoryEntryModel.user_id)
+            .all()
+        )
+        
+        for user_id, sim_count, avg_dps, last_sim in stats:
+            if user_id in users_map:
+                users_map[user_id]["sim_count"] = sim_count
+                users_map[user_id]["avg_dps"] = round(avg_dps, 0) if avg_dps else 0
+                users_map[user_id]["last_sim"] = last_sim
+    
+    users = sorted(users_map.values(), key=lambda x: x["last_sim"] or 0, reverse=True)[:limit]
+    return users
