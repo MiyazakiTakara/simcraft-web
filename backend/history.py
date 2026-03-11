@@ -37,7 +37,7 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
 
 @router.get("/api/history")
 async def get_history(page: int = 1, limit: int = 50):
-    """Publiczna historia — ostatnie wpisow wszystkich uzytkownikow."""
+    """Publiczna historia — ostatnie wpisów wszystkich użytkowników."""
     offset = (page - 1) * limit
     with SessionLocal() as db:
         rows = (
@@ -59,7 +59,7 @@ async def get_history(page: int = 1, limit: int = 50):
 
 @router.get("/api/history/mine")
 async def get_my_history(session: str, page: int = 1, limit: int = 20):
-    """Historia zalogowanego uzytkownika — filtrowana po session_id."""
+    """Historia zalogowanego użytkownika — filtrowana po session_id."""
     if not session:
         raise HTTPException(400, "Brak session")
     offset = (page - 1) * limit
@@ -145,39 +145,3 @@ async def get_character_trend(
         "fight_style": fight_style,
         "points": [{"timestamp": r.created_at, "dps": r.dps, "job_id": r.job_id} for r in rows]
     }
-
-
-APPEARANCE_CONFIG_FILE = "/home/patryknowicki/simcraft-web/config/appearance.json"
-
-def load_appearance_config():
-    """Load appearance config from JSON file."""
-    default_config = {
-        "header_title": "SimCraft Web",
-        "hero_title": "Symulator DPS dla World of Warcraft",
-        "emoji": "⚔️"
-    }
-    
-    try:
-        if os.path.exists(APPEARANCE_CONFIG_FILE):
-            with open(APPEARANCE_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                # Merge with defaults
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
-        else:
-            # Create default config file
-            with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(default_config, f, indent=2, ensure_ascii=False)
-            return default_config
-    except Exception as e:
-        print(f"Error loading appearance config: {e}")
-        return default_config
-
-
-@router.get("/api/appearance")
-async def get_appearance():
-    """Public endpoint to get appearance settings."""
-    config = load_appearance_config()
-    return config
