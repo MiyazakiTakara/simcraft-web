@@ -557,11 +557,11 @@ async def get_result_json(job_id: str):
 
 
 @router.get("/api/result/{job_id}/dps-chart.png")
-async def get_dps_chart(job_id: str, role: str = None):
+async def get_dps_chart(job_id: str):
     job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
-    png = generate_dps_chart(job["json_path"], role=role)
+    png = generate_dps_chart(job["json_path"], role='dps')
     if not png or not os.path.exists(png):
         raise HTTPException(500, "Chart generation failed")
     return FileResponse(png, media_type="image/png")
