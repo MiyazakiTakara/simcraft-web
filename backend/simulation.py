@@ -102,7 +102,7 @@ def _run_sim(job_id: str, simc_input: str):
         blizzard_id = os.environ.get("BLIZZARD_CLIENT_ID")
         blizzard_secret = os.environ.get("BLIZZARD_CLIENT_SECRET")
         if blizzard_id and blizzard_secret:
-            api_key_path = os.path.expanduser("~/.simc_apikey")
+            api_key_path = SIMC_APIKEY_PATH
             with open(api_key_path, "w") as f:
                 f.write(f"{blizzard_id}:{blizzard_secret}")
             os.chmod(api_key_path, 0o600)
