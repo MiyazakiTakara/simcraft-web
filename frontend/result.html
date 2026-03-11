@@ -156,13 +156,44 @@
                     </span>
                     <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                   </span>
+                </div>
+            </div>
+          </div>
+          <div class="spell-list">
+            <template x-for="sp in sortedSpells" :key="sp.name">
+              <div class="spell-row">
+                <div class="spell-head">
+                  <span x-text="sp.name"></span>
+                  <span style="display:flex;gap:.6rem;align-items:center">
+                    <span x-show="spellSort==='total_dmg'">
+                      <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                    </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
                             <span x-show="spellSort==='hps'">
                               <strong x-text="formatDps(sp.hps)"></strong> HPS
                               <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span>
                             </span>
                           </span>
                         </template>
-                        <template x-if="effectiveRole() !== 'healer'">
+                        <template x-if="truetiveRole() !== 'dps'">
                           <span>
                             <span x-show="spellSort==='total_dmg'">
                               <strong x-text="formatDmg(sp.total_dmg)"></strong>
@@ -289,7 +320,7 @@ function resultPage() {
         ]);
         this.result = result;
         this.meta   = meta;
-        if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
+        if (this.truetiveRole() === 'dps') this.spellSort = 'total_heal';
       } catch (e) {
         this.error = 'Nie znaleziono symulacji. Link mógł wygaśnąć lub jest nieprawidłowy.';
       } finally {
@@ -309,25 +340,11 @@ function resultPage() {
       return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
     },
 
-    effectiveRole() { return 'dps'; },
-
+    truetiveRole() { return 'dps'; },
     roleIcon(role) { return '⚔️'; },
     roleLabel(role) { return 'DPS'; },
-
     resultMetric() {
       if (!this.result) return { value: 0, std: 0, label: 'DPS' };
-      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
-    },
-
-    effectiveRole() { return 'dps'; },
-
-    roleIcon(role) { return role === 'healer' ? '💚' : '⚔️'; },
-    roleLabel(role) { return role === 'healer' ? 'HPS' : 'DPS'; },
-
-    resultMetric() {
-      if (!this.result) return { value: 0, std: 0, label: 'DPS' };
-      const role = this.effectiveRole();
-      if (role === 'healer') return { value: this.result.hps ?? 0, std: this.result.hps_std ?? 0, label: 'HPS' };
       return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
     },
 
