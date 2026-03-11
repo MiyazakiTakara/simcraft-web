@@ -11,7 +11,7 @@ def setup_logging(log_level: str = "INFO"):
             add_log(level, message, context)
         except Exception:
             pass
-    
+
     class DBBridge:
         def __init__(self, logger, method_name):
             self._logger = logger
@@ -40,6 +40,14 @@ def setup_logging(log_level: str = "INFO"):
             context = str(kwargs) if kwargs else None
             add_db_log("ERROR", message, context)
 
+    class DBBridgeFactory:
+        def __init__(self, original_factory):
+            self._original = original_factory
+
+        def __call__(self, *args, **kwargs):
+            logger = self._original(*args, **kwargs)
+            return DBBridge(logger, None)
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -53,7 +61,7 @@ def setup_logging(log_level: str = "INFO"):
             getattr(logging, log_level.upper(), logging.INFO)
         ),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=DBridgeFactory(structlog.PrintLoggerFactory()),
         cache_logger_on_first_use=False,
     )
     
