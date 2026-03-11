@@ -3,7 +3,7 @@ import time
 import uuid
 import secrets
 import httpx
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
@@ -18,10 +18,9 @@ SESSION_TTL  = 60 * 60 * 8  # 8 godzin
 
 
 def _cfg():
-    """Lazy-load Keycloak config — czytane przy pierwszym request, nie przy imporcie."""
-    url    = os.environ["KEYCLOAK_URL"].rstrip("/")
-    realm  = os.environ["KEYCLOAK_REALM"]
-    base   = f"{url}/realms/{realm}/protocol/openid-connect"
+    url   = os.environ["KEYCLOAK_URL"].rstrip("/")
+    realm = os.environ["KEYCLOAK_REALM"]
+    base  = f"{url}/realms/{realm}/protocol/openid-connect"
     return {
         "client_id":     os.environ["KEYCLOAK_CLIENT_ID"],
         "client_secret": os.environ["KEYCLOAK_CLIENT_SECRET"],
@@ -46,13 +45,17 @@ def _get_admin_session(session_id: str) -> dict | None:
 
 
 def _require_admin(request: Request) -> dict:
+    """Zwraca dane sesji lub rzuca RedirectResponse do /admin/login."""
     session_id = request.cookies.get(ADMIN_COOKIE)
-    if not session_id:
-        raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
-    session = _get_admin_session(session_id)
-    if not session:
-        raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
-    return session
+    if session_id:
+        session = _get_admin_session(session_id)
+        if session:
+            return session
+    # Zamiast HTTPException(302) — prawdziwy redirect
+    raise HTTPException(
+        status_code=302,
+        headers={"Location": "/admin/login"},
+    )
 
 
 # ---------- auth routes ----------
@@ -105,9 +108,9 @@ async def admin_callback(code: str, state: str = None):
     with SessionLocal() as db:
         db.query(AdminSessionModel).filter(AdminSessionModel.expires_at < time.time()).delete()
         db.add(AdminSessionModel(
-            session_id = session_id,
-            username   = username,
-            expires_at = expires_at,
+            session_id=session_id,
+            username=username,
+            expires_at=expires_at,
         ))
         db.commit()
 
@@ -152,9 +155,8 @@ async def get_dashboard(request: Request):
     _require_admin(request)
     import psutil
 
-    # created_at jest teraz DateTime — porownujemy przez datetime, nie int
-    now       = datetime.utcnow()
-    last_24h  = now - timedelta(hours=24)
+    now      = datetime.utcnow()
+    last_24h = now - timedelta(hours=24)
 
     with SessionLocal() as db:
         total_sims  = db.query(func.count(HistoryEntryModel.id)).scalar() or 0
@@ -197,11 +199,11 @@ async def get_dashboard(request: Request):
         },
         "daily_trend":  [{"hour": str(h), "count": c} for h, c in daily_stats],
         "recent_sims": [{
-            "job_id":           s.job_id,
-            "character_name":   s.character_name,
-            "character_class":  s.character_class,
-            "dps":              s.dps,
-            "created_at":       s.created_at.isoformat() if s.created_at else None,
+            "job_id":          s.job_id,
+            "character_name":  s.character_name,
+            "character_class": s.character_class,
+            "dps":             s.dps,
+            "created_at":      s.created_at.isoformat() if s.created_at else None,
         } for s in recent_sims],
     }
 
@@ -225,21 +227,18 @@ async def list_news(request: Request):
     _require_admin(request)
     with SessionLocal() as db:
         rows = db.query(NewsModel).order_by(NewsModel.created_at.desc()).all()
-    return [{"id": r.id, "title": r.title, "body": r.body,
-             "published": r.published,
-             "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]
+    return [{
+        "id": r.id, "title": r.title, "body": r.body,
+        "published": r.published,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    } for r in rows]
 
 
 @router.post("/api/news", status_code=201)
 async def create_news(request: Request, data: NewsCreate):
     _require_admin(request)
     with SessionLocal() as db:
-        entry = NewsModel(
-            title=data.title,
-            body=data.body,
-            published=data.published,
-            # created_at ma default=datetime.utcnow w modelu — nie trzeba ustawiać ręcznie
-        )
+        entry = NewsModel(title=data.title, body=data.body, published=data.published)
         db.add(entry)
         db.commit()
         db.refresh(entry)
@@ -253,12 +252,9 @@ async def update_news(news_id: int, request: Request, data: NewsUpdate):
         row = db.query(NewsModel).filter(NewsModel.id == news_id).first()
         if not row:
             raise HTTPException(404, "News not found")
-        if data.title is not None:
-            row.title = data.title
-        if data.body is not None:
-            row.body = data.body
-        if data.published is not None:
-            row.published = data.published
+        if data.title     is not None: row.title     = data.title
+        if data.body      is not None: row.body      = data.body
+        if data.published is not None: row.published = data.published
         db.commit()
     return {"ok": True}
 
@@ -284,9 +280,7 @@ async def public_news():
                 .order_by(NewsModel.created_at.desc())
                 .limit(20).all())
     return [{
-        "id": r.id,
-        "title": r.title,
-        "body": r.body,
+        "id": r.id, "title": r.title, "body": r.body,
         "created_at": r.created_at.isoformat() if r.created_at else None,
     } for r in rows]
 
@@ -296,10 +290,7 @@ async def list_logs(request: Request, limit: int = 100, level: str = None):
     _require_admin(request)
     logs = get_logs(limit=limit, level=level)
     return [{
-        "id": l.id,
-        "level": l.level,
-        "message": l.message,
-        "context": l.context,
+        "id": l.id, "level": l.level, "message": l.message, "context": l.context,
         "created_at": l.created_at.isoformat() if l.created_at else None,
     } for l in logs]
 
@@ -316,21 +307,20 @@ async def list_users(request: Request, limit: int = 50):
                 HistoryEntryModel.character_spec,
             )
             .filter(HistoryEntryModel.user_id.isnot(None))
-            .distinct()
-            .all()
+            .distinct().all()
         )
 
         users_map = {}
         for user_id, char_name, char_class, char_spec in rows:
             if user_id not in users_map:
                 users_map[user_id] = {
-                    "user_id":        user_id,
-                    "character_name": char_name,
-                    "character_class":char_class,
-                    "character_spec": char_spec,
-                    "sim_count":      0,
-                    "total_dps":      0,
-                    "last_sim":       None,
+                    "user_id":         user_id,
+                    "character_name":  char_name,
+                    "character_class": char_class,
+                    "character_spec":  char_spec,
+                    "sim_count":       0,
+                    "avg_dps":         0,
+                    "last_sim":        None,
                 }
 
         stats = (
@@ -341,20 +331,19 @@ async def list_users(request: Request, limit: int = 50):
                 func.max(HistoryEntryModel.created_at).label("last_sim"),
             )
             .filter(HistoryEntryModel.user_id.isnot(None))
-            .group_by(HistoryEntryModel.user_id)
-            .all()
+            .group_by(HistoryEntryModel.user_id).all()
         )
 
         for user_id, sim_count, avg_dps, last_sim in stats:
             if user_id in users_map:
                 users_map[user_id]["sim_count"] = sim_count
                 users_map[user_id]["avg_dps"]   = round(avg_dps, 0) if avg_dps else 0
-                users_map[user_id]["last_sim"]   = last_sim
+                users_map[user_id]["last_sim"]   = last_sim.isoformat() if last_sim else None
 
     users = sorted(
         users_map.values(),
-        key=lambda x: x["last_sim"] or datetime.min,
-        reverse=True
+        key=lambda x: x["last_sim"] or "",
+        reverse=True,
     )[:limit]
     return users
 
@@ -367,8 +356,7 @@ async def get_user_simulations(request: Request, user_id: str, limit: int = 20):
             db.query(HistoryEntryModel)
             .filter(HistoryEntryModel.user_id == user_id)
             .order_by(HistoryEntryModel.created_at.desc())
-            .limit(limit)
-            .all()
+            .limit(limit).all()
         )
     return [{
         "job_id":          r.job_id,
@@ -384,20 +372,15 @@ async def get_user_simulations(request: Request, user_id: str, limit: int = 20):
 @router.delete("/api/simulations")
 async def delete_simulations(request: Request, older_than_days: int = None, user_id: str = None):
     _require_admin(request)
-
     with SessionLocal() as db:
         query = db.query(HistoryEntryModel)
-
         if user_id:
             query = query.filter(HistoryEntryModel.user_id == user_id)
         elif older_than_days:
-            # created_at to teraz DateTime — odejmujemy timedelta
             cutoff = datetime.utcnow() - timedelta(days=older_than_days)
             query  = query.filter(HistoryEntryModel.created_at < cutoff)
-
         deleted = query.delete()
         db.commit()
-
     return {"deleted": deleted}
 
 
@@ -443,7 +426,6 @@ async def health_check(request: Request):
         from sqlalchemy import text
         with SessionLocal() as db:
             db.execute(text("SELECT 1"))
-        health_status["database"] = "ok"
     except Exception as e:
         health_status["database"] = f"error: {str(e)}"
 
@@ -455,7 +437,7 @@ async def health_check(request: Request):
         health_status["blizzard_api"] = f"error: {str(e)}"
 
     try:
-        cfg = _cfg()
+        cfg  = _cfg()
         async with httpx.AsyncClient() as client:
             url  = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
             resp = await client.get(url, timeout=5)
@@ -469,16 +451,12 @@ async def health_check(request: Request):
         health_status["keycloak"] = f"error: {str(e)}"
 
     simc_path = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
-    if os.path.exists(simc_path) and os.access(simc_path, os.X_OK):
-        health_status["simc_binary"] = "ok"
-    else:
-        health_status["simc_binary"] = f"error: not found or not executable at {simc_path}"
+    health_status["simc_binary"] = "ok" if (os.path.exists(simc_path) and os.access(simc_path, os.X_OK)) \
+        else f"error: not found or not executable at {simc_path}"
 
     results_dir = os.environ.get("RESULTS_DIR", "/app/results")
-    if os.path.exists(results_dir) and os.access(results_dir, os.W_OK):
-        health_status["results_dir"] = "ok"
-    else:
-        health_status["results_dir"] = f"error: not writable at {results_dir}"
+    health_status["results_dir"] = "ok" if (os.path.exists(results_dir) and os.access(results_dir, os.W_OK)) \
+        else f"error: not writable at {results_dir}"
 
     return health_status
 
@@ -489,13 +467,8 @@ async def health_check(request: Request):
 async def list_tasks(request: Request):
     _require_admin(request)
     from simulation import jobs
-
     active_tasks = [
-        {
-            "job_id":     job_id,
-            "status":     "running",
-            "started_at": job_info.get("started_at"),
-        }
+        {"job_id": job_id, "status": "running", "started_at": job_info.get("started_at")}
         for job_id, job_info in jobs.items()
         if job_info.get("status") == "running"
     ]
@@ -513,11 +486,8 @@ async def cancel_task(request: Request, job_id: str):
 
     jobs[job_id]["status"] = "cancelled"
     jobs[job_id]["error"]  = "Cancelled by admin"
-
-    # Zwolnij slot w puli symulacji i zaktualizuj DB
     _release_slot(job_id)
     update_job_status(job_id, "error", error="Cancelled by admin")
-
     return {"ok": True, "message": f"Task {job_id} cancelled"}
 
 
@@ -539,20 +509,20 @@ class AppearanceUpdate(BaseModel):
 
 def load_appearance_config():
     default_config = {
-        "header_title":    "SimCraft Web",
-        "hero_title":      "World of Warcraft",
-        "emoji":           "⚔️",
-        "hero_custom_text": ""
+        "header_title":     "SimCraft Web",
+        "hero_title":       "World of Warcraft",
+        "emoji":            "⚔️",
+        "hero_custom_text": "",
     }
     try:
         APPEARANCE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         if APPEARANCE_CONFIG_FILE.exists():
             with open(APPEARANCE_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                for key, value in default_config.items():
-                    if key not in config:
-                        config[key] = value
-                return config
+            for key, value in default_config.items():
+                if key not in config:
+                    config[key] = value
+            return config
         else:
             with open(APPEARANCE_CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, indent=2, ensure_ascii=False)
@@ -583,17 +553,10 @@ async def get_appearance(request: Request):
 async def update_appearance(request: Request, data: AppearanceUpdate):
     _require_admin(request)
     config = load_appearance_config()
-
-    if data.header_title is not None:
-        config["header_title"] = data.header_title
-    if data.hero_title is not None:
-        config["hero_title"] = data.hero_title
-    if data.emoji is not None:
-        config["emoji"] = data.emoji
-    if data.hero_custom_text is not None:
-        config["hero_custom_text"] = data.hero_custom_text
-
+    if data.header_title    is not None: config["header_title"]    = data.header_title
+    if data.hero_title      is not None: config["hero_title"]      = data.hero_title
+    if data.emoji           is not None: config["emoji"]           = data.emoji
+    if data.hero_custom_text is not None: config["hero_custom_text"] = data.hero_custom_text
     if save_appearance_config(config):
         return {"ok": True, "message": "Appearance settings saved successfully"}
-    else:
-        raise HTTPException(500, "Failed to save appearance settings")
+    raise HTTPException(500, "Failed to save appearance settings")

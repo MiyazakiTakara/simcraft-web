@@ -1,7 +1,7 @@
 import json
 import os
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from simulation import jobs
 
 router = APIRouter()
@@ -11,7 +11,6 @@ def _get_job(job_id: str):
     from database import get_job
     db_job = get_job(job_id)
     if db_job:
-        # get_job() zwraca dict od czasu poprawki DetachedInstanceError
         return {"status": db_job["status"], "json_path": db_job["json_path"], "error": db_job["error"]}
     return jobs.get(job_id)
 
@@ -57,7 +56,6 @@ def ability_total_dmg(ab: dict) -> float:
 
 
 def ability_hps(ab: dict) -> float:
-    """Heal per second z portion_aps (heal spelle) lub children."""
     pa = ab.get("portion_aps")
     if isinstance(pa, dict):
         v = safe_float(pa.get("mean"))
@@ -72,7 +70,6 @@ def ability_hps(ab: dict) -> float:
 
 
 def ability_total_heal(ab: dict) -> float:
-    """Total healing z compound_amount lub heal_results."""
     v = safe_float(ab.get("compound_amount", 0))
     if v > 0:
         return v
@@ -80,7 +77,7 @@ def ability_total_heal(ab: dict) -> float:
     if isinstance(hr, dict):
         for key, block in hr.items():
             if isinstance(block, dict):
-                aa = block.get("actual_amount", {})
+                aa  = block.get("actual_amount", {})
                 cnt = _get_count(block)
                 mean = safe_float(aa.get("mean", 0)) if isinstance(aa, dict) else 0.0
                 if mean > 0 and cnt > 0:
@@ -125,7 +122,6 @@ def _stats_from_results(results: dict):
     crit_pct  = round((crit_count / hit_count * 100), 2) if hit_count > 0 else 0.0
     miss_pct  = round((miss_count / all_count * 100), 1) if all_count > 0 else 0.0
     avg_hit   = round(total_val / total_cnt) if total_cnt > 0 else 0
-
     return crit_pct, hit_count, miss_pct, avg_hit
 
 
@@ -157,12 +153,12 @@ def _weighted_stats(ab: dict):
 
 
 def _hit_count_from_results(ab: dict) -> float:
-    total = 0.0
+    total     = 0.0
+    miss_keys = {"miss", "dodge", "parry", "glancing"}
     for key in ("direct_results", "tick_results"):
         r = ab.get(key)
         if not isinstance(r, dict):
             continue
-        miss_keys = {"miss", "dodge", "parry", "glancing"}
         for bkey, block in r.items():
             if isinstance(block, dict) and bkey not in miss_keys:
                 total += _get_count(block)
@@ -187,7 +183,7 @@ def _has_only_ticks(ab: dict) -> bool:
 
 
 def ability_count(ab: dict) -> tuple[int, bool]:
-    ne = ab.get("num_executes")
+    ne       = ab.get("num_executes")
     executes = 0
     if isinstance(ne, dict):
         executes = int(safe_float(ne.get("mean", 0)))
@@ -197,13 +193,10 @@ def ability_count(ab: dict) -> tuple[int, bool]:
     if executes > 0:
         return executes, False
 
-    child_counts = [
-        ability_count(c) for c in ab.get("children", []) if isinstance(c, dict)
-    ]
-    child_sum = sum(c[0] for c in child_counts)
+    child_counts = [ability_count(c) for c in ab.get("children", []) if isinstance(c, dict)]
+    child_sum    = sum(c[0] for c in child_counts)
     if child_sum > 0:
-        is_ch = all(c[1] for c in child_counts)
-        return child_sum, is_ch
+        return child_sum, all(c[1] for c in child_counts)
 
     hc = _hit_count_from_results(ab)
     return int(hc), True
@@ -213,21 +206,16 @@ def spell_display_name(ab: dict) -> str:
     spell_name = ab.get("spell_name", "").strip()
     if spell_name:
         return spell_name
-    raw = ab.get("name", "?")
-    return raw.replace("_", " ").title()
+    return ab.get("name", "?").replace("_", " ").title()
 
 
 def _extract_hps_dtps(cd: dict) -> tuple[float, float, float]:
-    """
-    Wyciaga hps, dtps, tmi z collected_data SimC.
-    """
     hps_data  = cd.get("hps") or cd.get("hpse") or {}
     dtps_data = cd.get("dtps") or {}
-    tmi_data  = cd.get("tmi") or {}
-
-    hps  = safe_float(hps_data.get("mean") if isinstance(hps_data, dict) else hps_data)
+    tmi_data  = cd.get("tmi")  or {}
+    hps  = safe_float(hps_data.get("mean")  if isinstance(hps_data,  dict) else hps_data)
     dtps = safe_float(dtps_data.get("mean") if isinstance(dtps_data, dict) else dtps_data)
-    tmi  = safe_float(tmi_data.get("mean") if isinstance(tmi_data, dict) else tmi_data)
+    tmi  = safe_float(tmi_data.get("mean")  if isinstance(tmi_data,  dict) else tmi_data)
     return round(hps, 1), round(dtps, 1), round(tmi, 1)
 
 
@@ -236,14 +224,13 @@ def parse_results(json_path: str):
         with open(json_path) as f:
             raw = json.load(f)
 
-        sim = raw.get("sim", {})
+        sim     = raw.get("sim", {})
         players = sim.get("players", [])
-
         if not players:
             return {"error": "No player data"}
 
         player = players[0]
-        cd = player.get("collected_data", {})
+        cd     = player.get("collected_data", {})
 
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
@@ -252,8 +239,7 @@ def parse_results(json_path: str):
         hps, dtps, tmi = _extract_hps_dtps(cd)
 
         hps_std_data = cd.get("hps") or cd.get("hpse") or {}
-        hps_std = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
-
+        hps_std  = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
         dtps_std_data = cd.get("dtps") or {}
         dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
@@ -287,20 +273,17 @@ def parse_results(json_path: str):
                     if spell_hps > main_hps:
                         main_hps = spell_hps
 
-        if main_hps > 100:
-            role = "healer"
-        else:
-            role = "dps"
+        role = "healer" if main_hps > 100 else "dps"
 
         spells = []
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
-            dps       = ability_dps(ab)
+            dps_v     = ability_dps(ab)
             tot_dmg   = ability_total_dmg(ab)
             spell_hps = ability_hps(ab)
             tot_heal  = ability_total_heal(ab)
-            if dps <= 0 and tot_dmg <= 0 and spell_hps <= 0 and tot_heal <= 0:
+            if dps_v <= 0 and tot_dmg <= 0 and spell_hps <= 0 and tot_heal <= 0:
                 continue
 
             name                        = spell_display_name(ab)
@@ -312,7 +295,7 @@ def parse_results(json_path: str):
 
             spells.append({
                 "name":       name,
-                "dps":        round(dps, 2),
+                "dps":        round(dps_v, 2),
                 "total_dmg":  round(tot_dmg),
                 "hps":        round(spell_hps, 2),
                 "total_heal": round(tot_heal),
@@ -325,7 +308,7 @@ def parse_results(json_path: str):
             })
 
         if not spells:
-            action_seq = cd.get("action_sequence", [])
+            action_seq   = cd.get("action_sequence", [])
             spell_counts: dict = {}
             for action in action_seq:
                 sname = action.get("spell_name") or action.get("name", "?")
@@ -334,29 +317,28 @@ def parse_results(json_path: str):
             for sname, count in spell_counts.items():
                 spells.append({
                     "name": sname, "dps": 0.0, "total_dmg": 0,
-                    "crit_pct": 0.0, "executes": count,
-                    "count": count, "avg_hit": 0, "miss_pct": 0.0,
-                    "is_channel": False,
+                    "crit_pct": 0.0, "executes": count, "count": count,
+                    "avg_hit": 0, "miss_pct": 0.0, "is_channel": False,
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        total_spell_dps  = sum(s["dps"] for s in spells)
-        total_spell_dmg  = sum(s["total_dmg"] for s in spells)
-        total_spell_hps  = sum(s["hps"] for s in spells)
-        total_spell_heal = sum(s["total_heal"] for s in spells)
+        total_spell_dps  = sum(s["dps"]        for s in spells)
+        total_spell_dmg  = sum(s["total_dmg"]  for s in spells)
+        total_spell_hps  = sum(s["hps"]        for s in spells)
+        total_spell_heal = sum(s["total_heal"]  for s in spells)
 
         for s in spells:
-            s["dps_pct"]  = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
-            s["dmg_pct"]  = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
-            s["hps_pct"]  = round((s["hps"] / total_spell_hps * 100), 1) if total_spell_hps > 0 else 0.0
-            s["heal_pct"] = round((s["total_heal"] / total_spell_heal * 100), 1) if total_spell_heal > 0 else 0.0
+            s["dps_pct"]  = round(s["dps"]        / total_spell_dps  * 100, 1) if total_spell_dps  > 0 else 0.0
+            s["dmg_pct"]  = round(s["total_dmg"]  / total_spell_dmg  * 100, 1) if total_spell_dmg  > 0 else 0.0
+            s["hps_pct"]  = round(s["hps"]        / total_spell_hps  * 100, 1) if total_spell_hps  > 0 else 0.0
+            s["heal_pct"] = round(s["total_heal"] / total_spell_heal * 100, 1) if total_spell_heal > 0 else 0.0
 
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
         top_spells = spells[:25]
-        other_dps  = sum(s["dps"] for s in spells[25:])
-        other_dmg  = sum(s["total_dmg"] for s in spells[25:])
-        other_hps  = sum(s["hps"] for s in spells[25:])
+        other_dps  = sum(s["dps"]        for s in spells[25:])
+        other_dmg  = sum(s["total_dmg"]  for s in spells[25:])
+        other_hps  = sum(s["hps"]        for s in spells[25:])
         other_heal = sum(s["total_heal"] for s in spells[25:])
         if other_dps > 0 or other_dmg > 0 or other_hps > 0 or other_heal > 0:
             top_spells.append({
@@ -409,10 +391,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
 
         if role is None:
             hps, dtps, tmi = _extract_hps_dtps(cd)
-            if hps > 100:
-                role = "healer"
-            else:
-                role = "dps"
+            role = "healer" if hps > 100 else "dps"
 
         real_dps = safe_float(cd.get("dps",  {}).get("mean", 0))
         real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
@@ -441,13 +420,12 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
                     rows.append({"name": name, "value": val})
             if not rows:
                 return [], []
-            import pandas as pd
             df = pd.DataFrame(rows).sort_values("value", ascending=False).reset_index(drop=True)
             if len(df) > TOP_N:
                 other = df.iloc[TOP_N:]["value"].sum()
                 df = pd.concat(
                     [df.head(TOP_N), pd.DataFrame([{"name": "Other", "value": other}])],
-                    ignore_index=True
+                    ignore_index=True,
                 )
             return df["name"].tolist(), df["value"].tolist()
 
@@ -493,21 +471,18 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             specs=[[{"type": "pie"}, {"type": "pie"}]],
             subplot_titles=[left_title, right_title],
         )
-
         fig.add_trace(go.Pie(
             labels=left_names, values=left_vals,
             hole=0.38, textinfo="percent", textfont_size=11,
             marker=dict(colors=colors[:len(left_names)], line=dict(color="#0d0d1a", width=1.5)),
             name=left_title, showlegend=True,
         ), row=1, col=1)
-
         fig.add_trace(go.Pie(
             labels=right_names, values=right_vals,
             hole=0.38, textinfo="percent", textfont_size=11,
             marker=dict(colors=colors[:len(right_names)], line=dict(color="#0d0d1a", width=1.5)),
             name=right_title, showlegend=False,
         ), row=1, col=2)
-
         fig.update_layout(
             title=dict(text=chart_title, font=dict(size=17, color="#ffffff"), x=0.5, xanchor="center"),
             legend=dict(
@@ -549,7 +524,16 @@ async def get_dps_chart(job_id: str):
     png = generate_dps_chart(job["json_path"], role='dps')
     if not png or not os.path.exists(png):
         raise HTTPException(500, "Chart generation failed")
-    return FileResponse(png, media_type="image/png")
+    # Wczytaj do pamięci i usuń plik z /tmp — zapobiegą zapychaniu dysku
+    try:
+        with open(png, "rb") as f:
+            data = f.read()
+    finally:
+        try:
+            os.remove(png)
+        except OSError:
+            pass
+    return Response(content=data, media_type="image/png")
 
 
 @router.get("/api/result/{job_id}/debug-spell")
@@ -560,7 +544,7 @@ async def get_debug_spell(job_id: str):
     try:
         with open(job["json_path"]) as f:
             raw = json.load(f)
-        player = raw.get("sim", {}).get("players", [{}])[0]
+        player    = raw.get("sim", {}).get("players", [{}])[0]
         abilities = player.get("stats", [])
         if not isinstance(abilities, list):
             return {"error": "no abilities list"}
@@ -596,34 +580,32 @@ async def get_result_debug(job_id: str):
     try:
         with open(job["json_path"]) as f:
             raw = json.load(f)
-        sim = raw.get("sim", {})
+        sim     = raw.get("sim", {})
         players = sim.get("players", [])
         if not players:
             return {"error": "no players"}
-        player = players[0]
+        player    = players[0]
         stats_raw = player.get("stats", [])
 
         def strip_timeseries(obj, depth=0):
-            if depth > 4:
-                return "..."
+            if depth > 4: return "..."
             if isinstance(obj, dict):
-                return {k: strip_timeseries(v, depth + 1) for k, v in obj.items() if k not in ("data", "timeline", "distribution")}
+                return {k: strip_timeseries(v, depth+1) for k, v in obj.items() if k not in ("data", "timeline", "distribution")}
             if isinstance(obj, list):
                 if len(obj) > 3:
-                    return [strip_timeseries(i, depth + 1) for i in obj[:3]] + [f"...+{len(obj)-3} more"]
-                return [strip_timeseries(i, depth + 1) for i in obj]
+                    return [strip_timeseries(i, depth+1) for i in obj[:3]] + [f"...+{len(obj)-3} more"]
+                return [strip_timeseries(i, depth+1) for i in obj]
             return obj
 
         cd = player.get("collected_data", {})
         hps, dtps, tmi = _extract_hps_dtps(cd)
-
         return {
-            "player_name": player.get("name"),
-            "player_keys": list(player.keys()),
-            "stats_type": type(stats_raw).__name__,
-            "stats_len": len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
-            "first_3_abilities": strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
-            "collected_data_keys": list(cd.keys()),
+            "player_name":          player.get("name"),
+            "player_keys":          list(player.keys()),
+            "stats_type":           type(stats_raw).__name__,
+            "stats_len":            len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
+            "first_3_abilities":    strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
+            "collected_data_keys":  list(cd.keys()),
             "hps": hps, "dtps": dtps, "tmi": tmi,
         }
     except Exception as e:

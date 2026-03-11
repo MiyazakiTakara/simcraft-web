@@ -10,7 +10,6 @@ from slowapi.errors import RateLimitExceeded
 
 
 def get_client_ip(request):
-    """Get client IP address, respecting Cloudflare headers."""
     forwarded = request.headers.get("CF-Connecting-IP")
     if forwarded:
         return forwarded
@@ -22,7 +21,7 @@ def get_client_ip(request):
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from logging_config import setup_logging
-from database import init_db
+from database import init_db, SessionLocal, JobModel
 from auth import router as auth_router
 from characters import router as characters_router
 from simulation import router as sim_router, RESULTS_DIR, jobs, create_job
@@ -90,7 +89,6 @@ app.include_router(admin_router)
 
 @app.get("/api/appearance")
 async def get_appearance_public():
-    """Publiczny endpoint do pobierania ustawień wyglądu przez frontend."""
     config = load_appearance_config()
     return JSONResponse(
         content=config,
@@ -128,17 +126,15 @@ async def result_page(job_id: str):
         dps_str = str(int(dps))
 
     spec_class = f"{char_spec} {char_class}".strip()
-    raw_title = f"{char_name} ({spec_class}) — {dps_str} DPS" if spec_class else f"{char_name} — {dps_str} DPS"
-    raw_desc  = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
+    raw_title  = f"{char_name} ({spec_class}) — {dps_str} DPS" if spec_class else f"{char_name} — {dps_str} DPS"
+    raw_desc   = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
 
-    # Escapowanie przed wstawieniem do HTML, żeby uniknąć XSS
     og_title = html_lib.escape(raw_title)
     og_desc  = html_lib.escape(raw_desc)
     og_image = html_lib.escape(f"{BASE_URL}/api/result/{job_id}/dps-chart.png")
     og_url   = html_lib.escape(f"{BASE_URL}/result/{job_id}")
 
-    html_path = "/app/frontend/result.html"
-    with open(html_path) as f:
+    with open("/app/frontend/result.html") as f:
         html_content = f.read()
 
     og_tags = f"""
@@ -157,13 +153,27 @@ async def result_page(job_id: str):
     return HTMLResponse(content=html_content)
 
 
+def _mark_stale_running_jobs():
+    """
+    Po restarcie kontenera joby ze statusem 'running' w DB nigdy nie dostałyby
+    statusu 'done' (wątek _run_sim zginął razem z procesem).
+    Oznaczamy je jako 'error' z informacją o restarcie.
+    """
+    with SessionLocal() as db:
+        stale = db.query(JobModel).filter(JobModel.status == "running").all()
+        for job in stale:
+            job.status = "error"
+            job.error  = "Serwer został zrestartowany w trakcie symulacji"
+        if stale:
+            db.commit()
+            log.warning("stale-jobs-marked", count=len(stale))
+
+
 def _restore_jobs():
     """
     Przywraca joby po restarcie.
     Priorytet: nowy format (katalog/<job_id>/output.json) > stary format (<job_id>.json).
-    Każdy job_id dodawany jest tylko raz — subdir ma pierwszeństwo.
     """
-    # 1. Najpierw nowy format (katalogi) — mają wyższy priorytet
     for entry in os.scandir(RESULTS_DIR):
         if not entry.is_dir():
             continue
@@ -172,14 +182,12 @@ def _restore_jobs():
             jobs[entry.name] = {"status": "done", "json_path": out, "error": None, "counted": False}
             create_job(entry.name, out)
 
-    # 2. Stary format (płaskie pliki .json) — tylko jeśli job nie został już dodany z katalogu
     _SKIP = {"history.json", "sessions.json"}
     for fname in os.listdir(RESULTS_DIR):
         if not fname.endswith(".json") or fname in _SKIP:
             continue
         job_id = fname[:-5]
         if job_id in jobs:
-            # Subdir już wygrał — pomijamy duplikat
             continue
         fpath = os.path.join(RESULTS_DIR, fname)
         jobs[job_id] = {"status": "done", "json_path": fpath, "error": None, "counted": False}
@@ -188,6 +196,8 @@ def _restore_jobs():
     log.info("jobs-restored", count=len(jobs))
 
 
+# Najpierw zakónicz stare 'running', potem wczytaj z dysku
+_mark_stale_running_jobs()
 _restore_jobs()
 
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")
