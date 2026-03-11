@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
-from database import SessionLocal, AdminSessionModel, NewsModel
+from database import SessionLocal, AdminSessionModel, NewsModel, LogEntryModel, get_logs
 
 router = APIRouter(prefix="/admin")
 
@@ -220,3 +220,16 @@ async def public_news():
                 .order_by(NewsModel.created_at.desc())
                 .limit(20).all())
     return [{"id": r.id, "title": r.title, "body": r.body, "created_at": r.created_at} for r in rows]
+
+
+@router.get("/api/logs")
+async def list_logs(request: Request, limit: int = 100, level: str = None):
+    _require_admin(request)
+    logs = get_logs(limit=limit, level=level)
+    return [{
+        "id": l.id,
+        "level": l.level,
+        "message": l.message,
+        "context": l.context,
+        "created_at": l.created_at.isoformat() if l.created_at else None,
+    } for l in logs]

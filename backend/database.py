@@ -65,6 +65,16 @@ class NewsModel(Base):
     created_at = Column(Integer, default=0)
 
 
+class LogEntryModel(Base):
+    __tablename__ = "admin_logs"
+
+    id        = Column(Integer, primary_key=True, autoincrement=True)
+    level     = Column(String(8), nullable=False)
+    message   = Column(Text, nullable=False)
+    context   = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
@@ -90,3 +100,18 @@ def update_job_status(job_id: str, status: str, error: str = None):
 def get_job(job_id: str):
     with SessionLocal() as db:
         return db.query(JobModel).filter(JobModel.job_id == job_id).first()
+
+
+def add_log(level: str, message: str, context: str = None):
+    with SessionLocal() as db:
+        entry = LogEntryModel(level=level, message=message, context=context)
+        db.add(entry)
+        db.commit()
+
+
+def get_logs(limit: int = 100, level: str = None):
+    with SessionLocal() as db:
+        query = db.query(LogEntryModel).order_by(LogEntryModel.created_at.desc())
+        if level:
+            query = query.filter(LogEntryModel.level == level.upper())
+        return query.limit(limit).all()
