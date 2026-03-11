@@ -55,41 +55,6 @@ def ability_total_dmg(ab: dict) -> float:
     return 0.0
 
 
-def ability_hps(ab: dict) -> float:
-    pa = ab.get("portion_aps")
-    if isinstance(pa, dict):
-        v = safe_float(pa.get("mean"))
-        if v > 0:
-            return v
-    children = ab.get("children", [])
-    if isinstance(children, list) and children:
-        total = sum(ability_hps(c) for c in children if isinstance(c, dict))
-        if total > 0:
-            return total
-    return 0.0
-
-
-def ability_total_heal(ab: dict) -> float:
-    v = safe_float(ab.get("compound_amount", 0))
-    if v > 0:
-        return v
-    hr = ab.get("heal_results") or ab.get("direct_results", {})
-    if isinstance(hr, dict):
-        for key, block in hr.items():
-            if isinstance(block, dict):
-                aa  = block.get("actual_amount", {})
-                cnt = _get_count(block)
-                mean = safe_float(aa.get("mean", 0)) if isinstance(aa, dict) else 0.0
-                if mean > 0 and cnt > 0:
-                    return mean * cnt
-    children = ab.get("children", [])
-    if isinstance(children, list) and children:
-        total = sum(ability_total_heal(c) for c in children if isinstance(c, dict))
-        if total > 0:
-            return total
-    return 0.0
-
-
 def _stats_from_results(results: dict):
     if not isinstance(results, dict) or not results:
         return None
@@ -209,16 +174,6 @@ def spell_display_name(ab: dict) -> str:
     return ab.get("name", "?").replace("_", " ").title()
 
 
-def _extract_hps_dtps(cd: dict) -> tuple[float, float, float]:
-    hps_data  = cd.get("hps") or cd.get("hpse") or {}
-    dtps_data = cd.get("dtps") or {}
-    tmi_data  = cd.get("tmi")  or {}
-    hps  = safe_float(hps_data.get("mean")  if isinstance(hps_data,  dict) else hps_data)
-    dtps = safe_float(dtps_data.get("mean") if isinstance(dtps_data, dict) else dtps_data)
-    tmi  = safe_float(tmi_data.get("mean")  if isinstance(tmi_data,  dict) else tmi_data)
-    return round(hps, 1), round(dtps, 1), round(tmi, 1)
-
-
 def parse_results(json_path: str):
     try:
         with open(json_path) as f:
@@ -235,13 +190,6 @@ def parse_results(json_path: str):
         dps_data = cd.get("dps", {})
         dps_mean = safe_float(dps_data.get("mean"))
         dps_std  = safe_float(dps_data.get("mean_std_dev"))
-
-        hps, dtps, tmi = _extract_hps_dtps(cd)
-
-        hps_std_data = cd.get("hps") or cd.get("hpse") or {}
-        hps_std  = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
-        dtps_std_data = cd.get("dtps") or {}
-        dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
         fl_data      = cd.get("fight_length", {})
         fight_length = safe_float(fl_data.get("mean", 1)) or 1.0
@@ -265,25 +213,13 @@ def parse_results(json_path: str):
         if not isinstance(abilities, list):
             abilities = []
 
-        main_hps = hps
-        if main_hps <= 0:
-            for ab in abilities:
-                if isinstance(ab, dict):
-                    spell_hps = ability_hps(ab)
-                    if spell_hps > main_hps:
-                        main_hps = spell_hps
-
-        role = "healer" if main_hps > 100 else "dps"
-
         spells = []
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
-            dps_v     = ability_dps(ab)
-            tot_dmg   = ability_total_dmg(ab)
-            spell_hps = ability_hps(ab)
-            tot_heal  = ability_total_heal(ab)
-            if dps_v <= 0 and tot_dmg <= 0 and spell_hps <= 0 and tot_heal <= 0:
+            dps_v   = ability_dps(ab)
+            tot_dmg = ability_total_dmg(ab)
+            if dps_v <= 0 and tot_dmg <= 0:
                 continue
 
             name                        = spell_display_name(ab)
@@ -297,8 +233,6 @@ def parse_results(json_path: str):
                 "name":       name,
                 "dps":        round(dps_v, 2),
                 "total_dmg":  round(tot_dmg),
-                "hps":        round(spell_hps, 2),
-                "total_heal": round(tot_heal),
                 "crit_pct":   crit_pct,
                 "executes":   executes,
                 "count":      executes,
@@ -322,43 +256,31 @@ def parse_results(json_path: str):
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        total_spell_dps  = sum(s["dps"]        for s in spells)
-        total_spell_dmg  = sum(s["total_dmg"]  for s in spells)
-        total_spell_hps  = sum(s["hps"]        for s in spells)
-        total_spell_heal = sum(s["total_heal"]  for s in spells)
+        total_spell_dps = sum(s["dps"]       for s in spells)
+        total_spell_dmg = sum(s["total_dmg"] for s in spells)
 
         for s in spells:
-            s["dps_pct"]  = round(s["dps"]        / total_spell_dps  * 100, 1) if total_spell_dps  > 0 else 0.0
-            s["dmg_pct"]  = round(s["total_dmg"]  / total_spell_dmg  * 100, 1) if total_spell_dmg  > 0 else 0.0
-            s["hps_pct"]  = round(s["hps"]        / total_spell_hps  * 100, 1) if total_spell_hps  > 0 else 0.0
-            s["heal_pct"] = round(s["total_heal"] / total_spell_heal * 100, 1) if total_spell_heal > 0 else 0.0
+            s["dps_pct"] = round(s["dps"]       / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0
+            s["dmg_pct"] = round(s["total_dmg"] / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0
 
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
         top_spells = spells[:25]
-        other_dps  = sum(s["dps"]        for s in spells[25:])
-        other_dmg  = sum(s["total_dmg"]  for s in spells[25:])
-        other_hps  = sum(s["hps"]        for s in spells[25:])
-        other_heal = sum(s["total_heal"] for s in spells[25:])
-        if other_dps > 0 or other_dmg > 0 or other_hps > 0 or other_heal > 0:
+        other_dps  = sum(s["dps"]       for s in spells[25:])
+        other_dmg  = sum(s["total_dmg"] for s in spells[25:])
+        if other_dps > 0 or other_dmg > 0:
             top_spells.append({
                 "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
-                "hps": round(other_hps, 2), "total_heal": round(other_heal),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "is_channel": False,
-                "dps_pct":  round(other_dps  / total_spell_dps  * 100, 1) if total_spell_dps  > 0 else 0.0,
-                "dmg_pct":  round(other_dmg  / total_spell_dmg  * 100, 1) if total_spell_dmg  > 0 else 0.0,
-                "hps_pct":  round(other_hps  / total_spell_hps  * 100, 1) if total_spell_hps  > 0 else 0.0,
-                "heal_pct": round(other_heal / total_spell_heal * 100, 1) if total_spell_heal > 0 else 0.0,
+                "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
+                "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
             })
 
         return {
             "name":         player.get("name", "?"),
             "dps":          round(dps_mean, 1),
             "dps_std":      round(dps_std, 1),
-            "hps":          main_hps,
-            "hps_std":      round(hps_std, 1),
-            "role":         role,
             "fight_length": round(fight_length, 1),
             "stats":        stats,
             "spells":       top_spells,
@@ -369,7 +291,7 @@ def parse_results(json_path: str):
         return {"error": str(e), "trace": traceback.format_exc()}
 
 
-def generate_dps_chart(json_path: str, role: str = None) -> str:
+def generate_dps_chart(json_path: str) -> str:
     try:
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
@@ -389,24 +311,14 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
         if not isinstance(abilities, list):
             return None
 
-        if role is None:
-            hps, dtps, tmi = _extract_hps_dtps(cd)
-            role = "healer" if hps > 100 else "dps"
-
         real_dps = safe_float(cd.get("dps",  {}).get("mean", 0))
         real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
-        real_hps = safe_float((cd.get("hps") or cd.get("hpse") or {}).get("mean", 0))
 
         TOP_N  = 12
         COLORS = [
             "#f0027f", "#386cb0", "#fdc086", "#7fc97f", "#beaed4",
             "#bf5b17", "#999999", "#1b9e77", "#d95f02", "#7570b3",
             "#e7298a", "#66a61e", "#aaaaaa",
-        ]
-        HEAL_COLORS = [
-            "#00cc66", "#33cc99", "#66ffcc", "#00aa44", "#88ddaa",
-            "#004d22", "#00ff88", "#009933", "#66cc88", "#33ff66",
-            "#00cc55", "#88ff99", "#aaaaaa",
         ]
 
         def build_data(key_fn):
@@ -441,30 +353,14 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
 
         player_name = player.get("name", "?")
 
-        if role == "healer":
-            heal_names, heal_vals = build_data(ability_total_heal)
-            hps_names,  hps_vals  = build_data(ability_hps)
-            if not heal_vals and not hps_vals:
-                role = "dps"
-            else:
-                left_title  = f"Total Heal  ({fmt_dmg(real_hps * safe_float(cd.get('fight_length', {}).get('mean', 1)))})" if real_hps > 0 else "Total Heal"
-                right_title = f"HPS  ({fmt_dps(real_hps)})" if real_hps > 0 else "HPS"
-                chart_title = f"{player_name} \u2014 Healing Breakdown"
-                left_names, left_vals   = heal_names, heal_vals
-                right_names, right_vals = hps_names,  hps_vals
-                colors = HEAL_COLORS
+        dmg_names, dmg_vals = build_data(ability_total_dmg)
+        dps_names, dps_vals = build_data(ability_dps)
+        if not dmg_vals and not dps_vals:
+            return None
 
-        if role == "dps":
-            dmg_names, dmg_vals = build_data(ability_total_dmg)
-            dps_names, dps_vals = build_data(ability_dps)
-            if not dmg_vals and not dps_vals:
-                return None
-            left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
-            right_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
-            chart_title = f"{player_name} \u2014 Damage Breakdown"
-            left_names, left_vals   = dmg_names, dmg_vals
-            right_names, right_vals = dps_names, dps_vals
-            colors = COLORS
+        left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
+        right_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
+        chart_title = f"{player_name} \u2014 Damage Breakdown"
 
         fig = make_subplots(
             rows=1, cols=2,
@@ -472,15 +368,15 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             subplot_titles=[left_title, right_title],
         )
         fig.add_trace(go.Pie(
-            labels=left_names, values=left_vals,
+            labels=dmg_names, values=dmg_vals,
             hole=0.38, textinfo="percent", textfont_size=11,
-            marker=dict(colors=colors[:len(left_names)], line=dict(color="#0d0d1a", width=1.5)),
+            marker=dict(colors=COLORS[:len(dmg_names)], line=dict(color="#0d0d1a", width=1.5)),
             name=left_title, showlegend=True,
         ), row=1, col=1)
         fig.add_trace(go.Pie(
-            labels=right_names, values=right_vals,
+            labels=dps_names, values=dps_vals,
             hole=0.38, textinfo="percent", textfont_size=11,
-            marker=dict(colors=colors[:len(right_names)], line=dict(color="#0d0d1a", width=1.5)),
+            marker=dict(colors=COLORS[:len(dps_names)], line=dict(color="#0d0d1a", width=1.5)),
             name=right_title, showlegend=False,
         ), row=1, col=2)
         fig.update_layout(
@@ -521,10 +417,9 @@ async def get_dps_chart(job_id: str):
     job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
-    png = generate_dps_chart(job["json_path"], role='dps')
+    png = generate_dps_chart(job["json_path"])
     if not png or not os.path.exists(png):
         raise HTTPException(500, "Chart generation failed")
-    # Wczytaj do pamięci i usuń plik z /tmp — zapobiegą zapychaniu dysku
     try:
         with open(png, "rb") as f:
             data = f.read()
@@ -598,15 +493,13 @@ async def get_result_debug(job_id: str):
             return obj
 
         cd = player.get("collected_data", {})
-        hps, dtps, tmi = _extract_hps_dtps(cd)
         return {
-            "player_name":          player.get("name"),
-            "player_keys":          list(player.keys()),
-            "stats_type":           type(stats_raw).__name__,
-            "stats_len":            len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
-            "first_3_abilities":    strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
-            "collected_data_keys":  list(cd.keys()),
-            "hps": hps, "dtps": dtps, "tmi": tmi,
+            "player_name":         player.get("name"),
+            "player_keys":         list(player.keys()),
+            "stats_type":          type(stats_raw).__name__,
+            "stats_len":           len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
+            "first_3_abilities":   strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
+            "collected_data_keys": list(cd.keys()),
         }
     except Exception as e:
         import traceback

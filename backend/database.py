@@ -13,35 +13,6 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
 
-# Mapowanie spec -> rola (używane przy override w UI w przyszłości)
-SPEC_ROLE: dict[str, str] = {
-    # Healerzy
-    "Holy Priest":         "healer",
-    "Discipline Priest":   "healer",
-    "Holy Paladin":        "healer",
-    "Restoration Druid":   "healer",
-    "Restoration Shaman":  "healer",
-    "Mistweaver Monk":     "healer",
-    "Preservation Evoker": "healer",
-    # Tanki
-    "Protection Warrior":    "tank",
-    "Protection Paladin":    "tank",
-    "Blood Death Knight":    "tank",
-    "Guardian Druid":        "tank",
-    "Brewmaster Monk":       "tank",
-    "Vengeance Demon Hunter": "tank",
-}
-
-
-def detect_role_from_result(result: dict) -> str:
-    """Auto-detect roli na podstawie wyniku SimulationCraft."""
-    if result.get("hps", 0) > 0:
-        return "healer"
-    if result.get("dtps", 0) > 0 or result.get("tmi") is not None:
-        return "tank"
-    return "dps"
-
-
 class JobModel(Base):
     __tablename__ = "jobs"
 
@@ -66,7 +37,7 @@ class HistoryEntryModel(Base):
     role                 = Column(String(16), default="dps")
     fight_style          = Column(String(64), default="Patchwerk")
     user_id              = Column(String(64), nullable=True, index=True)
-    created_at           = Column(DateTime, default=datetime.utcnow)  # było Integer (unix ts)
+    created_at           = Column(DateTime, default=datetime.utcnow)
 
 
 class SessionModel(Base):
@@ -92,7 +63,7 @@ class NewsModel(Base):
     title      = Column(String(256), nullable=False)
     body       = Column(Text, nullable=False)
     published  = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)  # było Integer (unix ts)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class LogEntryModel(Base):
@@ -109,10 +80,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         try:
-            # Migracja 1: dodaj kolumnę role jeśli brakuje
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
-            # Migracja 2: zmień created_at z INTEGER na TIMESTAMP w history
-            # USING konwertuje istniejące unix timestamps na DateTime
             db.execute(text("""
                 DO $$ BEGIN
                     IF (SELECT data_type FROM information_schema.columns
@@ -123,7 +91,6 @@ def init_db():
                     END IF;
                 END $$;
             """))
-            # Migracja 3: zmień created_at z INTEGER na TIMESTAMP w news
             db.execute(text("""
                 DO $$ BEGIN
                     IF (SELECT data_type FROM information_schema.columns
@@ -161,7 +128,6 @@ def update_job_status(job_id: str, status: str, error: str = None):
 
 
 def get_job(job_id: str) -> dict | None:
-    """Zwraca job jako słownik — nie ORM obiekt — żeby uniknąć DetachedInstanceError poza sesją."""
     with SessionLocal() as db:
         job = db.query(JobModel).filter(JobModel.job_id == job_id).first()
         if not job:

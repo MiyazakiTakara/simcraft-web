@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, HistoryEntryModel, JobModel, detect_role_from_result
+from database import SessionLocal, HistoryEntryModel, JobModel
 
 router = APIRouter()
 
@@ -18,7 +18,6 @@ class HistoryEntry(BaseModel):
     character_spec: Optional[str] = ""
     character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
-    role: Optional[str] = "dps"
     fight_style: Optional[str] = "Patchwerk"
     user_id: Optional[str] = None
 
@@ -31,10 +30,8 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
         "character_spec":       e.character_spec,
         "character_realm_slug": e.character_realm_slug,
         "dps":                  e.dps,
-        "role":                 e.role,
         "fight_style":          e.fight_style,
         "user_id":              e.user_id,
-        # created_at to DateTime — serializujemy jako ISO string
         "created_at":           e.created_at.isoformat() if e.created_at else None,
     }
 
@@ -99,7 +96,6 @@ async def get_result_meta(job_id: str):
 @router.post("/api/history")
 async def add_history(entry: HistoryEntry):
     with SessionLocal() as db:
-        # Walidacja: job musi istnieć w tabeli jobs zanim trafi do historii
         job_exists = db.query(JobModel).filter(JobModel.job_id == entry.job_id).first()
         if not job_exists:
             raise HTTPException(404, "Job not found — cannot add to history")
@@ -113,10 +109,9 @@ async def add_history(entry: HistoryEntry):
                 character_spec       = entry.character_spec,
                 character_realm_slug = entry.character_realm_slug or "",
                 dps                  = entry.dps,
-                role                 = entry.role or "dps",
+                role                 = "dps",
                 fight_style          = entry.fight_style,
                 user_id              = entry.user_id,
-                # created_at ma default=datetime.utcnow w modelu — nie ustawiamy ręcznie
             )
             db.add(row)
             db.commit()
@@ -131,7 +126,7 @@ async def get_character_trend(
     fight_style: str = "Patchwerk",
     limit: int = 50
 ):
-    """Pobiera dane do wykresu DPS/HPS/DTPS w czasie dla konkretnej postaci."""
+    """Pobiera dane do wykresu DPS w czasie dla konkretnej postaci."""
     if not session:
         raise HTTPException(400, "Brak session")
 
@@ -157,7 +152,6 @@ async def get_character_trend(
             {
                 "timestamp": r.created_at.isoformat() if r.created_at else None,
                 "dps":       r.dps,
-                "role":      r.role,
                 "job_id":    r.job_id,
             }
             for r in rows
