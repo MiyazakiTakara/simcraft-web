@@ -9,19 +9,36 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from logging_config import setup_logging
 from database import init_db
 from auth import router as auth_router
 from characters import router as characters_router
-from simulation import router as sim_router, RESULTS_DIR, jobs
+from simulation import router as sim_router, RESULTS_DIR, jobs, create_job
 from results import router as results_router
 from history import router as history_router
 from admin import router as admin_router
+
+log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
+
+REQUIRED_ENV_VARS = [
+    "BLIZZARD_CLIENT_ID",
+    "BLIZZARD_CLIENT_SECRET",
+]
+
+def _validate_env():
+    missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
+    if missing:
+        log.error("missing-env-vars", vars=missing)
+        raise RuntimeError(f"Missing required env vars: {missing}")
+    log.info("env-validated")
+
+_validate_env()
 
 
 
 # Inicjalizacja bazy danych
 init_db()
-print("Baza danych zainicjalizowana", flush=True)
+log.info("database-initialized")
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -116,14 +133,16 @@ def _restore_jobs():
         job_id = fname[:-5]
         fpath  = os.path.join(RESULTS_DIR, fname)
         jobs[job_id] = {"status": "done", "json_path": fpath, "error": None}
+        create_job(job_id, fpath)
 
     for entry in os.scandir(RESULTS_DIR):
         if entry.is_dir():
             out = os.path.join(entry.path, "output.json")
             if os.path.exists(out):
                 jobs[entry.name] = {"status": "done", "json_path": out, "error": None}
+                create_job(entry.name, out)
 
-    print(f"Odtworzono {len(jobs)} jobow z dysku", flush=True)
+    log.info("jobs-restored", count=len(jobs))
 
 
 _restore_jobs()

@@ -1,5 +1,6 @@
 import os
-from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean
+from datetime import datetime
+from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ.get(
@@ -10,6 +11,17 @@ DATABASE_URL = os.environ.get(
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
+
+
+class JobModel(Base):
+    __tablename__ = "jobs"
+
+    job_id       = Column(String(64), primary_key=True)
+    status       = Column(String(16), nullable=False, default="running")
+    json_path    = Column(String(256))
+    error        = Column(Text)
+    started_at   = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
 
 
 class HistoryEntryModel(Base):
@@ -55,3 +67,26 @@ class NewsModel(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
+def create_job(job_id: str, json_path: str):
+    with SessionLocal() as db:
+        job = JobModel(job_id=job_id, status="running", json_path=json_path)
+        db.add(job)
+        db.commit()
+
+
+def update_job_status(job_id: str, status: str, error: str = None):
+    with SessionLocal() as db:
+        job = db.query(JobModel).filter(JobModel.job_id == job_id).first()
+        if job:
+            job.status = status
+            job.error = error
+            if status in ("done", "error"):
+                job.completed_at = datetime.utcnow()
+            db.commit()
+
+
+def get_job(job_id: str):
+    with SessionLocal() as db:
+        return db.query(JobModel).filter(JobModel.job_id == job_id).first()

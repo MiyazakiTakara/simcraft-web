@@ -9,3 +9,4 @@ kaleido==0.2.1
 pandas==2.2.3
 sqlalchemy==2.0.30
 psycopg2-binary==2.9.9
+structlog==24.4.0

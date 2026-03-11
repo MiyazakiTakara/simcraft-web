@@ -11,8 +11,13 @@ from typing import Optional
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from logging_config import setup_logging
+from database import create_job, update_job_status, get_job
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -108,16 +113,19 @@ def _run_sim(job_id: str, simc_input: str):
         )
         out_path = jobs[job_id].get("json_path")
         if result.returncode != 0 or not os.path.exists(out_path):
-            jobs[job_id]["status"] = "error"
-            jobs[job_id]["error"]  = result.stderr[-2000:] if result.stderr else "simc failed"
+            error_msg = result.stderr[-2000:] if result.stderr else "simc failed"
+            update_job_status(job_id, "error", error_msg)
+            log.error("sim-failed", job_id=job_id, returncode=result.returncode, error=error_msg)
         else:
-            jobs[job_id]["status"] = "done"
+            update_job_status(job_id, "done")
+            log.info("sim-completed", job_id=job_id)
     except subprocess.TimeoutExpired:
-        jobs[job_id]["status"] = "error"
-        jobs[job_id]["error"]  = f"Symulacja przekroczyla limit czasu ({JOB_TIMEOUT}s)"
+        error_msg = f"Symulacja przekroczyla limit czasu ({JOB_TIMEOUT}s)"
+        update_job_status(job_id, "error", error_msg)
+        log.error("sim-timeout", job_id=job_id, timeout=JOB_TIMEOUT)
     except Exception as e:
-        jobs[job_id]["status"] = "error"
-        jobs[job_id]["error"]  = str(e)
+        update_job_status(job_id, "error", str(e))
+        log.exception("sim-exception", job_id=job_id)
     finally:
         with _running_lock:
             _running_sims -= 1
@@ -133,11 +141,12 @@ def _watchdog():
                 if now - started > JOB_TIMEOUT + 60:
                     jobs[job_id]["status"] = "error"
                     jobs[job_id]["error"]  = "Job timeout (watchdog)"
+                    update_job_status(job_id, "error", "Job timeout (watchdog)")
                     with _running_lock:
                         global _running_sims
                         if _running_sims > 0:
                             _running_sims -= 1
-                    print(f"Watchdog: job {job_id} timeout", flush=True)
+                    log.warning("job-timeout", job_id=job_id)
 
 
 threading.Thread(target=_watchdog, daemon=True).start()
@@ -157,6 +166,7 @@ async def start_sim(request: Request, req: SimRequest):
         _running_sims += 1
 
     job_id   = str(uuid.uuid4())
+    log.info("sim-started", job_id=job_id, addon_text=bool(req.addon_text), character=req.name, realm=req.realm_slug)
     job_dir  = os.path.join(RESULTS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     out_path = os.path.join(job_dir, "output.json")
@@ -168,6 +178,8 @@ async def start_sim(request: Request, req: SimRequest):
         "started_at": time.time(),
     }
 
+    create_job(job_id, out_path)
+
     simc_input = _build_simc_input(req, out_path)
     t = threading.Thread(target=_run_sim, args=(job_id, simc_input), daemon=True)
     t.start()
@@ -177,6 +189,9 @@ async def start_sim(request: Request, req: SimRequest):
 
 @router.get("/api/job/{job_id}")
 async def get_job_status(job_id: str):
+    db_job = get_job(job_id)
+    if db_job:
+        return {"status": db_job.status, "error": db_job.error}
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
