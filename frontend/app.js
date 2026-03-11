@@ -658,7 +658,10 @@ function app() {
 
      showItemTooltip(event, item) {
        const tooltip = document.getElementById('item-tooltip');
-       if (!tooltip) return;
+       if (!tooltip) {
+         console.error('Tooltip element not found');
+         return;
+       }
 
        let html = `
          <div class="item-tooltip-slot">${item.slot}</div>
@@ -702,16 +705,15 @@ function app() {
 
        // Position tooltip
        const rect = event.target.getBoundingClientRect();
-       const tooltipRect = tooltip.getBoundingClientRect();
        
-       let top = rect.top - tooltipRect.height - 10;
-       let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+       let top = rect.top - tooltip.offsetHeight - 10;
+       let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
        
        // Adjust if tooltip goes off screen
        if (top < 10) top = rect.bottom + 10;
        if (left < 10) left = 10;
-       if (left + tooltipRect.width > window.innerWidth - 10) {
-         left = window.innerWidth - tooltipRect.width - 10;
+       if (left + tooltip.offsetWidth > window.innerWidth - 10) {
+         left = window.innerWidth - tooltip.offsetWidth - 10;
        }
        
        tooltip.style.top = top + 'px';

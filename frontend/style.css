@@ -259,11 +259,12 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   border-radius: 8px;
   padding: 0.75rem;
   max-width: 280px;
-  z-index: 1000;
+  z-index: 99999;
   pointer-events: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.8);
   font-size: 0.85rem;
   line-height: 1.4;
+  display: none;
 }
 
 .item-tooltip-title {
