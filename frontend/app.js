@@ -1,3 +1,23 @@
+// SPEC -> rola (mirror z backendu, używane do auto-detect przed symulacją)
+const SPEC_ROLE = {
+  'Holy Priest':          'healer',
+  'Discipline Priest':    'healer',
+  'Holy Paladin':         'healer',
+  'Restoration Druid':    'healer',
+  'Restoration Shaman':   'healer',
+  'Mistweaver Monk':      'healer',
+  'Preservation Evoker':  'healer',
+  'Protection Warrior':   'tank',
+  'Protection Paladin':   'tank',
+  'Blood Death Knight':   'tank',
+  'Guardian Druid':       'tank',
+  'Brewmaster Monk':      'tank',
+  'Vengeance Demon Hunter': 'tank',
+};
+
+const ROLE_ICON = { dps: '⚔️', healer: '💚', tank: '🛡️' };
+const ROLE_LABEL = { dps: 'DPS', healer: 'Healer', tank: 'Tank' };
+
 function app() {
   return {
     sessionId: null,
@@ -9,6 +29,7 @@ function app() {
     pubResult: null,
     pubJob: null,
     simMode: "armory",
+    simRole: "auto",   // auto | dps | healer | tank
     addonText: "",
     guestAddonText: "",
     guestSimOptions: {
@@ -97,8 +118,6 @@ function app() {
       "Warrior":       "#C69B3A",
     },
 
-    // Appearance settings — hero_custom_text MUSI być tutaj jako pusty string,
-    // żeby Alpine 3 był reaktywny na ten klucz od startu
     appearance: {
       header_title: "SimCraft Web",
       hero_title: "World of Warcraft",
@@ -108,8 +127,6 @@ function app() {
 
     init() {
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
-
-      // Load appearance settings
       this.loadAppearance();
 
       const params = new URLSearchParams(window.location.search);
@@ -139,18 +156,50 @@ function app() {
         const res = await fetch('/api/appearance');
         if (res.ok) {
           const data = await res.json();
-          // Przypisuj pole po polu — NIE rób this.appearance = data,
-          // bo Alpine 3 traci reaktywność na klucze które nie istniały w init
-          this.appearance.header_title   = data.header_title   ?? this.appearance.header_title;
-          this.appearance.hero_title     = data.hero_title     ?? this.appearance.hero_title;
-          this.appearance.emoji          = data.emoji          ?? this.appearance.emoji;
+          this.appearance.header_title     = data.header_title     ?? this.appearance.header_title;
+          this.appearance.hero_title       = data.hero_title       ?? this.appearance.hero_title;
+          this.appearance.emoji            = data.emoji            ?? this.appearance.emoji;
           this.appearance.hero_custom_text = data.hero_custom_text ?? "";
-          // Sync browser tab title with header_title
           document.title = this.appearance.emoji + ' ' + this.appearance.header_title;
         }
       } catch (e) {
         console.error('Failed to load appearance:', e);
       }
+    },
+
+    // Zwraca rolę wynikającą z aktualnie wybranego chara (dla auto-detect)
+    detectedRole() {
+      if (!this.selectedChar) return 'dps';
+      const spec = this.selectedChar.spec || '';
+      return SPEC_ROLE[spec] || 'dps';
+    },
+
+    // Efektywna rola: jeśli simRole==='auto' — detect po speccu, inaczej override
+    effectiveRole() {
+      return this.simRole === 'auto' ? this.detectedRole() : this.simRole;
+    },
+
+    roleIcon(role) { return ROLE_ICON[role] || '⚔️'; },
+    roleLabel(role) { return ROLE_LABEL[role] || 'DPS'; },
+
+    // Gdy user wybiera postać — resetuj simRole do auto (żeby auto-detect zadziałał)
+    selectChar(ch) {
+      this.selectedChar = ch;
+      this.simResult = null;
+      this.job = null;
+      this.simRole = 'auto';
+      this.currentView = "symulacje";
+      this.activeTab = "symulacje";
+      localStorage.setItem("simcraft_last_char", ch.name);
+    },
+
+    // Główna metryka do pokazania w wyniku
+    resultMetric(result) {
+      if (!result) return { value: 0, std: 0, label: 'DPS' };
+      const role = result._role || this.effectiveRole();
+      if (role === 'healer') return { value: result.hps ?? 0, std: result.hps_std ?? 0, label: 'HPS' };
+      if (role === 'tank')   return { value: result.dtps ?? 0, std: result.dtps_std ?? 0, label: 'DTPS' };
+      return { value: result.dps ?? 0, std: result.dps_std ?? 0, label: 'DPS' };
     },
 
     async loadNews() {
@@ -251,80 +300,80 @@ function app() {
       } catch (e) { console.error("Failed to load public history", e); }
     },
 
-      async loadCharDetails(char) {
-        this.loadingCharDetails = true;
-        this.charDetailsError = null;
-        this.charEquipment = [];
-        this.charTalents = [];
-        try {
-          const [eq, talents] = await Promise.all([
-            API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
-            API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
-          ]);
-          this.charEquipment = eq.equipment || [];
-          this.charTalents = talents.talents || [];
-        } catch (e) {
-          this.charDetailsError = e.message;
-          console.error("Failed to load char details", e);
-        } finally {
-          this.loadingCharDetails = false;
-          this.$nextTick(() => this.drawDpsTrendChart(char));
+    async loadCharDetails(char) {
+      this.loadingCharDetails = true;
+      this.charDetailsError = null;
+      this.charEquipment = [];
+      this.charTalents = [];
+      try {
+        const [eq, talents] = await Promise.all([
+          API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
+          API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
+        ]);
+        this.charEquipment = eq.equipment || [];
+        this.charTalents = talents.talents || [];
+      } catch (e) {
+        this.charDetailsError = e.message;
+        console.error("Failed to load char details", e);
+      } finally {
+        this.loadingCharDetails = false;
+        this.$nextTick(() => this.drawDpsTrendChart(char));
+      }
+    },
+
+    async drawDpsTrendChart(char) {
+      const chartDiv = document.getElementById('dps-trend-chart');
+      if (!chartDiv) return;
+
+      try {
+        const params = new URLSearchParams({
+          session: this.sessionId,
+          character_name: char.name,
+          character_realm_slug: char.realm_slug,
+          fight_style: 'Patchwerk',
+          limit: 100
+        });
+
+        const response = await fetch(`/api/history/trend?${params}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (!data.points || data.points.length === 0) {
+          Plotly.purge(chartDiv);
+          chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
+          return;
         }
-      },
 
-     async drawDpsTrendChart(char) {
-       const chartDiv = document.getElementById('dps-trend-chart');
-       if (!chartDiv) return;
+        const x = data.points.map(p => new Date(p.timestamp * 1000));
+        const y = data.points.map(p => p.dps);
 
-       try {
-         const params = new URLSearchParams({
-           session: this.sessionId,
-           character_name: char.name,
-           character_realm_slug: char.realm_slug,
-           fight_style: 'Patchwerk',
-           limit: 100
-         });
-         
-         const response = await fetch(`/api/history/trend?${params}`);
-         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-         
-         const data = await response.json();
-         
-         if (!data.points || data.points.length === 0) {
-           Plotly.purge(chartDiv);
-           chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
-           return;
-         }
+        const trace = {
+          x, y,
+          mode: 'lines+markers',
+          type: 'scatter',
+          name: 'DPS',
+          line: { color: '#f4a01c', width: 2 },
+          marker: { size: 6, color: '#f4a01c' },
+          hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
+        };
 
-         const x = data.points.map(p => new Date(p.timestamp * 1000));
-         const y = data.points.map(p => p.dps);
+        const layout = {
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          margin: { l: 50, r: 20, t: 20, b: 50 },
+          xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
+          yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'DPS' },
+          showlegend: false
+        };
 
-         const trace = {
-           x, y,
-           mode: 'lines+markers',
-           type: 'scatter',
-           name: 'DPS',
-           line: { color: '#f4a01c', width: 2 },
-           marker: { size: 6, color: '#f4a01c' },
-           hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
-         };
-
-         const layout = {
-           paper_bgcolor: 'rgba(0,0,0,0)',
-           plot_bgcolor: 'rgba(0,0,0,0)',
-           margin: { l: 50, r: 20, t: 20, b: 50 },
-           xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
-           yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'DPS' },
-           showlegend: false
-         };
-
-         Plotly.newPlot(chartDiv, [trace], layout, { responsive: true, displayModeBar: false });
-       } catch (e) {
-         console.error("Failed to load DPS trend", e);
-         Plotly.purge(chartDiv);
-         chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f66">Błąd ładowania danych</div>';
-       }
-     },
+        Plotly.newPlot(chartDiv, [trace], layout, { responsive: true, displayModeBar: false });
+      } catch (e) {
+        console.error("Failed to load DPS trend", e);
+        Plotly.purge(chartDiv);
+        chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f66">Błąd ładowania danych</div>';
+      }
+    },
 
     getItemQualityColor(quality) {
       const colors = {
@@ -340,7 +389,6 @@ function app() {
       return colors[quality] || "#fff";
     },
 
-    // Wywołanie z panelu bocznego (zakładka Symulacje) — ładuje wynik inline
     async loadHistoryResult(jobId) {
       try {
         this.simResult = await API.getResultJson(jobId);
@@ -351,19 +399,20 @@ function app() {
         const charClass = entry?.character_class || null;
         const charSpec  = entry?.character_spec  || null;
         const charObj   = charName ? this.characters.find(c => c.name === charName) : null;
+        if (entry?.role) this.simResult._role = entry.role;
         this.job = {
           id:        jobId,
           charName:  charName !== 'Addon Export' ? charName : null,
           realmSlug: charObj?.realm_slug || entry?.character_realm_slug || null,
           charClass: charClass || null,
           charSpec:  charSpec || charObj?.spec || null,
+          role:      entry?.role || 'dps',
         };
       } catch (e) {
-        alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
+        alert("Nie udało się załadować wyniku: " + e.message);
       }
     },
 
-    // Wywołanie z zakładki Profil > Historia — otwiera /result/:jobId w nowej karcie
     openResultPage(jobId) {
       window.open('/result/' + jobId, '_blank');
     },
@@ -375,6 +424,7 @@ function app() {
           API.getResultMeta(jobId),
         ]);
         result._source = meta?.character_name === 'Addon Export' ? 'addon' : 'history';
+        if (meta?.role) result._role = meta.role;
         this.pubResult = result;
         this.pubJob = {
           id:        jobId,
@@ -382,6 +432,7 @@ function app() {
           realmSlug: meta?.character_realm_slug || null,
           charClass: meta?.character_class || null,
           charSpec:  meta?.character_spec  || null,
+          role:      meta?.role || 'dps',
         };
       } catch (e) {
         console.error("loadPubResult failed", e);
@@ -413,7 +464,7 @@ function app() {
               const result = await API.getResultJson(guestJobId);
               result._source = 'addon';
               this.pubResult = result;
-              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null };
+              this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: 'dps' };
               await API.saveToHistory({
                 job_id:               guestJobId,
                 character_name:       "Addon Export",
@@ -428,7 +479,7 @@ function app() {
               this.guestLoadingSim = false;
             } else if (status.status === "error") {
               clearInterval(this._guestPollInterval);
-              this.guestSimError = "B\u0142\u0105d symulacji: " + (status.error || "Nieznany b\u0142\u0105d");
+              this.guestSimError = "Błąd symulacji: " + (status.error || "Nieznany błąd");
               this.guestLoadingSim = false;
             }
           } catch (e) {
@@ -437,7 +488,7 @@ function app() {
           }
         }, 3000);
       } catch (e) {
-        this.guestSimError = "B\u0142\u0105d: " + e.message;
+        this.guestSimError = "Błąd: " + e.message;
         this.guestLoadingSim = false;
       }
     },
@@ -469,15 +520,6 @@ function app() {
     armoryUrl(realmSlug, name) {
       if (!realmSlug || !name) return null;
       return `https://worldofwarcraft.blizzard.com/en-gb/character/eu/${realmSlug}/${name.toLowerCase()}`;
-    },
-
-    selectChar(ch) {
-      this.selectedChar = ch;
-      this.simResult = null;
-      this.job = null;
-      this.currentView = "symulacje";
-      this.activeTab = "symulacje";
-      localStorage.setItem("simcraft_last_char", ch.name);
     },
 
     charDetailsModal: null,
@@ -520,6 +562,7 @@ function app() {
           realmSlug: this.selectedChar?.realm_slug || null,
           charClass: this.selectedChar?.class || null,
           charSpec:  this.selectedChar?.spec || null,
+          role:      this.effectiveRole(),
         };
         this._pollInterval = setInterval(() => this._pollJob(), 3000);
       } catch (e) {
@@ -536,6 +579,7 @@ function app() {
         if (status.status === "done") {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
+          this.simResult._role = this.job.role;
           await API.saveToHistory({
             job_id:               this.job.id,
             character_name:       this.selectedChar?.name || "Addon Export",
@@ -582,29 +626,29 @@ function app() {
       return Array.from(charMap.values()).sort((a, b) => b.created_at - a.created_at);
     },
 
-     getCharDps(charName) {
-       const charSims = this.history.filter(h => h.character_name === charName);
-       if (charSims.length === 0) return null;
-       const sortedSims = charSims.sort((a, b) => a.created_at - b.created_at);
-       const dpsList = sortedSims.map(h => h.dps);
-       const latest = dpsList[dpsList.length - 1];
-       const first = dpsList[0];
-       const diff = latest - first;
-       const trend = dpsList.length > 1 
-         ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
-         : '1 symulacja';
-       return {
-         latest, first, diff, trend,
-         count: dpsList.length,
-         lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
-         dpsList,
-         chartData: sortedSims.map(h => ({
-           x: new Date(h.created_at * 1000),
-           y: h.dps,
-           job_id: h.job_id
-         }))
-       };
-     },
+    getCharDps(charName) {
+      const charSims = this.history.filter(h => h.character_name === charName);
+      if (charSims.length === 0) return null;
+      const sortedSims = charSims.sort((a, b) => a.created_at - b.created_at);
+      const dpsList = sortedSims.map(h => h.dps);
+      const latest = dpsList[dpsList.length - 1];
+      const first = dpsList[0];
+      const diff = latest - first;
+      const trend = dpsList.length > 1
+        ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
+        : '1 symulacja';
+      return {
+        latest, first, diff, trend,
+        count: dpsList.length,
+        lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
+        dpsList,
+        chartData: sortedSims.map(h => ({
+          x: new Date(h.created_at * 1000),
+          y: h.dps,
+          job_id: h.job_id
+        }))
+      };
+    },
 
     getCharAvatar(name) {
       const ch = this.characters.find(c => c.name === name);
@@ -660,55 +704,55 @@ function app() {
       if (diff < 86400) return Math.floor(diff / 3600) + "h temu";
       return date.toLocaleDateString('pl-PL');
     },
-     getShareUrl(jobId) { return window.location.origin + "/result/" + jobId; },
-     copyToClipboard(text, jobId) {
-       navigator.clipboard.writeText(text).then(() => {
-         this.copiedJobId = jobId || true;
-         setTimeout(() => { this.copiedJobId = null; }, 2000);
-       }).catch(() => {});
-     },
+    getShareUrl(jobId) { return window.location.origin + "/result/" + jobId; },
+    copyToClipboard(text, jobId) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.copiedJobId = jobId || true;
+        setTimeout(() => { this.copiedJobId = null; }, 2000);
+      }).catch(() => {});
+    },
 
-     showItemTooltip(event, item) {
-       const tooltip = document.getElementById('item-tooltip');
-       if (!tooltip) return;
+    showItemTooltip(event, item) {
+      const tooltip = document.getElementById('item-tooltip');
+      if (!tooltip) return;
 
-       let html = `
-         <div class="item-tooltip-slot">${item.slot}</div>
-         <div class="item-tooltip-title" style="color:${this.getItemQualityColor(item.quality)}">${item.name}</div>
-         <div style="color:var(--muted);font-size:.75rem;margin-bottom:.5rem">ilvl ${item.level}</div>
-       `;
-       if (item.description) html += `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic">${item.description}</div>`;
-       if (item.stats && item.stats.length > 0) {
-         html += '<div class="item-tooltip-stats">';
-         item.stats.forEach(stat => {
-           html += `<div class="item-tooltip-stat"><span>${stat.type}</span><span>${stat.value > 0 ? '+' : ''}${stat.value}</span></div>`;
-         });
-         html += '</div>';
-       }
-       if (item.enchant) html += `<div class="item-tooltip-enchant">✓ ${item.enchant}</div>`;
-       if (item.gem)     html += `<div class="item-tooltip-gem">♦ ${item.gem}</div>`;
-       if (item.spells && item.spells.length > 0) {
-         item.spells.forEach(spell => {
-           html += `<div class="item-tooltip-spell"><div class="item-tooltip-spell-name">${spell.name}</div><div class="item-tooltip-spell-desc">${spell.description}</div></div>`;
-         });
-       }
+      let html = `
+        <div class="item-tooltip-slot">${item.slot}</div>
+        <div class="item-tooltip-title" style="color:${this.getItemQualityColor(item.quality)}">${item.name}</div>
+        <div style="color:var(--muted);font-size:.75rem;margin-bottom:.5rem">ilvl ${item.level}</div>
+      `;
+      if (item.description) html += `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic">${item.description}</div>`;
+      if (item.stats && item.stats.length > 0) {
+        html += '<div class="item-tooltip-stats">';
+        item.stats.forEach(stat => {
+          html += `<div class="item-tooltip-stat"><span>${stat.type}</span><span>${stat.value > 0 ? '+' : ''}${stat.value}</span></div>`;
+        });
+        html += '</div>';
+      }
+      if (item.enchant) html += `<div class="item-tooltip-enchant">✓ ${item.enchant}</div>`;
+      if (item.gem)     html += `<div class="item-tooltip-gem">♦ ${item.gem}</div>`;
+      if (item.spells && item.spells.length > 0) {
+        item.spells.forEach(spell => {
+          html += `<div class="item-tooltip-spell"><div class="item-tooltip-spell-name">${spell.name}</div><div class="item-tooltip-spell-desc">${spell.description}</div></div>`;
+        });
+      }
 
-       tooltip.innerHTML = html;
-       tooltip.style.display = 'block';
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
 
-       const rect = event.target.getBoundingClientRect();
-       let top  = rect.top - tooltip.offsetHeight - 10;
-       let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
-       if (top < 10) top = rect.bottom + 10;
-       if (left < 10) left = 10;
-       if (left + tooltip.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltip.offsetWidth - 10;
-       tooltip.style.top  = top + 'px';
-       tooltip.style.left = left + 'px';
-     },
+      const rect = event.target.getBoundingClientRect();
+      let top  = rect.top - tooltip.offsetHeight - 10;
+      let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+      if (top < 10) top = rect.bottom + 10;
+      if (left < 10) left = 10;
+      if (left + tooltip.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltip.offsetWidth - 10;
+      tooltip.style.top  = top + 'px';
+      tooltip.style.left = left + 'px';
+    },
 
-     hideItemTooltip() {
-       const tooltip = document.getElementById('item-tooltip');
-       if (tooltip) tooltip.style.display = 'none';
-     },
-   };
- }
+    hideItemTooltip() {
+      const tooltip = document.getElementById('item-tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+    },
+  };
+}
