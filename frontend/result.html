@@ -6,6 +6,7 @@
   <!-- OG_META_PLACEHOLDER -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link rel="stylesheet" href="/style.css?v=4"/>
+  <script src="/i18n.js?v=1"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/api.js?v=2"></script>
   <style>
@@ -20,8 +21,6 @@
     .result-footer { margin-top:1.2rem; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; font-size:.82rem; color:var(--muted); }
     .result-footer a { color:var(--muted); }
     .spinner-wrap { display:flex; justify-content:center; align-items:center; padding:4rem; }
-
-    /* Spell tooltip */
     .spell-row { position:relative; }
     .spell-tooltip {
       display:none;
@@ -30,9 +29,7 @@
       border-radius:8px; padding:.55rem .75rem; min-width:180px; max-width:250px;
       font-size:.85rem; line-height:1.5; white-space:normal;
       box-shadow:0 4px 20px rgba(0,0,0,0.8); pointer-events:none;
-      color:var(--text);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      color:var(--text); word-wrap:break-word; overflow-wrap:break-word;
     }
     .spell-row:hover .spell-tooltip { display:block; }
     .spell-tooltip-row { display:flex; justify-content:space-between; gap:1.2rem; margin:.2rem 0; }
@@ -51,7 +48,19 @@
   <!-- Header -->
   <header class="header">
     <a href="/" class="header-logo" style="text-decoration:none" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</a>
-    <a href="/" class="btn btn-ghost" style="font-size:.85rem">← Strona główna</a>
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <!-- Przełącznik języka -->
+      <div style="display:flex;gap:.2rem">
+        <template x-for="lang in ['pl','en']" :key="lang">
+          <button
+            @click="$store.i18n.setLang(lang)"
+            :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.8rem', padding: '.2rem .35rem'}"
+            x-text="lang.toUpperCase()"
+          ></button>
+        </template>
+      </div>
+      <a href="/" class="btn btn-ghost" style="font-size:.85rem" x-text="'← ' + $store.i18n.t('nav.home')"></a>
+    </div>
   </header>
 
   <div class="result-page">
@@ -65,7 +74,7 @@
     <div class="result-not-found" x-show="!loading && error">
       <div class="icon">🔍</div>
       <p x-text="error"></p>
-      <a href="/" class="btn btn-primary" style="margin-top:1rem">Wróć na stronę główną</a>
+      <a href="/" class="btn btn-primary" style="margin-top:1rem" x-text="$store.i18n.t('result.back_home')"></a>
     </div>
 
     <!-- Wynik -->
@@ -77,33 +86,20 @@
           <div class="result-hero">
             <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric().value)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
-              <span x-text="'DPS (±' + formatDps(resultMetric().std) + ')'"></span>
+              <span x-text="$store.i18n.t('result.dps') + ' (±' + formatDps(resultMetric().std) + ')'"></span>
 
-              <!-- Badge postaci z linkiem do Armory -->
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && armoryUrl()">
                 <a
                   :href="armoryUrl()"
                   target="_blank"
                   rel="noopener"
-                  :style="{
-                    background: classColor(meta.character_class),
-                    color: classTextColor(meta.character_class),
-                    padding: '.2rem .7rem',
-                    borderRadius: '999px',
-                    fontWeight: '700',
-                    fontSize: '.85rem',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '.3rem',
-                  }"
+                  :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '.3rem'}"
                 >
                   <span x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"></span>
                   <span style="font-size:.75rem;opacity:.8">↗</span>
                 </a>
               </template>
 
-              <!-- Badge bez linku (addon export lub brak realm_slug) -->
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && !armoryUrl()">
                 <span
                   :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem'}"
@@ -120,7 +116,7 @@
           <!-- Grid: stats + spelle -->
           <div class="result-grid">
             <div>
-              <h2 style="margin-bottom:.6rem">Statystyki</h2>
+              <h2 style="margin-bottom:.6rem" x-text="$store.i18n.t('result.stats')"></h2>
               <div class="stat-list">
                 <template x-for="[key, val] in Object.entries(result.stats)" :key="key">
                   <div class="stat-row">
@@ -132,12 +128,10 @@
             </div>
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-                <h2>Breakdown spelli</h2>
+                <h2 x-text="$store.i18n.t('result.spell_breakdown')"></h2>
                 <div style="display:flex;gap:.3rem">
-                  <div>
-                    <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                    <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
-                  </div>
+                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
+                  <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
                 </div>
               </div>
               <div class="spell-list">
@@ -145,19 +139,19 @@
                   <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                     <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
                       <div class="spell-tooltip-row">
-                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : 'Hits'"></span>
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : $store.i18n.t('result.spell_executes')"></span>
                         <span class="spell-tooltip-val" x-text="sp.count > 0 ? sp.count.toLocaleString() : '—'"></span>
                       </div>
                       <div class="spell-tooltip-row">
-                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : 'Avg hit'"></span>
+                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : $store.i18n.t('result.spell_avg_hit')"></span>
                         <span class="spell-tooltip-val" x-text="sp.avg_hit > 0 ? formatDmg(sp.avg_hit) : '—'"></span>
                       </div>
                       <div class="spell-tooltip-row">
-                        <span class="spell-tooltip-label">Crit</span>
+                        <span class="spell-tooltip-label" x-text="$store.i18n.t('result.spell_crit')"></span>
                         <span class="spell-tooltip-val" x-text="sp.crit_pct > 0 ? sp.crit_pct + '%' : '—'"></span>
                       </div>
                       <div class="spell-tooltip-row" x-show="sp.miss_pct > 0">
-                        <span class="spell-tooltip-label">Miss/Dodge</span>
+                        <span class="spell-tooltip-label" x-text="$store.i18n.t('result.spell_miss')"></span>
                         <span class="spell-tooltip-val" x-text="sp.miss_pct + '%'"></span>
                       </div>
                     </div>
@@ -204,7 +198,7 @@
 
   <!-- Footer -->
   <div class="result-footer">
-    <a :href="'/api/result/' + jobId + '/json'" target="_blank">Raw JSON</a>
+    <a :href="'/api/result/' + jobId + '/json'" target="_blank" x-text="$store.i18n.t('result.raw_json')"></a>
     <span style="color:var(--border)">·</span>
     <a :href="'/api/result/' + jobId + '/dps-chart.png'" target="_blank">Chart PNG</a>
     <span style="color:var(--border)">·</span>
@@ -212,9 +206,11 @@
       class="btn"
       style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
       @click="copyShare()"
-      x-text="copied ? '✓ Skopiowano link' : '🔗 Kopiuj link'"
+      x-text="copied ? '✓ ' + $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('result.share_result')"
     ></button>
-    <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none" x-text="appearance.emoji + ' Symuluj swoją postać'">⚔️ Symuluj swoją postać</a>
+    <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none"
+      x-text="appearance.emoji + ' ' + $store.i18n.t('result.simulate_cta')"
+    ></a>
   </div>
 </div>
 
@@ -234,7 +230,7 @@ function resultPage() {
 
     appearance: {
       header_title: 'SimCraft Web',
-      hero_title: 'Symulator DPS dla World of Warcraft',
+      hero_title: 'WoW DPS Simulator',
       emoji: '⚔️',
     },
 
@@ -251,14 +247,17 @@ function resultPage() {
     },
 
     async init() {
-      // Ładuj appearance i dane symulacji równolegle
       const appearancePromise = fetch('/api/appearance')
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) this.appearance = data; })
         .catch(() => {});
 
       this.jobId = window.location.pathname.split('/').filter(Boolean).pop();
-      if (!this.jobId) { this.error = 'Brak ID symulacji.'; this.loading = false; return; }
+      if (!this.jobId) {
+        this.error = Alpine.store('i18n').t('errors.sim_failed');
+        this.loading = false;
+        return;
+      }
 
       try {
         const [result, meta] = await Promise.all([
@@ -268,9 +267,8 @@ function resultPage() {
         ]);
         this.result = result;
         this.meta   = meta;
-        if (this.truetiveRole() === 'dps') this.spellSort = 'total_dmg';
       } catch (e) {
-        this.error = 'Nie znaleziono symulacji. Link mógł wygaśnąć lub jest nieprawidłowy.';
+        this.error = Alpine.store('i18n').t('result.not_found_error');
       } finally {
         this.loading = false;
       }
@@ -288,12 +286,9 @@ function resultPage() {
       return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
     },
 
-    truetiveRole() { return 'dps'; },
-    roleIcon(role) { return '⚔️'; },
-    roleLabel(role) { return 'DPS'; },
     resultMetric() {
-      if (!this.result) return { value: 0, std: 0, label: 'DPS' };
-      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
+      if (!this.result) return { value: 0, std: 0 };
+      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0 };
     },
 
     classColor(c)     { return this.CLASS_COLORS[c] || '#aaa'; },
