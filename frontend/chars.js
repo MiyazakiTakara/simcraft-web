@@ -80,6 +80,20 @@ const CharsMixin = {
     }
   },
 
+  // Parsuje created_at niezależnie od formatu (ISO string lub Unix seconds)
+  _parseDate(created_at) {
+    if (!created_at && created_at !== 0) return null;
+    if (typeof created_at === "string") {
+      const s = created_at.endsWith("Z") || created_at.includes("+") ? created_at : created_at + "Z";
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof created_at === "number") {
+      return new Date(created_at < 1e10 ? created_at * 1000 : created_at);
+    }
+    return null;
+  },
+
   async drawDpsTrendChart(char) {
     const chartDiv = document.getElementById('dps-trend-chart');
     if (!chartDiv) return;
@@ -119,14 +133,19 @@ const CharsMixin = {
   getCharDps(charName) {
     const charSims = this.history.filter(h => h.character_name === charName);
     if (charSims.length === 0) return null;
-    const sortedSims = charSims.sort((a, b) => a.created_at - b.created_at);
+    const sortedSims = charSims.sort((a, b) => {
+      const da = this._parseDate(a.created_at);
+      const db = this._parseDate(b.created_at);
+      return (da?.getTime() ?? 0) - (db?.getTime() ?? 0);
+    });
     const dpsList = sortedSims.map(h => h.dps);
     const hpsList = sortedSims.map(h => h.hps || 0);
     const latest = dpsList[dpsList.length - 1];
     const latestHps = hpsList[hpsList.length - 1];
     const first = dpsList[0];
     const diff = latest - first;
-    const lastSim = charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0);
+    const lastSimEntry = sortedSims[sortedSims.length - 1];
+    const lastSim = lastSimEntry?.created_at ?? null;
     const trend = dpsList.length > 1
       ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
       : '1 symulacja';
@@ -134,8 +153,11 @@ const CharsMixin = {
       latest, latestHps, first, diff, trend,
       count: dpsList.length, lastSim, dpsList, hpsList,
       chartData: sortedSims.map(h => ({
-        x: new Date(h.created_at * 1000), dps: h.dps, hps: h.hps || 0, job_id: h.job_id
-      }))
+        x: this._parseDate(h.created_at),
+        dps: h.dps,
+        hps: h.hps || 0,
+        job_id: h.job_id
+      })).filter(p => p.x !== null)
     };
   },
 
@@ -153,9 +175,15 @@ const CharsMixin = {
       }
       const char = charMap.get(key);
       char.dps.push({ dps: entry.dps, created_at: entry.created_at, fight_style: entry.fight_style });
-      if (entry.created_at > char.created_at) char.created_at = entry.created_at;
+      const da = this._parseDate(entry.created_at);
+      const db = this._parseDate(char.created_at);
+      if (da && db && da > db) char.created_at = entry.created_at;
     }
-    return Array.from(charMap.values()).sort((a, b) => b.created_at - a.created_at);
+    return Array.from(charMap.values()).sort((a, b) => {
+      const da = this._parseDate(a.created_at);
+      const db = this._parseDate(b.created_at);
+      return (db?.getTime() ?? 0) - (da?.getTime() ?? 0);
+    });
   },
 
   get filteredChars() {

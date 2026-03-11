@@ -40,7 +40,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 
 ### Techniczne
 
-- [ ] **Race condition w `simulation.py`** — `out_path` czytany z `jobs[]` poza `_running_lock`; przekazać jako argument do `_run_sim()`
+- [x] **Race condition w `simulation.py`** — `out_path` przekazywany jako argument do `_run_sim()`, nie jest czytany z `jobs[]` poza lockiem
 - [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze` dla reprodukowalnych buildów
 - [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli (ma sens po dodaniu porównywania buildów)
 
