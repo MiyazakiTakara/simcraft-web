@@ -9,7 +9,7 @@ from database import SessionLocal, HistoryEntryModel, detect_role_from_result
 
 router = APIRouter()
 
-RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
+RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 
 
 class HistoryEntry(BaseModel):

@@ -482,7 +482,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
                 right_names, right_vals = hps_names,  hps_vals
                 colors = HEAL_COLORS
 
-        if role == "tank":
+        elif role == "tank":
             # Damage taken breakdown: total dmg taken | DTPS
             # SimC trzyma damage taken w collected_data.dmg_taken
             dmg_taken_data = cd.get("dmg_taken") or {}
@@ -499,7 +499,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             right_names, right_vals = dps_names, dps_vals
             colors = TANK_COLORS
 
-        if role == "dps":
+        elif role == "dps":
             dmg_names, dmg_vals = build_data(ability_total_dmg)
             dps_names, dps_vals = build_data(ability_dps)
 
