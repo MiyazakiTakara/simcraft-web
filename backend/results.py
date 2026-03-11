@@ -7,6 +7,14 @@ from simulation import jobs
 router = APIRouter()
 
 
+def _get_job(job_id: str):
+    from database import get_job
+    db_job = get_job(job_id)
+    if db_job:
+        return {"status": db_job.status, "json_path": db_job.json_path, "error": db_job.error}
+    return jobs.get(job_id)
+
+
 def safe_float(v, default=0.0):
     try:
         return float(v)
@@ -441,7 +449,7 @@ def generate_dps_chart(json_path: str) -> str:
 
 @router.get("/api/result/{job_id}/json")
 async def get_result_json(job_id: str):
-    job = jobs.get(job_id)
+    job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     return parse_results(job["json_path"])
@@ -449,7 +457,7 @@ async def get_result_json(job_id: str):
 
 @router.get("/api/result/{job_id}/dps-chart.png")
 async def get_dps_chart(job_id: str):
-    job = jobs.get(job_id)
+    job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     png = generate_dps_chart(job["json_path"])
@@ -460,7 +468,7 @@ async def get_dps_chart(job_id: str):
 
 @router.get("/api/result/{job_id}/debug-spell")
 async def get_debug_spell(job_id: str):
-    job = jobs.get(job_id)
+    job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     try:
@@ -496,7 +504,7 @@ async def get_debug_spell(job_id: str):
 
 @router.get("/api/result/{job_id}/debug")
 async def get_result_debug(job_id: str):
-    job = jobs.get(job_id)
+    job = _get_job(job_id)
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     try:
