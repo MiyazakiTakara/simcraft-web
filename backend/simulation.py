@@ -58,11 +58,27 @@ def _validate_addon_text(text: str) -> str:
 
     return text
 
+
 jobs: dict = {}
 
 MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT_SIMS", "3"))
-_running_sims = 0
+
+# Zamiast globalnego licznika _running_sims śledzi per-job flagę "counted",
+# żeby watchdog i _run_sim nie mogły zmniejszyć licznika dwa razy dla tego samego joba.
 _running_lock = threading.Lock()
+
+
+def _count_running() -> int:
+    """Zlicza joby ze statusem 'running' i flagą counted=True."""
+    return sum(1 for j in jobs.values() if j.get("counted"))
+
+
+def _release_slot(job_id: str):
+    """Zwalnia slot tylko raz — ustawia counted=False."""
+    with _running_lock:
+        job = jobs.get(job_id)
+        if job and job.get("counted"):
+            job["counted"] = False
 
 
 class SimRequest(BaseModel):
@@ -97,7 +113,6 @@ def _build_simc_input(req: SimRequest, out_path: str) -> str:
 
 
 def _run_sim(job_id: str, simc_input: str):
-    global _running_sims
     job_dir  = os.path.join(RESULTS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     inp_path = os.path.join(job_dir, "input.simc")
@@ -134,8 +149,7 @@ def _run_sim(job_id: str, simc_input: str):
         update_job_status(job_id, "error", str(e))
         log.exception("sim-exception", job_id=job_id)
     finally:
-        with _running_lock:
-            _running_sims -= 1
+        _release_slot(job_id)
 
 
 def _watchdog():
@@ -143,16 +157,13 @@ def _watchdog():
         time.sleep(60)
         now = time.time()
         for job_id, job in list(jobs.items()):
-            if job.get("status") == "running":
+            if job.get("counted"):
                 started = job.get("started_at", now)
                 if now - started > JOB_TIMEOUT + 60:
                     jobs[job_id]["status"] = "error"
                     jobs[job_id]["error"]  = "Job timeout (watchdog)"
                     update_job_status(job_id, "error", "Job timeout (watchdog)")
-                    with _running_lock:
-                        global _running_sims
-                        if _running_sims > 0:
-                            _running_sims -= 1
+                    _release_slot(job_id)
                     log.warning("job-timeout", job_id=job_id)
 
 
@@ -162,29 +173,27 @@ threading.Thread(target=_watchdog, daemon=True).start()
 @router.post("/api/simulate")
 @limiter.limit("5/minute")
 async def start_sim(request: Request, req: SimRequest):
-    global _running_sims
-
     if not req.addon_text and not (req.name and req.realm_slug):
         raise HTTPException(400, "Podaj addon_text lub name+realm_slug")
 
     with _running_lock:
-        if _running_sims >= MAX_CONCURRENT:
+        if _count_running() >= MAX_CONCURRENT:
             raise HTTPException(429, f"Serwer zajety ({MAX_CONCURRENT} symulacji rownoczesnie). Sprobuj za chwile.")
-        _running_sims += 1
 
-    job_id   = str(uuid.uuid4())
+        job_id   = str(uuid.uuid4())
+        job_dir  = os.path.join(RESULTS_DIR, job_id)
+        os.makedirs(job_dir, exist_ok=True)
+        out_path = os.path.join(job_dir, "output.json")
+
+        jobs[job_id] = {
+            "status":     "running",
+            "json_path":  out_path,
+            "error":      None,
+            "started_at": time.time(),
+            "counted":    True,   # per-job flaga zastępująca globalny licznik
+        }
+
     log.info("sim-started", job_id=job_id, addon_text=bool(req.addon_text), character=req.name, realm=req.realm_slug)
-    job_dir  = os.path.join(RESULTS_DIR, job_id)
-    os.makedirs(job_dir, exist_ok=True)
-    out_path = os.path.join(job_dir, "output.json")
-
-    jobs[job_id] = {
-        "status":     "running",
-        "json_path":  out_path,
-        "error":      None,
-        "started_at": time.time(),
-    }
-
     create_job(job_id, out_path)
 
     simc_input = _build_simc_input(req, out_path)
@@ -198,7 +207,7 @@ async def start_sim(request: Request, req: SimRequest):
 async def get_job_status(job_id: str):
     db_job = get_job(job_id)
     if db_job:
-        return {"status": db_job.status, "error": db_job.error}
+        return {"status": db_job["status"], "error": db_job["error"]}
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
