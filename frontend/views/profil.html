@@ -1,0 +1,74 @@
+<div style="max-width:1200px;margin:0 auto;padding:1rem">
+  <div class="sim-tabs" style="margin-bottom:1rem">
+    <button class="tab" :class="{active: profileTab==='chars'}" @click="profileTab='chars'">Postacie</button>
+    <button class="tab" :class="{active: profileTab==='history'}" @click="profileTab='history'; loadHistory()">Historia</button>
+  </div>
+
+  <template x-if="profileTab==='chars'">
+    <div>
+      <h2 style="margin-bottom:1rem">👤 Twoje Postacie</h2>
+      <div class="char-grid">
+        <template x-for="char in characters" :key="char.id">
+          <div class="char-card" @click="openCharDetails(char)">
+            <div class="char-card-header">
+              <img class="char-card-avatar" :src="char.avatar || '/static/default_avatar.png'" :alt="char.name"/>
+              <div class="char-card-info">
+                <div class="char-card-name" x-text="char.name"></div>
+                <div class="char-card-meta" x-text="char.realm + ' · lv' + char.level"></div>
+                <div class="char-card-meta" :style="{color: classColor(char.class)}" x-text="(char.spec ? char.spec + ' ' : '') + (char.class || '')"></div>
+              </div>
+            </div>
+            <template x-if="getCharDps(char.name)">
+              <div>
+                <div class="char-card-dps" x-text="'⚔️ ' + formatDps(getCharDps(char.name).latest)"></div>
+                <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
+                <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)" x-text="getCharDps(char.name).count + ' symulacji · ' + formatTime(getCharDps(char.name).lastSim)"></div>
+              </div>
+            </template>
+            <template x-if="!getCharDps(char.name)">
+              <div style="color:var(--muted);font-size:.85rem">Brak symulacji</div>
+            </template>
+          </div>
+        </template>
+      </div>
+      <template x-if="characters.length === 0">
+        <div style="text-align:center;padding:3rem;color:var(--muted)">
+          <p>Brak postaci do wyświetlenia.</p>
+          <p style="font-size:.85rem">Twoje postacie WoW pojawią się automatycznie po zalogowaniu.</p>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="profileTab==='history'">
+    <div>
+      <h2 style="margin-bottom:1rem">📜 Historia symulacji</h2>
+      <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem">Brak symulacji</div>
+      <div x-show="history.length > 0" class="history-list" style="max-height:500px;overflow-y:auto">
+        <template x-for="entry in pagedHistory" :key="entry.job_id">
+          <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
+               @click="openResultPage(entry.job_id)">
+            <div style="flex:1;min-width:0">
+              <div class="history-char">
+                <span x-text="entry.character_name || 'Addon Export'"></span>
+                <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                <span class="role-badge" x-text="roleIcon(entry.role || 'dps')"></span>
+              </div>
+              <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+              <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+              <div class="history-style" x-text="entry.fight_style"></div>
+            </div>
+            <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)" x-text="copiedJobId === entry.job_id ? '✓' : '🔗'" title="Skopiuj link"></button>
+          </div>
+        </template>
+      </div>
+      <div class="pagination" x-show="historyPageCount > 1" style="margin-top:1rem">
+        <button @click="historyPage > 1 && historyPage--">&laquo;</button>
+        <template x-for="p in historyPages()" :key="p">
+          <button :class="{active: historyPage === p}" x-text="p" @click="historyPage = p"></button>
+        </template>
+        <button @click="historyPage < historyPageCount && historyPage++">&raquo;</button>
+      </div>
+    </div>
+  </template>
+</div>

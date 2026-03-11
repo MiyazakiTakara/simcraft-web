@@ -16,7 +16,7 @@ function app() {
     pubResult: null,
     pubJob: null,
     simMode: "armory",
-    simRole: "auto",   // auto | dps
+    simRole: "auto",
     addonText: "",
     guestAddonText: "",
     guestSimOptions: {
@@ -65,13 +65,47 @@ function app() {
     loadingCharDetails: false,
     charDetailsError: null,
 
+    // =====================
+    // VIEW LOADER
+    // =====================
+    _viewCache: {},
+
+    async loadView(name) {
+      const container = document.getElementById('view-container');
+      if (!container) return;
+
+      if (this._viewCache[name]) {
+        container.innerHTML = this._viewCache[name];
+      } else {
+        try {
+          const res = await fetch('/views/' + name + '.html?v=1');
+          if (!res.ok) throw new Error('View not found: ' + name);
+          const html = await res.text();
+          this._viewCache[name] = html;
+          container.innerHTML = html;
+        } catch (e) {
+          console.error('loadView failed:', e);
+          container.innerHTML = '<p style="color:#f66;padding:2rem">Błąd ładowania widoku: ' + name + '</p>';
+          return;
+        }
+      }
+
+      // Po wstrzyknięciu HTML Alpine musi zainicjować nowe elementy
+      this.$nextTick(() => Alpine.initTree(container));
+    },
+
+    navigateTo(name) {
+      this.currentView = name;
+      this.activeTab = name;
+      this.loadView(name);
+    },
+
     handleHash() {
       const hash = window.location.hash.slice(1);
       if (hash === "symulacje" || hash === "profil") {
-        this.currentView = hash;
-        this.activeTab = hash;
+        this.navigateTo(hash);
       } else {
-        this.currentView = "home";
+        this.navigateTo("home");
       }
     },
 
@@ -135,6 +169,9 @@ function app() {
         this.loadPublicHistory();
         this.loadNews();
       }
+
+      // Załaduj widok startowy
+      this.loadView('home');
     },
 
     async loadAppearance() {
@@ -153,30 +190,20 @@ function app() {
       }
     },
 
-    // Zwraca rolę wynikającą z aktualnie wybranego chara (dla auto-detect)
-    detectedRole() {
-      return 'dps';
-    },
-
-    effectiveRole() {
-      return 'dps';
-    },
-
+    detectedRole() { return 'dps'; },
+    effectiveRole() { return 'dps'; },
     roleIcon(role) { return '⚔️'; },
     roleLabel(role) { return 'DPS'; },
 
-    // Gdy user wybiera postać — resetuj simRole do auto (żeby auto-detect zadziałał)
     selectChar(ch) {
       this.selectedChar = ch;
       this.simResult = null;
       this.job = null;
       this.simRole = 'auto';
-      this.currentView = "symulacje";
-      this.activeTab = "symulacje";
+      this.navigateTo('symulacje');
       localStorage.setItem("simcraft_last_char", ch.name);
     },
 
-    // Główna metryka do pokazania w wyniku
     resultMetric(result) {
       if (!result) return { value: 0, std: 0, label: 'DPS' };
       return { value: result.dps ?? 0, std: result.dps_std ?? 0, label: 'DPS' };
@@ -185,13 +212,9 @@ function app() {
     async loadNews() {
       try {
         const res = await fetch('/admin/api/news/public');
-        console.log('loadNews response:', res.status, res.ok);
         if (res.ok) {
           this.news = await res.json();
           this.newsPage = 1;
-          console.log('news loaded:', this.news.length);
-        } else {
-          console.error('News API error:', res.status);
         }
       } catch (e) { console.error('Failed to load news', e); }
     },
@@ -306,56 +329,40 @@ function app() {
       const x = charData.chartData.map(p => p.x);
       const dpsY = charData.chartData.map(p => p.dps);
       const hpsY = charData.chartData.map(p => p.hps);
-
       const hasHps = hpsY.some(v => v > 0);
 
       const traceDps = {
         x, y: dpsY,
-        mode: 'lines+markers',
-        type: 'scatter',
-        name: 'DPS',
-        line: { color: '#f4a01c', width: 2 },
-        marker: { size: 6, color: '#f4a01c' },
+        mode: 'lines+markers', type: 'scatter', name: 'DPS',
+        line: { color: '#f4a01c', width: 2 }, marker: { size: 6, color: '#f4a01c' },
         hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
       };
-
       const traces = [traceDps];
-
       if (hasHps) {
         traces.push({
           x, y: hpsY,
-          mode: 'lines+markers',
-          type: 'scatter',
-          name: 'HPS',
-          line: { color: '#3399ff', width: 2 },
-          marker: { size: 6, color: '#3399ff' },
+          mode: 'lines+markers', type: 'scatter', name: 'HPS',
+          line: { color: '#3399ff', width: 2 }, marker: { size: 6, color: '#3399ff' },
           hovertemplate: 'Czas: %{x}<br>HPS: %{y:.0f}<extra></extra>'
         });
       }
 
       const layout = {
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
         margin: { l: 50, r: 20, t: 20, b: 50 },
         xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
         yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: hasHps ? 'DPS / HPS' : 'DPS' },
         showlegend: true,
         legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { color: '#aaa' } }
       };
-
       Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displayModeBar: false });
     },
 
     getItemQualityColor(quality) {
       const colors = {
-        "Poor": "#9d9d9d",
-        "Common": "#ffffff",
-        "Uncommon": "#1eff00",
-        "Rare": "#0070dd",
-        "Epic": "#a335ee",
-        "Legendary": "#ff8000",
-        "Artifact": "#e6cc80",
-        "Heirloom": "#00ccff",
+        "Poor": "#9d9d9d", "Common": "#ffffff", "Uncommon": "#1eff00",
+        "Rare": "#0070dd", "Epic": "#a335ee", "Legendary": "#ff8000",
+        "Artifact": "#e6cc80", "Heirloom": "#00ccff",
       };
       return colors[quality] || "#fff";
     },
@@ -465,12 +472,6 @@ function app() {
       if (!this.simResult?.spells) return [];
       const key = this.spellSort;
       return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
-    },
-
-    get pubSortedSpells() {
-      if (!this.pubResult?.spells) return [];
-      const key = this.spellSort;
-      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
     classColor(className) { return this.CLASS_COLORS[className] || "#aaa"; },
@@ -628,10 +629,7 @@ function app() {
 
     selectCharByName(name) {
       const ch = this.characters.find(c => c.name === name);
-      if (ch) {
-        this.selectChar(ch);
-        this.activeTab = 'symulacje';
-      }
+      if (ch) this.navigateTo('symulacje');
     },
 
     logout() {
@@ -686,7 +684,6 @@ function app() {
     showItemTooltip(event, item) {
       const tooltip = document.getElementById('item-tooltip');
       if (!tooltip) return;
-
       let html = `
         <div class="item-tooltip-slot">${item.slot}</div>
         <div class="item-tooltip-title" style="color:${this.getItemQualityColor(item.quality)}">${item.name}</div>
@@ -707,10 +704,8 @@ function app() {
           html += `<div class="item-tooltip-spell"><div class="item-tooltip-spell-name">${spell.name}</div><div class="item-tooltip-spell-desc">${spell.description}</div></div>`;
         });
       }
-
       tooltip.innerHTML = html;
       tooltip.style.display = 'block';
-
       const rect = event.target.getBoundingClientRect();
       let top  = rect.top - tooltip.offsetHeight - 10;
       let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
