@@ -54,7 +54,6 @@ function app() {
     },
 
     charEquipment: [],
-    charStatistics: {},
     charTalents: [],
     loadingCharDetails: false,
     charDetailsError: null,
@@ -221,29 +220,26 @@ function app() {
       } catch (e) { console.error("Failed to load public history", e); }
     },
 
-     async loadCharDetails(char) {
-       this.loadingCharDetails = true;
-       this.charDetailsError = null;
-       this.charEquipment = [];
-       this.charStatistics = {};
-       this.charTalents = [];
-       try {
-         const [eq, stats, talents] = await Promise.all([
-           API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
-           API.getCharacterStatistics(this.sessionId, char.realm_slug, char.name),
-           API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
-         ]);
-         this.charEquipment = eq.equipment || [];
-         this.charStatistics = stats.statistics || {};
-         this.charTalents = talents.talents || [];
-       } catch (e) {
-         this.charDetailsError = e.message;
-         console.error("Failed to load char details", e);
-       } finally {
-         this.loadingCharDetails = false;
-         this.$nextTick(() => this.drawDpsTrendChart(char));
-       }
-     },
+      async loadCharDetails(char) {
+        this.loadingCharDetails = true;
+        this.charDetailsError = null;
+        this.charEquipment = [];
+        this.charTalents = [];
+        try {
+          const [eq, talents] = await Promise.all([
+            API.getCharacterEquipment(this.sessionId, char.realm_slug, char.name),
+            API.getCharacterTalents(this.sessionId, char.realm_slug, char.name),
+          ]);
+          this.charEquipment = eq.equipment || [];
+          this.charTalents = talents.talents || [];
+        } catch (e) {
+          this.charDetailsError = e.message;
+          console.error("Failed to load char details", e);
+        } finally {
+          this.loadingCharDetails = false;
+          this.$nextTick(() => this.drawDpsTrendChart(char));
+        }
+      },
 
      async drawDpsTrendChart(char) {
        const chartDiv = document.getElementById('dps-trend-chart');

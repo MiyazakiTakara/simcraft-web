@@ -628,20 +628,7 @@
               </div>
             </template>
 
-            <!-- Statistics -->
-            <template x-if="Object.keys(charStatistics).length > 0">
-              <div>
-                <h3 style="margin:1rem 0 .5rem">📊 Statystyki</h3>
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem">
-                  <template x-for="[key, val] in Object.entries(charStatistics)" :key="key">
-                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem">
-                      <div style="color:var(--muted);font-size:.7rem" x-text="key"></div>
-                      <div x-text="typeof val === 'number' ? val.toLocaleString() : val"></div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
+
 
             <!-- DPS Trend Chart -->
             <div>
