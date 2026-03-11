@@ -107,7 +107,8 @@ def _build_simc_input(req: SimRequest, out_path: str) -> str:
     return "\n".join(lines)
 
 
-def _run_sim(job_id: str, simc_input: str):
+def _run_sim(job_id: str, simc_input: str, out_path: str):
+    """out_path przekazywany jako argument — unikamy czytania jobs[] poza _running_lock."""
     job_dir  = os.path.join(RESULTS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     inp_path = os.path.join(job_dir, "input.simc")
@@ -127,7 +128,6 @@ def _run_sim(job_id: str, simc_input: str):
             [SIMC_PATH, inp_path],
             capture_output=True, text=True, timeout=JOB_TIMEOUT
         )
-        out_path = jobs[job_id].get("json_path")
         if result.returncode != 0 or not os.path.exists(out_path):
             error_msg = result.stderr[-2000:] if result.stderr else "simc failed"
             update_job_status(job_id, "error", error_msg)
@@ -205,7 +205,7 @@ async def start_sim(request: Request, req: SimRequest):
     create_job(job_id, out_path)
 
     simc_input = _build_simc_input(req, out_path)
-    t = threading.Thread(target=_run_sim, args=(job_id, simc_input), daemon=True)
+    t = threading.Thread(target=_run_sim, args=(job_id, simc_input, out_path), daemon=True)
     t.start()
 
     return {"job_id": job_id}
