@@ -15,6 +15,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - **Panel admina** — zarządzanie newsami, limitami symulacji, health check, lista aktywnych zadań (Keycloak OAuth2)
 - **Rate limiting** — ochrona przed nadużywaniem API (slowapi, per-IP)
 - **Watchdog** — automatyczne czyszczenie starych jobów i obsługa timeoutów
+- **Wielojęzyczność** — pełne i18n PL/EN z przełącznikiem języka, auto-detekcją z przeglądarki i zapisem w `localStorage`
 
 ## TODO
 
@@ -28,13 +29,13 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - [ ] **Komentarze / reakcje** — emoji-reakcje lub krótki komentarz pod wynikiem symulacji (per `job_id`)
 - [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji (addon text + parametry) jako publiczny link do ponownego uruchomienia
 - [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli i DPS obok siebie
-- [ ] **śledzenie trendów** — wykres DPS w czasie dla konkretnej postaci (endpoint `/api/history/trend` już istnieje, brakuje UI)
+- [ ] **Śledzenie trendów** — wykres DPS w czasie dla konkretnej postaci (endpoint `/api/history/trend` już istnieje, brakuje UI)
 
 ### Wielojęzyczność
 
-- [ ] **i18n frontend** — wydzielenie wszystkich stringów UI do plików tłumaczeń (np. `locales/pl.json`, `locales/en.json`); Alpine.js może obsłużyć przełączanie języka przez reaktywny store
-- [ ] **Automatyczne wykrywanie języka** — na podstawie `Accept-Language` z nagłówka HTTP lub ustawienia zapisanego w `localStorage`
-- [ ] **Angielski jako domyślny** — aktualnie UI jest po polsku; angielski powinien być domyślnym językiem dla szerszego zasięgu
+- [x] **i18n frontend** — stringi UI wydzielone do `locales/pl.json` i `locales/en.json`; Alpine.js `$store.i18n` obsługuje reaktywne przełączanie języka
+- [x] **Automatyczne wykrywanie języka** — na podstawie `navigator.language` lub ustawienia zapisanego w `localStorage`
+- [x] **Angielski jako domyślny** — angielski jest domyślnym językiem; przełącznik PL/EN widoczny w headerze na każdej stronie
 - [ ] **Lokalizacja nazw spelli** — SimulationCraft zwraca nazwy spelli po angielsku; rozważyć czy tłumaczyć czy zostawić EN (WoW gracze są przyzwyczajeni do EN nazw)
 
 ### Techniczne
@@ -129,7 +130,11 @@ simcraft-web/
 │   ├── api.js             # API client (fetch wrapper)
 │   ├── utils.js           # Helpers (formatowanie liczb, kolorów klas itp.)
 │   ├── admin.js           # Logika panelu admina
-│   └── style.css          # Style (dark theme)
+│   ├── i18n.js            # System tłumaczeń (Alpine store, auto-detect, localStorage)
+│   ├── style.css          # Style (dark theme)
+│   └── locales/
+│       ├── pl.json        # Tłumaczenia PL
+│       └── en.json        # Tłumaczenia EN
 ├── docker-compose.yml
 ├── Dockerfile
 └── requirements.txt
