@@ -17,6 +17,8 @@ router = APIRouter(prefix="/admin")
 ADMIN_COOKIE = "admin_session"
 SESSION_TTL  = 60 * 60 * 8  # 8 godzin
 
+_SIMC_GH_BRANCH = "midnight"  # domyslna galaz simulationcraft/simc
+
 
 def _cfg():
     url   = os.environ["KEYCLOAK_URL"].rstrip("/")
@@ -46,34 +48,30 @@ def _get_admin_session(session_id: str) -> dict | None:
 
 
 def _require_admin(request: Request) -> dict:
-    """Zwraca dane sesji lub rzuca redirect do /admin/login."""
     session_id = request.cookies.get(ADMIN_COOKIE)
     if session_id:
         session = _get_admin_session(session_id)
         if session:
             return session
-    raise HTTPException(
-        status_code=302,
-        headers={"Location": "/admin/login"},
-    )
+    raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
 
 
-# ---------- SimC version check (z cache 1h) ----------
+# ---------- SimC version check (cache 1h) ----------
 
 _simc_version_cache: dict = {"ts": 0, "data": None}
-_SIMC_VERSION_CACHE_TTL = 3600  # sekund
+_SIMC_VERSION_CACHE_TTL = 3600
 
 
 def _get_local_simc_version(simc_path: str) -> str | None:
     """
-    Uruchamia 'simc --version' i zwraca numer wersji w formacie XXX-YY,
-    np. '830-01' (pasujacy do tagu 'release-830-01').
+    Uruchamia 'simc --version', wyciaga numer w formacie MAJOR-MINOR
+    pasujacy do SC_MAJOR_VERSION-SC_MINOR_VERSION z config.hpp.
+    Przyklad: 'SimulationCraft 1201-01 ...' -> '1201-01'
     """
     import subprocess
     try:
         r = subprocess.run([simc_path, "--version"], capture_output=True, text=True, timeout=5)
         out = r.stdout + r.stderr
-        # "SimulationCraft 830-01 for World of Warcraft ..."
         m = re.search(r"SimulationCraft\s+([\d]+-\d+)", out)
         return m.group(1) if m else out.strip()[:40] or None
     except Exception:
@@ -82,39 +80,56 @@ def _get_local_simc_version(simc_path: str) -> str | None:
 
 async def _get_latest_simc_version() -> dict:
     """
-    Pobiera najnowszy tag z github.com/simulationcraft/simc (brak releases).
-    Tagi maja format: release-830-01
-    Wynik cache'owany przez _SIMC_VERSION_CACHE_TTL sekund.
-    Zwraca dict: {tag, version, url}
+    Pobiera rownoczesnie:
+      1. engine/config.hpp z gałęzi midnight -> SC_MAJOR_VERSION + SC_MINOR_VERSION
+      2. ostatni commit na gałęzi midnight -> sha + data
+    Cache: 1h.
+    Zwraca dict: {version, last_commit_sha, last_commit_date, last_commit_url}
     """
     now = time.time()
     if _simc_version_cache["data"] and now - _simc_version_cache["ts"] < _SIMC_VERSION_CACHE_TTL:
         return _simc_version_cache["data"]
 
+    headers = {"Accept": "application/vnd.github+json"}
+    base_url = "https://api.github.com/repos/simulationcraft/simc"
+
     try:
         async with httpx.AsyncClient(timeout=8) as client:
-            resp = await client.get(
-                "https://api.github.com/repos/simulationcraft/simc/tags?per_page=1",
-                headers={"Accept": "application/vnd.github+json"},
+            config_task = client.get(
+                f"{base_url}/contents/engine/config.hpp?ref={_SIMC_GH_BRANCH}",
+                headers=headers,
             )
-            resp.raise_for_status()
-            tags = resp.json()
+            commit_task = client.get(
+                f"{base_url}/commits/{_SIMC_GH_BRANCH}",
+                headers=headers,
+            )
+            # Rownoczesne zapytania
+            import asyncio
+            config_resp, commit_resp = await asyncio.gather(config_task, commit_task)
+            config_resp.raise_for_status()
+            commit_resp.raise_for_status()
 
-        if not tags:
-            raise ValueError("Brak tagow w repozytorium")
+        # Parsuj wersję z config.hpp (zakodowana w base64)
+        import base64
+        content = base64.b64decode(config_resp.json()["content"]).decode("utf-8")
+        major = re.search(r'#define SC_MAJOR_VERSION\s+"([\d]+)"', content)
+        minor = re.search(r'#define SC_MINOR_VERSION\s+"([\d]+)"', content)
+        version = f"{major.group(1)}-{minor.group(1)}" if major and minor else None
 
-        tag_name = tags[0]["name"]  # np. "release-830-01"
-        # Wytnij numer wersji: release-830-01 -> 830-01
-        m = re.match(r"^release-([\d]+-\d+)$", tag_name)
-        version = m.group(1) if m else tag_name
+        # Ostatni commit
+        commit_data   = commit_resp.json()
+        commit_sha    = commit_data["sha"]
+        commit_date   = commit_data["commit"]["committer"]["date"]  # ISO 8601
+        commit_url    = commit_data["html_url"]
 
         result = {
-            "tag":     tag_name,
-            "version": version,
-            "url":     f"https://github.com/simulationcraft/simc/releases/tag/{tag_name}",
+            "version":          version,
+            "last_commit_sha":  commit_sha[:7],
+            "last_commit_date": commit_date,
+            "last_commit_url":  commit_url,
         }
     except Exception as e:
-        result = {"tag": None, "version": None, "error": str(e)}
+        result = {"version": None, "error": str(e)}
 
     _simc_version_cache["ts"]   = now
     _simc_version_cache["data"] = result
@@ -525,9 +540,9 @@ async def health_check(request: Request):
         else f"error: not writable at {results_dir}"
 
     # --- SimC version check ---
-    local_version  = _get_local_simc_version(simc_path) if health_status["simc_binary"] == "ok" else None
-    latest         = await _get_latest_simc_version()
-    latest_version = latest.get("version")  # np. "830-01"
+    local_version = _get_local_simc_version(simc_path) if health_status["simc_binary"] == "ok" else None
+    latest        = await _get_latest_simc_version()
+    latest_version = latest.get("version")  # z config.hpp, np. "1201-01"
 
     if local_version and latest_version:
         up_to_date = local_version.strip() == latest_version.strip()
@@ -535,12 +550,13 @@ async def health_check(request: Request):
         up_to_date = None
 
     health_status["simc_version"] = {
-        "local":       local_version,
-        "latest":      latest_version,
-        "latest_tag":  latest.get("tag"),
-        "up_to_date":  up_to_date,
-        "url":         latest.get("url"),
-        "cache_age_s": int(time.time() - _simc_version_cache["ts"]),
+        "local":            local_version,
+        "latest":           latest_version,
+        "up_to_date":       up_to_date,
+        "last_commit_sha":  latest.get("last_commit_sha"),
+        "last_commit_date": latest.get("last_commit_date"),
+        "last_commit_url":  latest.get("last_commit_url"),
+        "cache_age_s":      int(time.time() - _simc_version_cache["ts"]),
         **(  {"error": latest["error"]} if "error" in latest else {}  ),
     }
 
