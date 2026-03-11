@@ -35,20 +35,27 @@ ADDON_TEXT_BLOCKED_PATTERNS = [
     re.compile(r"exec\s+['\"]", re.IGNORECASE),
     re.compile(r"source\s+.*\.sh", re.IGNORECASE),
     re.compile(r"\|.*sh", re.IGNORECASE),
+    # Blokada dyrektyw wczytujących pliki z dysku
+    re.compile(r"^\s*include\s*=", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*file\s*=", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*output\s*=", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*json2?\s*=", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*html\s*=", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*xml\s*=", re.MULTILINE | re.IGNORECASE),
 ]
 
 
 def _validate_addon_text(text: str) -> str:
     if not text:
         return text
-    
+
     if len(text) > MAX_ADDON_TEXT_LENGTH:
         raise HTTPException(400, f"Addon text too long (max {MAX_ADDON_TEXT_LENGTH} chars)")
-    
+
     for pattern in ADDON_TEXT_BLOCKED_PATTERNS:
         if pattern.search(text):
             raise HTTPException(400, "Invalid characters or commands in addon text")
-    
+
     return text
 
 jobs: dict = {}
