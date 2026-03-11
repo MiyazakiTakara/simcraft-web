@@ -5,8 +5,10 @@ import httpx
 import secrets
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
+from typing import Optional
 
-from database import SessionLocal, SessionModel
+from database import SessionLocal, SessionModel, get_session_info, set_main_character, clear_first_login
 
 router = APIRouter()
 
@@ -18,12 +20,11 @@ _token_cache: dict = {"token": None, "expires_at": 0}
 
 _oauth_states: dict = {}
 
-_OAUTH_STATE_TTL    = 600   # sekundy ważności state
-_OAUTH_STATE_MAX    = 500   # max liczba aktywnych state'ów
+_OAUTH_STATE_TTL    = 600
+_OAUTH_STATE_MAX    = 500
 
 
 def _cleanup_oauth_states():
-    """Usuwa wygasłe state'y OAuth. Wywołuj przed każdym dodaniem nowego."""
     cutoff = time.time() - _OAUTH_STATE_TTL
     expired = [k for k, v in _oauth_states.items() if v < cutoff]
     for k in expired:
@@ -65,7 +66,6 @@ async def get_blizzard_token() -> str:
 
 
 async def get_session_token(session_id: str) -> str:
-    """Zwraca access_token dla sesji lub rzuca 401."""
     s = _get_session(session_id)
     if not s:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje. Zaloguj sie ponownie.")
@@ -117,12 +117,12 @@ async def auth_callback(code: str, state: str = None):
     expires_at = time.time() + data.get("expires_in", 86400)
 
     with SessionLocal() as db:
-        # Wyczysc wygasle sesje przy okazji
         db.query(SessionModel).filter(SessionModel.expires_at < time.time()).delete()
         db.add(SessionModel(
             session_id   = session_id,
             access_token = data["access_token"],
             expires_at   = expires_at,
+            is_first_login = True,
         ))
         db.commit()
 
@@ -136,3 +136,39 @@ async def auth_logout(session: str = None):
             db.query(SessionModel).filter(SessionModel.session_id == session).delete()
             db.commit()
     return RedirectResponse("/")
+
+
+@router.get("/auth/session/info")
+async def session_info(session: str):
+    """Zwraca info o sesji: main char i czy to first login."""
+    info = get_session_info(session)
+    if not info:
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    return info
+
+
+class MainCharRequest(BaseModel):
+    name:  str
+    realm: str
+
+
+@router.patch("/auth/session/main-character")
+async def update_main_character(session: str, body: MainCharRequest):
+    """Ustawia glowna postac i kasuje flage first_login."""
+    info = get_session_info(session)
+    if not info:
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    if not body.name or not body.realm:
+        raise HTTPException(400, "Podaj name i realm.")
+    set_main_character(session, body.name.strip(), body.realm.strip())
+    return {"ok": True}
+
+
+@router.post("/auth/session/skip-first-login")
+async def skip_first_login(session: str):
+    """Zamkniecie modalu bez wyboru maina — nie pokazuj go wiecej."""
+    info = get_session_info(session)
+    if not info:
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    clear_first_login(session)
+    return {"ok": True}

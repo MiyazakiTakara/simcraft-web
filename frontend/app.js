@@ -1,185 +1,148 @@
-// Główny moduł Alpine — stan + init + nawigacja
-// Metody biznesowe są w: utils.js, sim.js, chars.js, history.js
-
-function mergeMixins(target, ...mixins) {
-  for (const mixin of mixins) {
-    const descs = Object.getOwnPropertyDescriptors(mixin);
-    Object.defineProperties(target, descs);
-  }
-  return target;
-}
-
+// Glowny Alpine.js store — laczy wszystkie mixiny
 function app() {
-  const state = {
-    sessionId: null,
-    characters: [],
-    charFilter: "",
-    selectedChar: null,
-    job: null,
-    simResult: null,
-    pubResult: null,
-    pubJob: null,
-    simMode: "armory",
-    simRole: "auto",
-    addonText: "",
-    guestAddonText: "",
-    guestSimOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
-    guestLoadingSim: false,
-    guestSimError: null,
-    _guestPollInterval: null,
-    simOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
-    loadingChars: false,
-    loadingSim: false,
-    errorChars: null,
-    _pollInterval: null,
-    history: [],
-    news: [],
-    loadingHistory: false,
-    spellSort: "total_dmg",
-    copiedJobId: null,
-    chartModal: null,
-    hoveredSpell: null,
-    historyPage: 1,
-    historyPerPage: 5,
-    profileTab: "chars",
-    newsPage: 1,
-    newsPerPage: 5,
-    expandedNews: null,
-    activeTab: "symulacje",
-    currentView: "home",
-    charEquipment: [],
-    charTalents: [],
+  return {
+    // Stan
+    sessionId:    localStorage.getItem('simcraft_session'),
+    theme:        localStorage.getItem('simcraft_theme') || 'dark',
+    currentView:  'home',
+    appearance:   { emoji: '\u2694\ufe0f', header_title: 'SimCraft Web' },
+
+    // Pierwsza sesja / main char
+    isFirstLogin:         false,
+    showMainCharModal:    false,
+    mainChar:             null,   // { name, realm }
+    savingMainChar:       false,
+    mainCharSaved:        false,
+
+    // Postacie
+    characters:       [],
+    selectedChar:     null,
+    charFilter:       '',
+    loadingChars:     false,
+    errorChars:       null,
+    charDetailsModal: null,
     loadingCharDetails: false,
     charDetailsError: null,
-    charDetailsModal: null,
-    _viewCache: {},
-    appearance: {
-      header_title: "SimCraft Web",
-      hero_title: "World of Warcraft",
-      emoji: "⚔️",
-      hero_custom_text: ""
-    },
-    theme: localStorage.getItem("simcraft_theme") || "dark",
+    charEquipment:    [],
+    charTalents:      [],
 
-    // Utils — delegaty
-    formatDps(v)                  { return Utils.formatDps(v); },
-    formatDmg(v)                  { return Utils.formatDmg(v); },
-    formatTime(ts)                { return Utils.formatTime(ts); },
-    pctBarWidth(val, spells, key) { return Utils.pctBarWidth(val, spells, key); },
-    formatStatName(key)           { return Utils.formatStatName(key); },
-    formatStatValue(key, val)     { return Utils.formatStatValue(key, val); },
-    getShareUrl(jobId)            { return Utils.getShareUrl(jobId); },
-    classColor(className)         { return Utils.classColor(className); },
-    classTextColor(className)     { return Utils.classTextColor(className); },
-    armoryUrl(realmSlug, name)    { return Utils.armoryUrl(realmSlug, name); },
-    getItemQualityColor(quality)  { return Utils.getItemQualityColor(quality); },
-    copyToClipboard(text, jobId)  { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
+    // Symulacja
+    addonText:    '',
+    simMode:      'armory',
+    simRole:      'auto',
+    fightStyle:   'Patchwerk',
+    iterations:   1000,
+    targetError:  0.5,
+    job:          null,
+    simResult:    null,
+    simError:     null,
+    pollTimer:    null,
+    chartModal:   null,
+    copiedShare:  null,
 
-    // Role
-    detectedRole()  { return 'dps'; },
-    effectiveRole() { return 'dps'; },
-    roleIcon()      { return '⚔️'; },
-    roleLabel()     { return 'DPS'; },
+    // Historia
+    history:        [],
+    historyPage:    1,
+    historyPerPage: 5,
+    news:           [],
+    newsPage:       1,
+    newsPerPage:    3,
+    expandedNews:   null,
 
-    // View loader
-    async loadView(name) {
-      const container = document.getElementById('view-container');
-      if (!container) return;
-      if (this._viewCache[name]) {
-        container.innerHTML = this._viewCache[name];
+    ...SimMixin,
+    ...CharsMixin,
+    ...HistoryMixin,
+
+    async init() {
+      this.applyTheme();
+      if (this.sessionId) {
+        await this.loadCharacters();
+        await this.loadHistory();
+        await this.checkFirstLogin();
       } else {
-        try {
-          const res = await fetch('/views/' + name + '.html?v=1');
-          if (!res.ok) throw new Error('View not found: ' + name);
-          const html = await res.text();
-          this._viewCache[name] = html;
-          container.innerHTML = html;
-        } catch (e) {
-          console.error('loadView failed:', e);
-          container.innerHTML = '<p style="color:#f66;padding:2rem">Błąd ładowania widoku: ' + name + '</p>';
-          return;
+        await this.loadPublicHistory();
+      }
+      await this.loadNews();
+      await this.loadAppearance();
+    },
+
+    async checkFirstLogin() {
+      if (!this.sessionId) return;
+      try {
+        const res = await fetch(`/auth/session/info?session=${this.sessionId}`);
+        if (!res.ok) return;
+        const info = await res.json();
+        this.mainChar = info.main_character_name
+          ? { name: info.main_character_name, realm: info.main_character_realm }
+          : null;
+        if (info.is_first_login) {
+          this.isFirstLogin      = true;
+          this.showMainCharModal = true;
         }
+      } catch (e) {
+        console.error('checkFirstLogin failed', e);
       }
-      this.$nextTick(() => Alpine.initTree(container));
     },
 
-    navigateTo(name) {
-      this.currentView = name;
-      this.activeTab = name;
-      this.loadView(name);
+    async saveMainChar(char) {
+      if (!this.sessionId || this.savingMainChar) return;
+      this.savingMainChar = true;
+      try {
+        const res = await fetch(`/auth/session/main-character?session=${this.sessionId}`, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ name: char.name, realm: char.realm_slug }),
+        });
+        if (res.ok) {
+          this.mainChar          = { name: char.name, realm: char.realm_slug };
+          this.mainCharSaved     = true;
+          this.showMainCharModal = false;
+          this.isFirstLogin      = false;
+        }
+      } catch (e) {
+        console.error('saveMainChar failed', e);
+      } finally {
+        this.savingMainChar = false;
+      }
     },
 
-    handleHash() {
-      const hash = window.location.hash.slice(1);
-      if (hash === "symulacje" || hash === "profil") {
-        this.navigateTo(hash);
-      } else {
-        this.navigateTo("home");
-      }
+    async skipMainCharModal() {
+      this.showMainCharModal = false;
+      this.isFirstLogin      = false;
+      if (!this.sessionId) return;
+      try {
+        await fetch(`/auth/session/skip-first-login?session=${this.sessionId}`, { method: 'POST' });
+      } catch (e) {}
+    },
+
+    navigateTo(view) { this.currentView = view; },
+
+    logout() {
+      const s = this.sessionId;
+      localStorage.removeItem('simcraft_session');
+      localStorage.removeItem('simcraft_last_char');
+      this.sessionId  = null;
+      this.characters = [];
+      this.history    = [];
+      window.location.href = '/auth/logout' + (s ? '?session=' + s : '');
     },
 
     toggleTheme() {
-      this.theme = this.theme === "dark" ? "light" : "dark";
-      localStorage.setItem("simcraft_theme", this.theme);
-      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+      this.theme = this.theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('simcraft_theme', this.theme);
+      this.applyTheme();
+    },
+    applyTheme() {
+      document.documentElement.setAttribute('data-theme', this.theme === 'light' ? 'light' : 'dark');
     },
 
-    logout() {
-      localStorage.removeItem("simcraft_session");
-      localStorage.removeItem("simcraft_last_char");
-      this.sessionId = null;
-      this.characters = [];
-      this.selectedChar = null;
-      this.simResult = null;
-      window.location.href = API.logoutUrl();
-    },
+    getItemQualityColor(q) { return Utils.getItemQualityColor(q); },
 
     async loadAppearance() {
       try {
-        const res = await fetch('/api/appearance');
-        if (res.ok) {
-          const data = await res.json();
-          this.appearance.header_title     = data.header_title     ?? this.appearance.header_title;
-          this.appearance.hero_title       = data.hero_title       ?? this.appearance.hero_title;
-          this.appearance.emoji            = data.emoji            ?? this.appearance.emoji;
-          this.appearance.hero_custom_text = data.hero_custom_text ?? "";
-          document.title = this.appearance.emoji + ' ' + this.appearance.header_title;
-        }
-      } catch (e) {
-        console.error('Failed to load appearance:', e);
-      }
-    },
-
-    init() {
-      document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
-      this.loadAppearance();
-
-      const params = new URLSearchParams(window.location.search);
-      const sessionFromUrl = params.get("session");
-      if (sessionFromUrl) {
-        this.sessionId = sessionFromUrl;
-        localStorage.setItem("simcraft_session", sessionFromUrl);
-        history.replaceState({}, "", "/");
-      } else {
-        const saved = localStorage.getItem("simcraft_session");
-        if (saved) this.sessionId = saved;
-      }
-
-      if (this.sessionId) {
-        this.loadCharacters();
-        this.loadHistory();
-        this.loadNews();
-      } else {
-        this.loadPublicHistory();
-        this.loadNews();
-      }
-
-      this.loadView('home');
+        const res = await fetch('/admin/api/appearance');
+        if (res.ok) this.appearance = await res.json();
+      } catch (e) {}
     },
   };
-
-  // Kopiuj gettery z miksy zachowując deskryptory (Object.assign tego nie robi poprawnie)
-  mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
-
-  return state;
 }

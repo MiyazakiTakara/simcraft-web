@@ -43,9 +43,12 @@ class HistoryEntryModel(Base):
 class SessionModel(Base):
     __tablename__ = "sessions"
 
-    session_id   = Column(String(64), primary_key=True)
-    access_token = Column(Text, nullable=False)
-    expires_at   = Column(Float, nullable=False)
+    session_id             = Column(String(64), primary_key=True)
+    access_token           = Column(Text, nullable=False)
+    expires_at             = Column(Float, nullable=False)
+    main_character_name    = Column(String(128), nullable=True)
+    main_character_realm   = Column(String(128), nullable=True)
+    is_first_login         = Column(Boolean, default=True)
 
 
 class AdminSessionModel(Base):
@@ -101,6 +104,10 @@ def init_db():
                     END IF;
                 END $$;
             """))
+            # Migracje dla funkcji spolecznosciowych
+            db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_name VARCHAR(128)"))
+            db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_realm VARCHAR(128)"))
+            db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS is_first_login BOOLEAN DEFAULT TRUE"))
             db.commit()
         except Exception:
             db.rollback()
@@ -140,6 +147,40 @@ def get_job(job_id: str) -> dict | None:
             "started_at":   job.started_at,
             "completed_at": job.completed_at,
         }
+
+
+def get_session_info(session_id: str) -> dict | None:
+    """Zwraca pelne info o sesji uzytkownika (main char, first login)."""
+    import time
+    with SessionLocal() as db:
+        row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+        if not row or time.time() > row.expires_at:
+            return None
+        return {
+            "main_character_name":  row.main_character_name,
+            "main_character_realm": row.main_character_realm,
+            "is_first_login":       row.is_first_login if row.is_first_login is not None else True,
+        }
+
+
+def set_main_character(session_id: str, name: str, realm: str):
+    """Ustawia glowna postac i oznacza ze to nie jest juz first login."""
+    with SessionLocal() as db:
+        row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+        if row:
+            row.main_character_name  = name
+            row.main_character_realm = realm
+            row.is_first_login       = False
+            db.commit()
+
+
+def clear_first_login(session_id: str):
+    """Oznacza sesje jako 'nie first login' bez ustawiania maina (uzytkownik zamknal modal)."""
+    with SessionLocal() as db:
+        row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+        if row:
+            row.is_first_login = False
+            db.commit()
 
 
 def add_log(level: str, message: str, context: str = None):
