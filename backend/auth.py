@@ -14,11 +14,20 @@ CLIENT_ID     = os.environ["BLIZZARD_CLIENT_ID"]
 CLIENT_SECRET = os.environ["BLIZZARD_CLIENT_SECRET"]
 REDIRECT_URI  = os.environ.get("REDIRECT_URI", "http://localhost:8000/auth/callback")
 
-print(f"REDIRECT_URI = {REDIRECT_URI}", flush=True)
-
 _token_cache: dict = {"token": None, "expires_at": 0}
 
 _oauth_states: dict = {}
+
+_OAUTH_STATE_TTL    = 600   # sekundy ważności state
+_OAUTH_STATE_MAX    = 500   # max liczba aktywnych state'ów
+
+
+def _cleanup_oauth_states():
+    """Usuwa wygasłe state'y OAuth. Wywołuj przed każdym dodaniem nowego."""
+    cutoff = time.time() - _OAUTH_STATE_TTL
+    expired = [k for k, v in _oauth_states.items() if v < cutoff]
+    for k in expired:
+        del _oauth_states[k]
 
 
 def _get_session(session_id: str) -> dict | None:
@@ -46,13 +55,11 @@ async def get_blizzard_token() -> str:
                 auth=(CLIENT_ID, CLIENT_SECRET),
                 timeout=10,
             )
-            print(f"TOKEN RESPONSE: {resp.status_code} {resp.text[:200]}", flush=True)
             resp.raise_for_status()
             data = resp.json()
             _token_cache["token"] = data["access_token"]
             _token_cache["expires_at"] = now + data["expires_in"]
         except Exception as e:
-            print(f"TOKEN ERROR: {e}", flush=True)
             raise
     return _token_cache["token"]
 
@@ -67,6 +74,9 @@ async def get_session_token(session_id: str) -> str:
 
 @router.get("/auth/login")
 async def auth_login():
+    _cleanup_oauth_states()
+    if len(_oauth_states) >= _OAUTH_STATE_MAX:
+        raise HTTPException(429, "Zbyt wiele aktywnych sesji logowania. Spróbuj za chwilę.")
     state = secrets.token_urlsafe(16)
     _oauth_states[state] = time.time()
     url = (
@@ -84,11 +94,11 @@ async def auth_login():
 async def auth_callback(code: str, state: str = None):
     if not state or state not in _oauth_states:
         raise HTTPException(400, "Invalid state parameter")
-    
+
     state_time = _oauth_states.pop(state)
-    if time.time() - state_time > 600:
+    if time.time() - state_time > _OAUTH_STATE_TTL:
         raise HTTPException(400, "State parameter expired")
-    
+
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "https://oauth.battle.net/token",
