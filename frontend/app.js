@@ -38,7 +38,7 @@ function app() {
 
     historySort: "date",
     historyPage: 1,
-    historyPerPage: 10,
+    historyPerPage: 5,
 
     newsPage: 1,
     newsPerPage: 5,

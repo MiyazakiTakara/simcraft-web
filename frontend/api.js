@@ -61,7 +61,7 @@ const API = {
   },
 
   // Publiczna historia (gosc)
-  async getPublicHistory(page = 1, limit = 50) {
+  async getPublicHistory(page = 1, limit = 5) {
     return this._fetch(`/api/history?page=${page}&limit=${limit}`);
   },
 
