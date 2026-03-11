@@ -140,8 +140,9 @@
               </div>
             </div>
           </div>
-          <div class="spell-list">
-            <template x-for="sp in sortedSpells" :key="sp.name">
+<div class="spell-list">
+<template x-for="sp in sortedSpells" :key="sp.name">
+<div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                 <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                   <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
                     <div class="spell-tooltip-row">
