@@ -452,11 +452,7 @@
             <div class="sim-option"><label>Styl walki</label><select x-model="simOptions.fight_style"><option value="Patchwerk">Patchwerk</option><option value="HecticAddCleave">HecticAddCleave</option><option value="LightMovement">LightMovement</option><option value="HeavyMovement">HeavyMovement</option></select></div>
             <div class="sim-option"><label>Iteracje</label><input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/></div>
             <div class="sim-option"><label>Target Error %</label><input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/></div>
-            <div class="sim-option"><label>Typ symulacji</label>
-              <select x-model="simRole">
-                <option value="dps">⚔️ DPS</option>
-              </select>
-            </div>
+
           </div>
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
             <span x-show="loadingSim" class="spinner"></span>
