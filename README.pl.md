@@ -55,7 +55,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 
 - [x] **Race condition w `simulation.py`** — `out_path` przekazywany jako argument do `_run_sim()`, nie jest czytany z `jobs[]` poza lockiem
 - [x] **Gettery Alpine.js w mixa-ach** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` itp. muszą być definiowane przez `Object.defineProperties` (przez `mergeMixins`), nie przez `...spread` — spread niszczy deskryptory getterów
-- [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze` dla reprodukowalnych buildów
+- [x] **Pinowanie wersji w `requirements.txt`** — wszystkie 13 zależności używają dokładnego pinowania `==`; zweryfikowane i zamknięte przez PR #11
 - [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli (ma sens po dodaniu porównywania buildów)
 
 ## Wymagania
