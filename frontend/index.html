@@ -34,7 +34,7 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
-  <script src="/app.js?v=19"></script>
+  <script src="/app.js?v=20"></script>
 
   <style>
     .chart-section { margin-top: 1.2rem; text-align: center; }
@@ -70,7 +70,7 @@
 
   <!-- Header -->
   <header class="header">
-    <div class="header-logo" style="cursor:pointer" @click="currentView = 'home'">⚔️ SimCraft Web</div>
+    <div class="header-logo" style="cursor:pointer" @click="currentView = 'home'" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
     <div style="display:flex;align-items:center;gap:.6rem">
       <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? 'Przełącz na jasny' : 'Przełącz na ciemny'">
         <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
@@ -94,7 +94,7 @@
     <div class="landing">
 
       <div class="landing-hero">
-        <h1 class="landing-hero-title">⚔️ Symulator DPS<br/>dla <span>World of Warcraft</span></h1>
+        <h1 class="landing-hero-title"><span x-text="appearance.emoji">⚔️</span> Symulator DPS<br/>dla <span x-text="appearance.hero_title">World of Warcraft</span></h1>
         <p class="landing-hero-sub">Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.</p>
         <div class="landing-hero-btns">
           <template x-if="!sessionId">
@@ -521,7 +521,7 @@
       <template x-if="characters.length === 0">
         <div style="text-align:center;padding:3rem;color:var(--muted)">
           <p>Brak postaci do wyświetlenia.</p>
-          <p style="font-size:.85rem">Twoje postacie WoW pojawią się automatycznie po zalogowaniu.</p>
+          <p style="font-size:.85rem">Twoje postacie WoW pojawią się automatycycznie po zalogowaniu.</p>
         </div>
       </template>
       </div>
@@ -627,8 +627,6 @@
                 </div>
               </div>
             </template>
-
-
 
             <!-- DPS Trend Chart -->
             <div>
