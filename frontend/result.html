@@ -319,9 +319,7 @@ function resultPage() {
       return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
     },
 
-    effectiveRole() {
-      return this.result?.role || 'dps';
-    },
+    effectiveRole() { return 'dps'; },
 
     roleIcon(role) { return role === 'healer' ? '💚' : '⚔️'; },
     roleLabel(role) { return role === 'healer' ? 'HPS' : 'DPS'; },
