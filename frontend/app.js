@@ -318,54 +318,54 @@ function app() {
       const chartDiv = document.getElementById('dps-trend-chart');
       if (!chartDiv) return;
 
-      try {
-        const params = new URLSearchParams({
-          session: this.sessionId,
-          character_name: char.name,
-          character_realm_slug: char.realm_slug,
-          fight_style: 'Patchwerk',
-          limit: 100
-        });
+      const charData = this.getCharDps(char.name);
+      if (!charData || !charData.chartData || charData.chartData.length === 0) {
+        Plotly.purge(chartDiv);
+        chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
+        return;
+      }
 
-        const response = await fetch(`/api/history/trend?${params}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const x = charData.chartData.map(p => p.x);
+      const dpsY = charData.chartData.map(p => p.dps);
+      const hpsY = charData.chartData.map(p => p.hps);
 
-        const data = await response.json();
+      const hasHps = hpsY.some(v => v > 0);
 
-        if (!data.points || data.points.length === 0) {
-          Plotly.purge(chartDiv);
-          chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">Brak danych do wykresu</div>';
-          return;
-        }
+      const traceDps = {
+        x, y: dpsY,
+        mode: 'lines+markers',
+        type: 'scatter',
+        name: 'DPS',
+        line: { color: '#f4a01c', width: 2 },
+        marker: { size: 6, color: '#f4a01c' },
+        hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
+      };
 
-        const x = data.points.map(p => new Date(p.timestamp * 1000));
-        const y = data.points.map(p => p.dps);
+      const traces = [traceDps];
 
-        const trace = {
-          x, y,
+      if (hasHps) {
+        traces.push({
+          x, y: hpsY,
           mode: 'lines+markers',
           type: 'scatter',
-          name: 'DPS',
-          line: { color: '#f4a01c', width: 2 },
-          marker: { size: 6, color: '#f4a01c' },
-          hovertemplate: 'Czas: %{x}<br>DPS: %{y:.0f}<extra></extra>'
-        };
-
-        const layout = {
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          margin: { l: 50, r: 20, t: 20, b: 50 },
-          xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
-          yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'DPS' },
-          showlegend: false
-        };
-
-        Plotly.newPlot(chartDiv, [trace], layout, { responsive: true, displayModeBar: false });
-      } catch (e) {
-        console.error("Failed to load DPS trend", e);
-        Plotly.purge(chartDiv);
-        chartDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f66">Błąd ładowania danych</div>';
+          name: 'HPS',
+          line: { color: '#3399ff', width: 2 },
+          marker: { size: 6, color: '#3399ff' },
+          hovertemplate: 'Czas: %{x}<br>HPS: %{y:.0f}<extra></extra>'
+        });
       }
+
+      const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: { l: 50, r: 20, t: 20, b: 50 },
+        xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
+        yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: hasHps ? 'DPS / HPS' : 'DPS' },
+        showlegend: true,
+        legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { color: '#aaa' } }
+      };
+
+      Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displayModeBar: false });
     },
 
     getItemQualityColor(quality) {
@@ -637,20 +637,27 @@ function app() {
       if (charSims.length === 0) return null;
       const sortedSims = charSims.sort((a, b) => a.created_at - b.created_at);
       const dpsList = sortedSims.map(h => h.dps);
+      const hpsList = sortedSims.map(h => h.hps || 0);
       const latest = dpsList[dpsList.length - 1];
+      const latestHps = hpsList[hpsList.length - 1];
       const first = dpsList[0];
       const diff = latest - first;
+      const diffHps = latestHps - (hpsList[0] || 0);
+      const lastSim = charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0);
+      const lastRole = charSims.reduce((max, h) => h.created_at > max.created_at ? h : max, charSims[0]).role || 'dps';
       const trend = dpsList.length > 1
         ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
         : '1 symulacja';
       return {
-        latest, first, diff, trend,
+        latest, latestHps, first, diff, diffHps, trend, lastRole,
         count: dpsList.length,
-        lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
+        lastSim,
         dpsList,
+        hpsList,
         chartData: sortedSims.map(h => ({
           x: new Date(h.created_at * 1000),
-          y: h.dps,
+          dps: h.dps,
+          hps: h.hps || 0,
           job_id: h.job_id
         }))
       };

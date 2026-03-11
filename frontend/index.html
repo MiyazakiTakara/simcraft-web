@@ -552,7 +552,7 @@
               </div>
               <template x-if="getCharDps(char.name)">
                 <div>
-                  <div class="char-card-dps" x-text="formatDps(getCharDps(char.name).latest)"></div>
+                  <div class="char-card-dps" x-text="(getCharDps(char.name).lastRole === 'healer' ? '💚 ' : '⚔️ ') + formatDps(getCharDps(char.name).latest)"></div>
                   <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
                   <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)" x-text="getCharDps(char.name).count + ' symulacji · ' + formatTime(getCharDps(char.name).lastSim)"></div>
                 </div>
