@@ -97,11 +97,13 @@ function app() {
       "Warrior":       "#C69B3A",
     },
 
-    // Appearance settings
+    // Appearance settings — hero_custom_text MUSI być tutaj jako pusty string,
+    // żeby Alpine 3 był reaktywny na ten klucz od startu
     appearance: {
       header_title: "SimCraft Web",
-      hero_title: "Symulator DPS dla World of Warcraft",
-      emoji: "⚔️"
+      hero_title: "World of Warcraft",
+      emoji: "⚔️",
+      hero_custom_text: ""
     },
 
     init() {
@@ -137,25 +139,12 @@ function app() {
         const res = await fetch('/api/appearance');
         if (res.ok) {
           const data = await res.json();
-          this.appearance = data;
-          // Update DOM
-          const titleEl = document.querySelector('title');
-          if (titleEl) titleEl.textContent = data.header_title + ' — ' + data.hero_title;
-          
-          const headerLogo = document.querySelector('.header-logo');
-          if (headerLogo) headerLogo.innerHTML = data.emoji + ' ' + data.header_title;
-          
-          // Update hero title (replace entire inner HTML)
-          const heroTitleEl = document.querySelector('.landing-hero-title');
-          if (heroTitleEl) {
-            // Keep the emoji and line break, only replace the text part
-            // The current format is: "⚔️ Symulator DPS<br/>dla <span>World of Warcraft</span>"
-            // We want to keep emoji and "Symulator DPS<br/>dla" but update the span content
-            const spanEl = heroTitleEl.querySelector('span');
-            if (spanEl) {
-              spanEl.textContent = data.hero_title;
-            }
-          }
+          // Przypisuj pole po polu — NIE rób this.appearance = data,
+          // bo Alpine 3 traci reaktywność na klucze które nie istniały w init
+          this.appearance.header_title   = data.header_title   ?? this.appearance.header_title;
+          this.appearance.hero_title     = data.hero_title     ?? this.appearance.hero_title;
+          this.appearance.emoji          = data.emoji          ?? this.appearance.emoji;
+          this.appearance.hero_custom_text = data.hero_custom_text ?? "";
         }
       } catch (e) {
         console.error('Failed to load appearance:', e);
@@ -286,7 +275,6 @@ function app() {
        if (!chartDiv) return;
 
        try {
-         // Fetch trend data from API
          const params = new URLSearchParams({
            session: this.sessionId,
            character_name: char.name,
@@ -296,9 +284,7 @@ function app() {
          });
          
          const response = await fetch(`/api/history/trend?${params}`);
-         if (!response.ok) {
-           throw new Error(`HTTP ${response.status}`);
-         }
+         if (!response.ok) throw new Error(`HTTP ${response.status}`);
          
          const data = await response.json();
          
@@ -312,8 +298,7 @@ function app() {
          const y = data.points.map(p => p.dps);
 
          const trace = {
-           x: x,
-           y: y,
+           x, y,
            mode: 'lines+markers',
            type: 'scatter',
            name: 'DPS',
@@ -326,25 +311,12 @@ function app() {
            paper_bgcolor: 'rgba(0,0,0,0)',
            plot_bgcolor: 'rgba(0,0,0,0)',
            margin: { l: 50, r: 20, t: 20, b: 50 },
-           xaxis: {
-             gridcolor: 'rgba(255,255,255,0.1)',
-             color: '#aaa',
-             tickformat: '%H:%M<br>%d.%m'
-           },
-           yaxis: {
-             gridcolor: 'rgba(255,255,255,0.1)',
-             color: '#aaa',
-             title: 'DPS'
-           },
+           xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', tickformat: '%H:%M<br>%d.%m' },
+           yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'DPS' },
            showlegend: false
          };
 
-         const config = {
-           responsive: true,
-           displayModeBar: false
-         };
-
-         Plotly.newPlot(chartDiv, [trace], layout, config);
+         Plotly.newPlot(chartDiv, [trace], layout, { responsive: true, displayModeBar: false });
        } catch (e) {
          console.error("Failed to load DPS trend", e);
          Plotly.purge(chartDiv);
@@ -614,14 +586,10 @@ function app() {
          ? (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(Math.round(diff))
          : '1 symulacja';
        return {
-         latest,
-         first,
-         diff,
-         trend,
+         latest, first, diff, trend,
          count: dpsList.length,
          lastSim: charSims.reduce((max, h) => h.created_at > max ? h.created_at : max, 0),
          dpsList,
-         // Data for chart
          chartData: sortedSims.map(h => ({
            x: new Date(h.created_at * 1000),
            y: h.dps,
@@ -694,23 +662,14 @@ function app() {
 
      showItemTooltip(event, item) {
        const tooltip = document.getElementById('item-tooltip');
-       if (!tooltip) {
-         console.error('Tooltip element not found');
-         return;
-       }
+       if (!tooltip) return;
 
        let html = `
          <div class="item-tooltip-slot">${item.slot}</div>
          <div class="item-tooltip-title" style="color:${this.getItemQualityColor(item.quality)}">${item.name}</div>
          <div style="color:var(--muted);font-size:.75rem;margin-bottom:.5rem">ilvl ${item.level}</div>
        `;
-
-       // Description (additional effects)
-       if (item.description) {
-         html += `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic">${item.description}</div>`;
-       }
-
-       // Stats
+       if (item.description) html += `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic">${item.description}</div>`;
        if (item.stats && item.stats.length > 0) {
          html += '<div class="item-tooltip-stats">';
          item.stats.forEach(stat => {
@@ -718,54 +677,30 @@ function app() {
          });
          html += '</div>';
        }
-
-       // Enchant
-       if (item.enchant) {
-         html += `<div class="item-tooltip-enchant">✓ ${item.enchant}</div>`;
-       }
-
-       // Gem
-       if (item.gem) {
-         html += `<div class="item-tooltip-gem">♦ ${item.gem}</div>`;
-       }
-
-       // Spell effects
+       if (item.enchant) html += `<div class="item-tooltip-enchant">✓ ${item.enchant}</div>`;
+       if (item.gem)     html += `<div class="item-tooltip-gem">♦ ${item.gem}</div>`;
        if (item.spells && item.spells.length > 0) {
          item.spells.forEach(spell => {
-           html += `
-             <div class="item-tooltip-spell">
-               <div class="item-tooltip-spell-name">${spell.name}</div>
-               <div class="item-tooltip-spell-desc">${spell.description}</div>
-             </div>
-           `;
+           html += `<div class="item-tooltip-spell"><div class="item-tooltip-spell-name">${spell.name}</div><div class="item-tooltip-spell-desc">${spell.description}</div></div>`;
          });
        }
 
        tooltip.innerHTML = html;
        tooltip.style.display = 'block';
 
-       // Position tooltip
        const rect = event.target.getBoundingClientRect();
-       
-       let top = rect.top - tooltip.offsetHeight - 10;
+       let top  = rect.top - tooltip.offsetHeight - 10;
        let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
-       
-       // Adjust if tooltip goes off screen
        if (top < 10) top = rect.bottom + 10;
        if (left < 10) left = 10;
-       if (left + tooltip.offsetWidth > window.innerWidth - 10) {
-         left = window.innerWidth - tooltip.offsetWidth - 10;
-       }
-       
-       tooltip.style.top = top + 'px';
+       if (left + tooltip.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltip.offsetWidth - 10;
+       tooltip.style.top  = top + 'px';
        tooltip.style.left = left + 'px';
      },
 
      hideItemTooltip() {
        const tooltip = document.getElementById('item-tooltip');
-       if (tooltip) {
-         tooltip.style.display = 'none';
-       }
+       if (tooltip) tooltip.style.display = 'none';
      },
    };
  }
