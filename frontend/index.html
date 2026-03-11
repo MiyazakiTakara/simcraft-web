@@ -34,7 +34,11 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
-  <script src="/app.js?v=24"></script>
+  <script src="/utils.js?v=1"></script>
+  <script src="/sim.js?v=1"></script>
+  <script src="/chars.js?v=1"></script>
+  <script src="/history.js?v=1"></script>
+  <script src="/app.js?v=25"></script>
 </head>
 <body>
 <div x-data="app()" x-init="init()" class="container">
@@ -65,10 +69,10 @@
     </div>
   </header>
 
-  <!-- Kontener widoków — wypełniany dynamicznie przez loadView() -->
+  <!-- Kontener widoków -->
   <div id="view-container"></div>
 
-  <!-- CHAR DETAILS MODAL (globalny, ponad widokami) -->
+  <!-- CHAR DETAILS MODAL -->
   <template x-if="charDetailsModal">
     <div class="chart-modal-overlay" @click="closeCharDetails()" style="display:flex;align-items:center;justify-content:center">
       <div @click.stop style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;padding:1.5rem;cursor:default">
@@ -82,22 +86,19 @@
           </div>
           <button @click="closeCharDetails()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)">&times;</button>
         </div>
-
         <template x-if="loadingCharDetails">
           <div style="text-align:center;padding:2rem;color:var(--muted)">Ładowanie...</div>
         </template>
         <template x-if="charDetailsError">
           <div style="text-align:center;padding:2rem;color:#f66" x-text="'Błąd: ' + charDetailsError"></div>
         </template>
-
         <template x-if="!loadingCharDetails && !charDetailsError">
           <div>
             <h3 style="margin:1rem 0 .5rem">🎒 Gear</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem">
               <template x-for="item in charEquipment" :key="item.slot">
                 <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem;position:relative"
-                     @mouseenter="showItemTooltip($event, item)"
-                     @mouseleave="hideItemTooltip()">
+                     @mouseenter="showItemTooltip($event, item)" @mouseleave="hideItemTooltip()">
                   <div style="color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:.2rem" x-text="item.slot"></div>
                   <div :style="{color: getItemQualityColor(item.quality)}" x-text="item.name"></div>
                   <template x-if="item.description">
@@ -110,7 +111,6 @@
                 </div>
               </template>
             </div>
-
             <template x-if="charTalents.length > 0">
               <div>
                 <h3 style="margin:1rem 0 .5rem">✨ Talenty</h3>
@@ -128,14 +128,12 @@
                 </div>
               </div>
             </template>
-
             <div>
               <h3 style="margin:1rem 0 .5rem">📈 DPS w czasie</h3>
               <div id="dps-trend-chart" style="width:100%;height:300px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"></div>
             </div>
           </div>
         </template>
-
         <div style="margin-top:1.5rem;display:flex;gap:.5rem">
           <button class="btn btn-primary" @click="selectChar(charDetailsModal); closeCharDetails()">🏃 Uruchom symulację</button>
         </div>
