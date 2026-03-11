@@ -338,6 +338,7 @@ function app() {
       return colors[quality] || "#fff";
     },
 
+    // Wywołanie z panelu bocznego (zakładka Symulacje) — ładuje wynik inline
     async loadHistoryResult(jobId) {
       try {
         this.simResult = await API.getResultJson(jobId);
@@ -358,6 +359,11 @@ function app() {
       } catch (e) {
         alert("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyniku: " + e.message);
       }
+    },
+
+    // Wywołanie z zakładki Profil > Historia — otwiera /result/:jobId w nowej karcie
+    openResultPage(jobId) {
+      window.open('/result/' + jobId, '_blank');
     },
 
     async loadPubResult(jobId) {
