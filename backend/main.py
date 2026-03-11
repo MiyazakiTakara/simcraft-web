@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -68,7 +68,7 @@ class NoCacheStaticMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         path = request.url.path.split("?")[0]
-        if path.endswith((".js", ".css", ".html")) or path in ("/",) or path.startswith("/result/"):
+        if path.endswith((".js", ".css", ".html")) or path in ("/",) or path.startswith("/result/") or path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
@@ -90,7 +90,17 @@ app.include_router(admin_router)
 @app.get("/api/appearance")
 async def get_appearance_public():
     """Publiczny endpoint do pobierania ustawień wyglądu przez frontend."""
-    return load_appearance_config()
+    config = load_appearance_config()
+    return JSONResponse(
+        content=config,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "CDN-Cache-Control": "no-store",
+            "Cloudflare-CDN-Cache-Control": "no-store",
+        }
+    )
 
 
 BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")
