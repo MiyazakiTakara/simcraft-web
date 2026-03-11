@@ -14,7 +14,7 @@ header {
   margin-bottom: 1.5rem;
   border-bottom: 1px solid #333;
   padding-bottom: 0.75rem;
-  max-width: 720px;
+  max-width: 850px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -34,7 +34,7 @@ a.logout {
   font-size: 0.9rem;
   margin-left: 1rem;
 }
-.container, header { max-width: 720px; margin: 0 auto; }
+.container, header { max-width: 850px; margin: 0 auto; }
 h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #ccc; }
 .form-box {
   background: #1a1a1a;
@@ -114,7 +114,7 @@ button.danger:hover { background: #2a1010; }
 .tab { background: none; border: none; color: #888; cursor: pointer; padding: 0.4rem 0.8rem; font-size: 0.9rem; border-radius: 6px 6px 0 0; }
 .tab.active { background: #1a1a1a; color: #fff; }
 .tab:hover { color: #ccc; }
-.tab-content { display: none; }
+.tab-content { display: none; max-width: 850px; margin: 0 auto; }
 .tab-content.active { display: block; }
 .log-entry { font-family: monospace; font-size: 0.8rem; padding: 0.3rem 0.5rem; border-bottom: 1px solid #222; }
 .log-entry:hover { background: #151515; }
