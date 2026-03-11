@@ -145,6 +145,8 @@ function app() {
           this.appearance.hero_title     = data.hero_title     ?? this.appearance.hero_title;
           this.appearance.emoji          = data.emoji          ?? this.appearance.emoji;
           this.appearance.hero_custom_text = data.hero_custom_text ?? "";
+          // Sync browser tab title with header_title
+          document.title = this.appearance.emoji + ' ' + this.appearance.header_title;
         }
       } catch (e) {
         console.error('Failed to load appearance:', e);
