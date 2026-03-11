@@ -9,7 +9,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - **Symulacje z Addon Export** — możliwość wklejenia tekstu z addona SimulationCraft bez logowania
 - **Historia symulacji** — zapis wszystkich symulacji, publiczna lista ostatnich wyników
 - **Wykresy DPS** — interaktywne wykresy kołowe (plotly)
-- **Panel admina** — zarządzanie newsami (Keycloak OAuth2)
+- **Panel admina** — zarządzanie newsami, limitami, health check, zadaniami (Keycloak OAuth2)
 - **Rate limiting** — ochrona przed nadużywaniem API
 
 ## Wymagania
@@ -85,10 +85,11 @@ simcraft-web/
 │   └── admin.py         # Panel admina (Keycloak)
 ├── frontend/
 │   ├── index.html       # Główna strona
-│   ├── admin.html       # Panel admina
+│   ├── admin.html       # Panel admina (nowe zakladki: limity, health, zadania)
 │   ├── result.html      # Strona wyniku (dla social sharing)
 │   ├── app.js          # Logika Alpine.js
 │   ├── api.js          # API client
+│   ├── admin.js        # Logika panelu admina
 │   └── style.css       # Style
 ├── docker-compose.yml
 ├── Dockerfile
@@ -106,6 +107,11 @@ simcraft-web/
 - `GET /api/characters` — lista postaci (wymaga sesji)
 - `GET /auth/login` — logowanie Battle.net
 - `GET /admin` — panel admina
+- `GET /admin/api/limits` — pobierz limity systemowe
+- `PATCH /admin/api/limits` — aktualizuj limity systemowe
+- `GET /admin/api/health` — health check usług
+- `GET /admin/api/tasks` — lista aktywnych zadań
+- `DELETE /admin/api/tasks/{job_id}` — anuluj zadanie
 
 ## Licencja
 
