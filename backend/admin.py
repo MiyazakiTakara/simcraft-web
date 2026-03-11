@@ -387,3 +387,119 @@ async def delete_simulations(request: Request, older_than_days: int = None, user
         db.commit()
     
     return {"deleted": deleted}
+
+
+# ---------- Limits Management ----------
+
+class LimitsUpdate(BaseModel):
+    max_concurrent_sims: int | None = None
+    rate_limit_per_minute: int | None = None
+    job_timeout: int | None = None
+
+
+@router.get("/api/limits")
+async def get_limits(request: Request):
+    _require_admin(request)
+    return {
+        "max_concurrent_sims": int(os.environ.get("MAX_CONCURRENT_SIMS", "3")),
+        "rate_limit_per_minute": 5,  # Hardcoded in simulation.py
+        "job_timeout": int(os.environ.get("JOB_TIMEOUT", "360")),
+    }
+
+
+@router.patch("/api/limits")
+async def update_limits(request: Request, data: LimitsUpdate):
+    _require_admin(request)
+    # Note: In a real app, you'd persist these to a config file or database
+    # For now, we'll just return success (implementation depends on how you want to store config)
+    return {"ok": True, "message": "Limits updated (not persisted in this demo)"}
+
+
+# ---------- Health Check ----------
+
+@router.get("/api/health")
+async def health_check(request: Request):
+    _require_admin(request)
+    import subprocess
+    
+    health_status = {
+        "database": "ok",
+        "blizzard_api": "unknown",
+        "keycloak": "unknown",
+        "simc_binary": "unknown",
+        "results_dir": "unknown",
+    }
+    
+    # Check database
+    try:
+        with SessionLocal() as db:
+            db.execute("SELECT 1")
+        health_status["database"] = "ok"
+    except Exception as e:
+        health_status["database"] = f"error: {str(e)}"
+    
+    # Check Blizzard API
+    try:
+        from auth import get_blizzard_token
+        token = await get_blizzard_token()
+        health_status["blizzard_api"] = "ok" if token else "error: no token"
+    except Exception as e:
+        health_status["blizzard_api"] = f"error: {str(e)}"
+    
+    # Check Keycloak
+    try:
+        cfg = _cfg()
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{cfg['oidc_base']}/userinfo", timeout=5)
+            health_status["keycloak"] = "ok" if resp.status_code == 200 else f"error: {resp.status_code}"
+    except Exception as e:
+        health_status["keycloak"] = f"error: {str(e)}"
+    
+    # Check SimulationCraft binary
+    simc_path = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
+    if os.path.exists(simc_path) and os.access(simc_path, os.X_OK):
+        health_status["simc_binary"] = "ok"
+    else:
+        health_status["simc_binary"] = f"error: not found or not executable at {simc_path}"
+    
+    # Check results directory
+    results_dir = os.environ.get("RESULTS_DIR", "/app/results")
+    if os.path.exists(results_dir) and os.access(results_dir, os.W_OK):
+        health_status["results_dir"] = "ok"
+    else:
+        health_status["results_dir"] = f"error: not writable at {results_dir}"
+    
+    return health_status
+
+
+# ---------- Task Management ----------
+
+@router.get("/api/tasks")
+async def list_tasks(request: Request):
+    _require_admin(request)
+    from simulation import jobs
+    
+    active_tasks = []
+    for job_id, job_info in jobs.items():
+        if job_info.get("status") == "running":
+            active_tasks.append({
+                "job_id": job_id,
+                "status": "running",
+                "started_at": job_info.get("started_at"),
+            })
+    
+    return {"active_tasks": active_tasks, "total_active": len(active_tasks)}
+
+
+@router.delete("/api/tasks/{job_id}")
+async def cancel_task(request: Request, job_id: str):
+    _require_admin(request)
+    from simulation import jobs
+    
+    if job_id in jobs:
+        # Mark job as cancelled (implementation depends on how you handle cancellation)
+        jobs[job_id]["status"] = "cancelled"
+        jobs[job_id]["error"] = "Cancelled by admin"
+        return {"ok": True, "message": f"Task {job_id} cancelled"}
+    else:
+        raise HTTPException(404, "Task not found")

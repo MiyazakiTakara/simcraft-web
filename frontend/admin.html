@@ -21,6 +21,9 @@
     <button class="tab" data-tab="users">Użytkownicy</button>
     <button class="tab" data-tab="logs">Logi</button>
     <button class="tab" data-tab="maintenance">Utrzymanie</button>
+    <button class="tab" data-tab="limits">Limity</button>
+    <button class="tab" data-tab="health">Health</button>
+    <button class="tab" data-tab="tasks">Zadania</button>
   </div>
 
   <div class="tab-content active" id="tab-dashboard">
@@ -100,6 +103,46 @@
       <p id="delete-result" style="margin-top:0.75rem;font-size:0.85rem;"></p>
     </div>
   </div>
+
+  <div class="tab-content" id="tab-limits">
+    <h2>Zarządzanie limitami</h2>
+    <div class="form-box">
+      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem;">Zmiana limitów systemowych.</p>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem">
+        <label style="width:200px">Max jednoczesnych symulacji:</label>
+        <input type="number" id="limit-concurrent" min="1" max="20" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem">
+        <label style="width:200px">Limit zapytań/min:</label>
+        <input type="number" id="limit-rate" min="1" max="60" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+        <label style="width:200px">Timeout symulacji (s):</label>
+        <input type="number" id="limit-timeout" min="60" max="3600" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
+      </div>
+      <button class="primary" onclick="saveLimits()">Zapisz limity</button>
+      <p id="limits-result" style="margin-top:0.75rem;font-size:0.85rem;"></p>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-health">
+    <h2>Health Check</h2>
+    <div class="form-box">
+      <div id="health-status">
+        <p class="empty">Ładowanie...</p>
+      </div>
+      <button class="primary" onclick="loadHealth()" style="margin-top:1rem">Odśwież</button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-tasks">
+    <h2>Zarządzanie zadaniami</h2>
+    <div class="form-box">
+      <div id="tasks-list">
+        <p class="empty">Ładowanie...</p>
+      </div>
+      <button class="primary" onclick="loadTasks()" style="margin-top:1rem">Odśwież</button>
+    </div>
   </div>
 
   <div id="toast"></div>

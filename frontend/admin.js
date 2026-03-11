@@ -3,7 +3,13 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    const tabId = 'tab-' + tab.dataset.tab;
+    document.getElementById(tabId).classList.add('active');
+    
+    // Load data for specific tabs
+    if (tab.dataset.tab === 'limits') loadLimits();
+    if (tab.dataset.tab === 'health') loadHealth();
+    if (tab.dataset.tab === 'tasks') loadTasks();
   });
 });
 
@@ -255,4 +261,100 @@ async function deleteAllSims() {
   loadDashboard();
 }
 
-loadDashboard();
+// ---------- Limits Management ----------
+async function loadLimits() {
+  const res = await fetch('/admin/api/limits');
+  if (!res.ok) { toast('Błąd ładowania limitów', '#e88'); return; }
+  const data = await res.json();
+  
+  document.getElementById('limit-concurrent').value = data.max_concurrent_sims;
+  document.getElementById('limit-rate').value = data.rate_limit_per_minute;
+  document.getElementById('limit-timeout').value = data.job_timeout;
+}
+
+async function saveLimits() {
+  const payload = {
+    max_concurrent_sims: parseInt(document.getElementById('limit-concurrent').value),
+    rate_limit_per_minute: parseInt(document.getElementById('limit-rate').value),
+    job_timeout: parseInt(document.getElementById('limit-timeout').value),
+  };
+  
+  const res = await fetch('/admin/api/limits', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  
+  const result = document.getElementById('limits-result');
+  if (res.ok) {
+    result.textContent = 'Limity zapisane (nie trwałe w demo).';
+    result.style.color = '#4c4';
+  } else {
+    result.textContent = 'Błąd zapisu limitów.';
+    result.style.color = '#e55';
+  }
+}
+
+// ---------- Health Check ----------
+async function loadHealth() {
+  const container = document.getElementById('health-status');
+  container.innerHTML = '<p class="empty">Ładowanie...</p>';
+  
+  const res = await fetch('/admin/api/health');
+  if (!res.ok) { container.innerHTML = '<p class="empty">Błąd ładowania.</p>'; return; }
+  const data = await res.json();
+  
+  const statusHtml = Object.entries(data).map(([key, val]) => {
+    const color = val === 'ok' ? '#4c4' : '#e55';
+    const icon = val === 'ok' ? '✓' : '✗';
+    return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #222">
+      <span>${key}</span>
+      <span style="color:${color}">${icon} ${val}</span>
+    </div>`;
+  }).join('');
+  
+  container.innerHTML = `<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem">${statusHtml}</div>`;
+}
+
+// ---------- Task Management ----------
+async function loadTasks() {
+  const container = document.getElementById('tasks-list');
+  container.innerHTML = '<p class="empty">Ładowanie...</p>';
+  
+  const res = await fetch('/admin/api/tasks');
+  if (!res.ok) { container.innerHTML = '<p class="empty">Błąd ładowania.</p>'; return; }
+  const data = await res.json();
+  
+  if (!data.active_tasks.length) {
+    container.innerHTML = '<p class="empty">Brak aktywnych zadań.</p>';
+    return;
+  }
+  
+  const tasksHtml = data.active_tasks.map(t => `
+    <div class="sim-item">
+      <div>
+        <div style="font-weight:600">${escHtml(t.job_id)}</div>
+        <div style="font-size:0.8rem;color:#888">Status: ${t.status} · ${fmt(t.started_at)}</div>
+      </div>
+      <button class="danger" onclick="cancelTask('${t.job_id}')">Anuluj</button>
+    </div>
+  `).join('');
+  
+  container.innerHTML = `<div class="news-list">${tasksHtml}</div>`;
+}
+
+async function cancelTask(jobId) {
+  if (!confirm(`Na pewno anulować zadanie ${jobId}?`)) return;
+  
+  const res = await fetch(`/admin/api/tasks/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    toast('Zadanie anulowane', '#4c4');
+    loadTasks();
+  } else {
+    toast('Błąd anulowania', '#e55');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+});
