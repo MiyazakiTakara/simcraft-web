@@ -1,84 +1,86 @@
 # SimCraft Web
 
-Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
+> 🇵🇱 [Polska wersja README](./README.pl.md)
 
-> Aplikacja jest **DPS-only** — symulacje healerów i tanków nie są obsługiwane.
+A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 
-## Funkcje
+> The application is **DPS-only** — healer and tank simulations are not supported.
 
-- **Logowanie przez Battle.net** — autoryzacja OAuth2, pobieranie postaci z armory
-- **Symulacje z Armory** — automatyczne pobieranie danych postaci z API Blizzarda
-- **Symulacje z Addon Export** — możliwość wklejenia tekstu z addona SimulationCraft bez logowania
-- **Historia symulacji** — zapis wszystkich symulacji, publiczna lista ostatnich wyników z paginacją
-- **Wykresy DPS** — wykresy kółowe Total DMG + DPS (Plotly/kaleido, renderowane server-side do PNG)
-- **Social sharing** — każdy wynik ma unikalny URL z OG meta tagami (podgląd na Discordzie, Twitterze itp.)
-- **Panel admina** — zarządzanie newsami, limitami symulacji, health check, lista aktywnych zadań (Keycloak OAuth2)
-- **Rate limiting** — ochrona przed nadużywaniem API (slowapi, per-IP)
-- **Watchdog** — automatyczne czyszczenie starych jobów i obsługa timeoutów
-- **Wielojęzyczność** — pełne i18n PL/EN z przełącznikiem języka, auto-detekcją z przeglądarki i zapisem w `localStorage`
-- **Główna postać (main char)** — przy pierwszym logowaniu modal z wyborem głównej postaci; zapis do sesji; wyświetlanie w headerze
+## Features
+
+- **Battle.net Login** — OAuth2 authorization, character fetching from armory
+- **Armory Simulations** — automatic character data retrieval from Blizzard API
+- **Addon Export Simulations** — paste SimulationCraft addon text without logging in
+- **Simulation History** — all simulations saved; public list of recent results with pagination
+- **DPS Charts** — Total DMG + DPS pie charts (Plotly/kaleido, rendered server-side to PNG)
+- **Social Sharing** — every result has a unique URL with OG meta tags (Discord, Twitter previews)
+- **Admin Panel** — manage news, simulation limits, health check, active job list (Keycloak OAuth2)
+- **Rate Limiting** — API abuse protection (slowapi, per-IP)
+- **Watchdog** — automatic cleanup of old jobs and timeout handling
+- **Internationalization** — full i18n PL/EN with language switcher, browser auto-detection and `localStorage` persistence
+- **Main Character** — modal on first login to select main character; saved to session; displayed in header
 
 ## TODO
 
-### Nawigacja
+### Navigation
 
-- [ ] **Persist widoku po refresh** — przy odświeżeniu strony użytkownik powinien trafić z powrotem do tego samego widoku (home/symulacje/profil). Aktualnie zawsze wraca na `home`. Proponowane rozwiązanie: zapis aktywnej zakładki w `localStorage` lub URL hash (`#symulacje`) i odczyt w `init()`.
+- [ ] **Persist view on refresh** — on page reload the user should return to the same view (home/simulations/profile). Currently always resets to `home`. Proposed solution: save active tab in `localStorage` or URL hash (`#symulacje`) and read it in `init()`.
 
-### Historia symulacji
+### Simulation History
 
-- [ ] **Ukrycie wyników symulacji gości z publicznej historii** — symulacje wykonane bez logowania (addon export na stronie głównej) nie powinny pojawiać się w publicznej liście historii na stronie głównej ani nigdzie indziej. Wynik powinien być nadal dostępny bezpośrednio przez link `/result/{job_id}` (np. do udostępnienia znajomym). Wymagane zmiany:
-  - Backend: przy zapisie do historii dodać flagę `is_guest: bool` (lub `user_id IS NULL` jako wyznacznik); endpoint `GET /api/history` powinien filtrować wpisy gdzie `is_guest = true`
-  - Frontend: `startGuestSim()` w `sim.js` może w ogóle nie wywoływać `API.saveToHistory()`, albo przekazywać flagę gościa — do ustalenia
+- [ ] **Hide guest simulation results from public history** — simulations run without logging in (addon export on the home page) should not appear in the public history list anywhere. The result should still be accessible via a direct link `/result/{job_id}` (e.g. to share with friends). Required changes:
+  - Backend: add an `is_guest: bool` flag when saving to history (or use `user_id IS NULL` as the indicator); `GET /api/history` endpoint should filter out entries where `is_guest = true`
+  - Frontend: `startGuestSim()` in `sim.js` should either not call `API.saveToHistory()` at all, or pass the guest flag — TBD
 
-### Funkcje społecznościowe
+### Social Features
 
-> **Problem tożsamości użytkowników:** Użytkownicy logują się przez Battle.net OAuth i posiadają wiele postaci. Planowane podejście: przy pierwszym logowaniu użytkownik wybiera **główną postać** (main), która staje się jego profilem publicznym. Wszystkie symulacje są nadal przypisane do konta (session UUID), ale publicznie wyświetlany jest nick w formacie `Imię-Realm`.
+> **User identity problem:** Users log in via Battle.net OAuth and own multiple characters. Planned approach: on first login the user picks a **main character**, which becomes their public profile. All simulations are still tied to the account (session UUID), but the public display name is in the format `Name-Realm`.
 
-- [x] **Wybór głównej postaci** — modal przy pierwszym logowaniu lub w ustawieniach; zapis do nowej kolumny `main_character` w tabeli sesji
-- [ ] **Profile użytkowników** — strona `/u/{realm}/{name}` z historią symulacji, wybrana główna postać jako awatar profilu
-- [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style, generowana z publicznej historii
-- [ ] **Komentarze / reakcje** — emoji-reakcje lub krótki komentarz pod wynikiem symulacji (per `job_id`)
-- [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji (addon text + parametry) jako publiczny link do ponownego uruchomienia
-- [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli i DPS obok siebie
-- [ ] **Śledzenie trendów** — wykres DPS w czasie dla konkretnej postaci (endpoint `/api/history/trend` już istnieje, brakuje UI)
+- [x] **Main character selection** — modal on first login or in settings; saved to new `main_character` column in sessions table
+- [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history, selected main character as profile avatar
+- [ ] **Rankings** — TOP DPS table per class/spec/fight style, generated from public history
+- [ ] **Comments / reactions** — emoji reactions or short comment under a simulation result (per `job_id`)
+- [ ] **Build sharing** — export simulation config (addon text + parameters) as a public link to re-run
+- [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` view with spell diff and side-by-side DPS
+- [ ] **Trend tracking** — DPS over time chart for a specific character (endpoint `/api/history/trend` already exists, UI missing)
 
-### Wielojęzyczność
+### Internationalization
 
-- [x] **i18n frontend** — stringi UI wydzielone do `locales/pl.json` i `locales/en.json`; Alpine.js `$store.i18n` obsługuje reaktywne przełączanie języka
-- [x] **Automatyczne wykrywanie języka** — na podstawie `navigator.language` lub ustawienia zapisanego w `localStorage`
-- [x] **Angielski jako domyślny** — angielski jest domyślnym językiem; przełącznik PL/EN widoczny w headerze na każdej stronie
-- [x] **Lokalizacja nazw spelli** — nazwy spelli pozostają po angielsku (SimulationCraft + WoW używają EN; gracze są do tego przyzwyczajeni)
+- [x] **i18n frontend** — UI strings extracted to `locales/pl.json` and `locales/en.json`; Alpine.js `$store.i18n` handles reactive language switching
+- [x] **Automatic language detection** — based on `navigator.language` or setting saved in `localStorage`
+- [x] **English as default** — English is the default language; PL/EN switcher visible in the header on every page
+- [x] **Spell name localization** — spell names remain in English (SimulationCraft + WoW use EN; players are used to it)
 
-### Techniczne
+### Technical
 
-- [x] **Race condition w `simulation.py`** — `out_path` przekazywany jako argument do `_run_sim()`, nie jest czytany z `jobs[]` poza lockiem
-- [x] **Gettery Alpine.js w mixa-ach** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` itp. muszą być definiowane przez `Object.defineProperties` (przez `mergeMixins`), nie przez `...spread` — spread niszczy deskryptory getterów
-- [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze` dla reprodukowalnych buildów
-- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli (ma sens po dodaniu porównywania buildów)
+- [x] **Race condition in `simulation.py`** — `out_path` passed as argument to `_run_sim()`, not read from `jobs[]` outside the lock
+- [x] **Alpine.js getters in mixins** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` etc. must be defined via `Object.defineProperties` (through `mergeMixins`), not `...spread` — spread destroys getter descriptors
+- [ ] **Pin versions in `requirements.txt`** — replace unpinned dependencies with `pip freeze` output for reproducible builds
+- [ ] **CSV result export** — `GET /api/result/{job_id}/csv` endpoint returning spell breakdown (makes sense after build comparison is added)
 
-## Wymagania
+## Requirements
 
 - Python 3.10+
 - PostgreSQL
-- Docker & Docker Compose (zalecane)
-- Konto deweloperskie Battle.net (OAuth2)
-- Keycloak (dla panelu admina)
+- Docker & Docker Compose (recommended)
+- Battle.net developer account (OAuth2)
+- Keycloak (for admin panel)
 
-## Uruchomienie lokalne
+## Local Setup
 
 ### Docker Compose
 
 ```bash
 cp .env.example .env
-# edytuj .env i uzupełnij zmienne środowiskowe
+# edit .env and fill in environment variables
 
 docker compose up --build
 ```
 
-### Ręcznie
+### Manual
 
 ```bash
-# Zbuduj SimulationCraft
+# Build SimulationCraft
 git clone --depth=1 https://github.com/simulationcraft/simc.git
 cd simc
 cmake -DBUILD_GUI=OFF -DCMAKE_BUILD_TYPE=Release -S . -B build
@@ -90,118 +92,118 @@ pip install -r requirements.txt
 export BLIZZARD_CLIENT_ID=...
 export BLIZZARD_CLIENT_SECRET=...
 export DATABASE_URL=postgresql://simcraft:simcraft@localhost:5432/simcraft
-# ... pozostałe zmienne środowiskowe (patrz .env.example)
+# ... other environment variables (see .env.example)
 
 cd backend
 uvicorn main:app --reload
 ```
 
-## Zmienne środowiskowe
+## Environment Variables
 
-| Zmienna | Opis | Domyślnie |
-|---------|------|----------|
-| `BLIZZARD_CLIENT_ID` | ID aplikacji OAuth Battle.net | — |
-| `BLIZZARD_CLIENT_SECRET` | Secret aplikacji OAuth Battle.net | — |
-| `REDIRECT_URI` | URL powrotny po autoryzacji Battle.net | — |
-| `DATABASE_URL` | Connection string PostgreSQL | `postgresql://simcraft:simcraft@db:5432/simcraft` |
-| `KEYCLOAK_URL` | URL Keycloak (dla admina) | — |
-| `KEYCLOAK_REALM` | Realm Keycloak | — |
-| `KEYCLOAK_CLIENT_ID` | Client ID Keycloak | — |
-| `KEYCLOAK_CLIENT_SECRET` | Client Secret Keycloak | — |
-| `ADMIN_REDIRECT_URI` | URL powrotny po logowaniu admina | — |
-| `BASE_URL` | Bazowy URL aplikacji (używany w OG meta tagach) | `https://sim.miyazakitakara.ovh` |
-| `RESULTS_DIR` | Katalog na wyniki symulacji | `/app/results` |
-| `SIMC_PATH` | Ścieżka do binary simc | `/app/SimulationCraft/simc` |
-| `MAX_CONCURRENT_SIMS` | Maks. liczba równoczesnych symulacji | `3` |
-| `JOB_TIMEOUT` | Timeout symulacji w sekundach | `360` |
-| `JOBS_TTL` | Czas życia zakończonych jobów w pamięci (sekundy) | `14400` (4h) |
-| `LOG_LEVEL` | Poziom logowania | `INFO` |
+| Variable | Description | Default |
+|----------|-------------|----------|
+| `BLIZZARD_CLIENT_ID` | Battle.net OAuth app ID | — |
+| `BLIZZARD_CLIENT_SECRET` | Battle.net OAuth app secret | — |
+| `REDIRECT_URI` | OAuth callback URL after Battle.net auth | — |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://simcraft:simcraft@db:5432/simcraft` |
+| `KEYCLOAK_URL` | Keycloak URL (for admin panel) | — |
+| `KEYCLOAK_REALM` | Keycloak realm | — |
+| `KEYCLOAK_CLIENT_ID` | Keycloak client ID | — |
+| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | — |
+| `ADMIN_REDIRECT_URI` | OAuth callback URL after admin login | — |
+| `BASE_URL` | Base application URL (used in OG meta tags) | `https://sim.miyazakitakara.ovh` |
+| `RESULTS_DIR` | Directory for simulation results | `/app/results` |
+| `SIMC_PATH` | Path to simc binary | `/app/SimulationCraft/simc` |
+| `MAX_CONCURRENT_SIMS` | Max number of concurrent simulations | `3` |
+| `JOB_TIMEOUT` | Simulation timeout in seconds | `360` |
+| `JOBS_TTL` | Lifetime of completed jobs in memory (seconds) | `14400` (4h) |
+| `LOG_LEVEL` | Log level | `INFO` |
 
-## Struktura projektu
+## Project Structure
 
 ```
 simcraft-web/
 ├── backend/
 │   ├── main.py            # FastAPI app, routing, OG meta, startup
 │   ├── auth.py            # Battle.net OAuth2
-│   ├── characters.py      # API postaci Blizzarda (lista, media, ekwipunek, statystyki, talenty)
-│   ├── simulation.py      # Uruchamianie simc, kolejka jobów, watchdog
-│   ├── results.py         # Parsowanie wyników JSON, generowanie wykresów PNG
-│   ├── history.py         # Historia symulacji, trendy, metadane
-│   ├── database.py        # Modele SQLAlchemy, migracje inline
-│   ├── admin.py           # Panel admina (Keycloak), newsy, logi, limity
-│   └── logging_config.py  # Strukturowane logowanie (structlog)
+│   ├── characters.py      # Blizzard character API (list, media, equipment, stats, talents)
+│   ├── simulation.py      # simc runner, job queue, watchdog
+│   ├── results.py         # JSON result parsing, PNG chart generation
+│   ├── history.py         # Simulation history, trends, metadata
+│   ├── database.py        # SQLAlchemy models, inline migrations
+│   ├── admin.py           # Admin panel (Keycloak), news, logs, limits
+│   └── logging_config.py  # Structured logging (structlog)
 ├── frontend/
-│   ├── index.html         # Główna strona
-│   ├── result.html        # Strona wyniku (OG meta, spell breakdown, chart)
-│   ├── admin.html         # Panel admina
-│   ├── app.js             # Logika Alpine.js (główna strona); zawiera router widoków (loadView/navigateTo)
-│   ├── sim.js             # Logika formularza symulacji (SimMixin)
-│   ├── chars.js           # Lista postaci, ekwipunek, talenty (CharsMixin)
-│   ├── history.js         # Widget historii (HistoryMixin)
+│   ├── index.html         # Main page
+│   ├── result.html        # Result page (OG meta, spell breakdown, chart)
+│   ├── admin.html         # Admin panel
+│   ├── app.js             # Alpine.js logic (main page); view router (loadView/navigateTo)
+│   ├── sim.js             # Simulation form logic (SimMixin)
+│   ├── chars.js           # Character list, equipment, talents (CharsMixin)
+│   ├── history.js         # History widget (HistoryMixin)
 │   ├── api.js             # API client (fetch wrapper)
-│   ├── utils.js           # Helpers (formatowanie liczb, kolorów klas itp.)
-│   ├── admin.js           # Logika panelu admina
-│   ├── i18n.js            # System tłumaczeń (Alpine store, auto-detect, localStorage)
-│   ├── style.css          # Style (dark theme)
+│   ├── utils.js           # Helpers (number formatting, class colors, etc.)
+│   ├── admin.js           # Admin panel logic
+│   ├── i18n.js            # Translation system (Alpine store, auto-detect, localStorage)
+│   ├── style.css          # Styles (dark theme)
 │   ├── views/
-│   │   ├── home.html        # Widok strony głównej (hero, addon form, historia publiczna, newsy)
-│   │   ├── symulacje.html   # Widok symulacji (lista postaci, formularz, wyniki, historia)
-│   │   └── profil.html      # Widok profilu użytkownika
+│   │   ├── home.html        # Home view (hero, addon form, public history, news)
+│   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
+│   │   └── profil.html      # User profile view
 │   └── locales/
-│       ├── pl.json          # Tłumaczenia PL
-│       └── en.json          # Tłumaczenia EN
+│       ├── pl.json          # Polish translations
+│       └── en.json          # English translations
 ├── docker-compose.yml
 ├── Dockerfile
 └── requirements.txt
 ```
 
-## Architektura frontendu
+## Frontend Architecture
 
-Frontend używa **Alpine.js** z wzorcem mixinów. Ważne zasady:
+The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 
-- `app()` jest jedynym Alpine `x-data` na stronie głównej
-- Widoki (`views/*.html`) są ładowane dynamicznie przez `loadView(name)` do `#view-container` i inicjowane przez `Alpine.initTree()` — **nie mają własnego `x-data`**, działają w scope rodzica
-- Mixiny (`SimMixin`, `CharsMixin`, `HistoryMixin`) są mergowane przez `mergeMixins()` która używa `Object.defineProperties` — dzięki temu gettery (np. `sortedSpells`, `filteredChars`) są poprawnie kopiowane z zachowaniem deskryptorów
-- Gettery które odwołują się do `this.*` muszą być zdefiniowane bezpośrednio w obiekcie `state` w `app()`, nie w mixa-ach — przy spread `...` deskryptory getterów są tracone
+- `app()` is the only Alpine `x-data` on the main page
+- Views (`views/*.html`) are loaded dynamically by `loadView(name)` into `#view-container` and initialized via `Alpine.initTree()` — **they have no own `x-data`**, they operate within the parent scope
+- Mixins (`SimMixin`, `CharsMixin`, `HistoryMixin`) are merged by `mergeMixins()` which uses `Object.defineProperties` — this ensures getters (e.g. `sortedSpells`, `filteredChars`) are correctly copied with their descriptors preserved
+- Getters that reference `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
 
 ## API
 
-### Symulacja
-- `POST /api/simulate` — uruchomienie symulacji
-- `GET /api/job/{job_id}` — status jobu (`running` / `done` / `error`)
-- `GET /api/result/{job_id}/json` — wyniki w formacie JSON
-- `GET /api/result/{job_id}/dps-chart.png` — wykres DPS jako PNG
-- `GET /api/result/{job_id}/meta` — metadane symulacji (postać, klasa, fight style)
+### Simulation
+- `POST /api/simulate` — run a simulation
+- `GET /api/job/{job_id}` — job status (`running` / `done` / `error`)
+- `GET /api/result/{job_id}/json` — results in JSON format
+- `GET /api/result/{job_id}/dps-chart.png` — DPS chart as PNG
+- `GET /api/result/{job_id}/meta` — simulation metadata (character, class, fight style)
 
-### Historia
-- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`); nie zawiera symulacji gości
-- `GET /api/history/mine` — historia zalogowanego użytkownika
-- `GET /api/history/trend` — historia DPS w czasie dla konkretnej postaci
+### History
+- `GET /api/history` — public history (pagination: `?page=1&limit=50`); excludes guest simulations
+- `GET /api/history/mine` — logged-in user's history
+- `GET /api/history/trend` — DPS over time for a specific character
 
-### Postacie
-- `GET /api/characters` — lista postaci konta (wymaga sesji)
-- `GET /api/character-media` — awatar postaci
-- `GET /api/character/equipment` — ekwipunek postaci
-- `GET /api/character/statistics` — statystyki postaci
-- `GET /api/character/talents` — talenty postaci
+### Characters
+- `GET /api/characters` — account character list (requires session)
+- `GET /api/character-media` — character avatar
+- `GET /api/character/equipment` — character equipment
+- `GET /api/character/statistics` — character statistics
+- `GET /api/character/talents` — character talents
 
 ### Auth
-- `GET /auth/login` — redirect do Battle.net OAuth
-- `GET /auth/callback` — callback OAuth
-- `GET /auth/logout` — wylogowanie
-- `GET /auth/session/info` — info o sesji (główna postać, is_first_login)
-- `PATCH /auth/session/main-character` — ustawienie głównej postaci
-- `POST /auth/session/skip-first-login` — pomiń modal wyboru głównej postaci
+- `GET /auth/login` — redirect to Battle.net OAuth
+- `GET /auth/callback` — OAuth callback
+- `GET /auth/logout` — logout
+- `GET /auth/session/info` — session info (main character, is_first_login)
+- `PATCH /auth/session/main-character` — set main character
+- `POST /auth/session/skip-first-login` — skip main character selection modal
 
 ### Admin
-- `GET /admin` — panel admina (wymaga sesji Keycloak)
-- `GET /admin/api/limits` — pobierz limity systemowe
-- `PATCH /admin/api/limits` — aktualizuj limity systemowe
-- `GET /admin/api/health` — health check usług
-- `GET /admin/api/tasks` — lista aktywnych zadań
-- `DELETE /admin/api/tasks/{job_id}` — anuluj zadanie
+- `GET /admin` — admin panel (requires Keycloak session)
+- `GET /admin/api/limits` — get system limits
+- `PATCH /admin/api/limits` — update system limits
+- `GET /admin/api/health` — service health check
+- `GET /admin/api/tasks` — list active jobs
+- `DELETE /admin/api/tasks/{job_id}` — cancel a job
 
-## Licencja
+## License
 
 MIT
