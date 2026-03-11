@@ -54,7 +54,7 @@ const PLOTLY_LAYOUT_BASE = {
   plot_bgcolor:  'transparent',
   font:          { color: '#aaa', size: 11 },
   margin:        { t: 10, r: 10, b: 40, l: 40 },
-  xaxis: { gridcolor: '#222', linecolor: '#333', tickcolor: '#444' },
+  xaxis: { gridcolor: '#222', linecolor: '#333', tickcolor: '#444', type: 'linear' },
   yaxis: { gridcolor: '#222', linecolor: '#333', tickcolor: '#444', rangemode: 'tozero' },
   showlegend: false,
 };
@@ -79,7 +79,6 @@ async function loadDashboard() {
   document.getElementById('stat-memory').textContent      = s.memory_percent + '%';
   document.getElementById('stat-uptime').textContent      = s.uptime;
 
-  // defer rendering so Plotly gets fully laid-out containers
   setTimeout(() => renderCharts(data), 0);
 }
 
@@ -95,7 +94,12 @@ function renderCharts(data) {
       line:    { color: '#f4a01c', width: 2 },
       marker:  { color: '#f4a01c', size: 5 },
       hovertemplate: '%{x}<br><b>%{y} symulacji</b><extra></extra>',
-    }], { ...PLOTLY_LAYOUT_BASE, margin: { t: 10, r: 10, b: 50, l: 40 } }, PLOTLY_CONFIG);
+    }], {
+      ...PLOTLY_LAYOUT_BASE,
+      margin: { t: 10, r: 10, b: 50, l: 40 },
+      xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, type: 'date' },
+      yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, tickformat: 'd' },
+    }, PLOTLY_CONFIG);
   } else {
     document.getElementById('chart-trend').innerHTML = '<p style="color:#555;text-align:center;padding:4rem 0">Brak danych</p>';
   }
@@ -109,14 +113,15 @@ function renderCharts(data) {
       y:           sorted.map(c => c.character_class || 'Unknown'),
       type:        'bar',
       orientation: 'h',
-      marker: {
-        color: sorted.map(c => CLASS_COLORS[c.character_class] || '#555'),
-      },
+      marker: { color: sorted.map(c => CLASS_COLORS[c.character_class] || '#555') },
       hovertemplate: '<b>%{y}</b><br>%{x} symulacji<extra></extra>',
     }], {
       ...PLOTLY_LAYOUT_BASE,
       margin: { t: 10, r: 20, b: 40, l: 110 },
-      xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis },
+      xaxis: {
+        gridcolor: '#222', linecolor: '#333', tickcolor: '#444',
+        type: 'linear', tickformat: 'd', dtick: 1,
+      },
       yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, automargin: true },
     }, PLOTLY_CONFIG);
   } else {
