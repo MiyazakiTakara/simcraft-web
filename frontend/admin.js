@@ -7,6 +7,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById(tabId).classList.add('active');
     
     // Load data for specific tabs
+    if (tab.dataset.tab === 'news') loadNews();
     if (tab.dataset.tab === 'limits') loadLimits();
     if (tab.dataset.tab === 'health') loadHealth();
     if (tab.dataset.tab === 'tasks') loadTasks();
