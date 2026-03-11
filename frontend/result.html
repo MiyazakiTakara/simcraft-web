@@ -25,16 +25,17 @@
     .spell-row { position:relative; }
     .spell-tooltip {
       display:none;
-      position:absolute; top:calc(100% + 6px); right:0; z-index:200;
-      background:var(--panel,#1a1a2e); border:1px solid var(--border,#333);
-      border-radius:8px; padding:.55rem .75rem; min-width:170px;
-      font-size:.78rem; line-height:1.7; white-space:nowrap;
-      box-shadow:0 4px 18px rgba(0,0,0,.5); pointer-events:none;
+      position:absolute; top:calc(100% + 6px); right:0; z-index:99999;
+      background:#1a1b22; border:1px solid var(--border);
+      border-radius:8px; padding:.55rem .75rem; min-width:180px; max-width:250px;
+      font-size:.85rem; line-height:1.5; white-space:normal;
+      box-shadow:0 4px 20px rgba(0,0,0,0.8); pointer-events:none;
+      color:var(--text);
     }
     .spell-row:hover .spell-tooltip { display:block; }
-    .spell-tooltip-row { display:flex; justify-content:space-between; gap:1.2rem; }
-    .spell-tooltip-label { color:var(--muted,#888); }
-    .spell-tooltip-val   { font-weight:600; color:var(--text,#eee); }
+    .spell-tooltip-row { display:flex; justify-content:space-between; gap:1.2rem; margin:.2rem 0; }
+    .spell-tooltip-label { color:var(--muted); }
+    .spell-tooltip-val   { font-weight:600; color:var(--text); }
   </style>
 </head>
 <body>
