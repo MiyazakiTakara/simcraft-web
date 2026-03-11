@@ -47,9 +47,19 @@ function app() {
     news: [],
     loadingHistory: false,
     spellSort: "total_dmg",
+    get effectiveSpellSort() {
+      if (this.spellSort === "total_dmg" || this.spellSort === "dps") {
+        return this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
+      }
+      return this.spellSort;
+    },
     copiedJobId: null,
     chartModal: null,
     hoveredSpell: null,
+
+    get defaultSpellSort() {
+      return this.effectiveRole() === 'healer' ? 'total_heal' : 'total_dmg';
+    },
 
     historyPage: 1,
     historyPerPage: 5,
@@ -383,6 +393,8 @@ function app() {
         const charSpec  = entry?.character_spec  || null;
         const charObj   = charName ? this.characters.find(c => c.name === charName) : null;
         if (entry?.role) this.simResult._role = entry.role;
+        if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
+        else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
         this.job = {
           id:        jobId,
           charName:  charName !== 'Addon Export' ? charName : null,
@@ -409,6 +421,8 @@ function app() {
         result._source = meta?.character_name === 'Addon Export' ? 'addon' : 'history';
         if (meta?.role) result._role = meta.role;
         this.pubResult = result;
+        if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
+        else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
         this.pubJob = {
           id:        jobId,
           charName:  meta?.character_name !== 'Addon Export' ? (meta?.character_name || null) : null,
@@ -567,6 +581,8 @@ function app() {
           clearInterval(this._pollInterval);
           this.simResult = await API.getResultJson(this.job.id);
           this.simResult._role = this.job.role;
+          if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
+          else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
           await API.saveToHistory({
             job_id:               this.job.id,
             character_name:       this.selectedChar?.name || "Addon Export",
