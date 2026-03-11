@@ -305,8 +305,9 @@ async function loadHealth() {
   const data = await res.json();
   
   const statusHtml = Object.entries(data).map(([key, val]) => {
-    const color = val === 'ok' ? '#4c4' : '#e55';
-    const icon = val === 'ok' ? '✓' : '✗';
+    const isOk = val === 'ok' || (typeof val === 'string' && val.startsWith('ok'));
+    const color = isOk ? '#4c4' : '#e55';
+    const icon = isOk ? '✓' : '✗';
     return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #222">
       <span>${key}</span>
       <span style="color:${color}">${icon} ${val}</span>

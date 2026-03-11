@@ -454,7 +454,13 @@ async def health_check(request: Request):
             # Check OIDC configuration endpoint (public, no auth required)
             url = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
             resp = await client.get(url, timeout=5)
-            health_status["keycloak"] = "ok" if resp.status_code == 200 else f"error: {resp.status_code}"
+            # 200 = ok, 401/403 = configured but requires auth (ok), other errors = problem
+            if resp.status_code == 200:
+                health_status["keycloak"] = "ok"
+            elif resp.status_code in (401, 403):
+                health_status["keycloak"] = "ok (requires auth)"
+            else:
+                health_status["keycloak"] = f"error: {resp.status_code}"
     except Exception as e:
         health_status["keycloak"] = f"error: {str(e)}"
     
