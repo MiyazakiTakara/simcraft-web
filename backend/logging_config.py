@@ -5,49 +5,6 @@ import os
 
 
 def setup_logging(log_level: str = "INFO"):
-    def add_db_log(level: str, message: str, context: str = None):
-        try:
-            from database import add_log
-            add_log(level, message, context)
-        except Exception:
-            pass
-
-    class DBBridge:
-        def __init__(self, logger, method_name):
-            self._logger = logger
-            self._method_name = method_name
-
-        def __getattr__(self, name):
-            return getattr(self._logger, name)
-
-        def info(self, message, **kwargs):
-            self._logger.info(message, **kwargs)
-            context = str(kwargs) if kwargs else None
-            add_db_log("INFO", message, context)
-
-        def warning(self, message, **kwargs):
-            self._logger.warning(message, **kwargs)
-            context = str(kwargs) if kwargs else None
-            add_db_log("WARNING", message, context)
-
-        def error(self, message, **kwargs):
-            self._logger.error(message, **kwargs)
-            context = str(kwargs) if kwargs else None
-            add_db_log("ERROR", message, context)
-
-        def exception(self, message, **kwargs):
-            self._logger.exception(message, **kwargs)
-            context = str(kwargs) if kwargs else None
-            add_db_log("ERROR", message, context)
-
-    class DBBridgeFactory:
-        def __init__(self, original_factory):
-            self._original = original_factory
-
-        def __call__(self, *args, **kwargs):
-            logger = self._original(*args, **kwargs)
-            return DBBridge(logger, None)
-
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -61,7 +18,7 @@ def setup_logging(log_level: str = "INFO"):
             getattr(logging, log_level.upper(), logging.INFO)
         ),
         context_class=dict,
-        logger_factory=DBridgeFactory(structlog.PrintLoggerFactory()),
+        logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
     
