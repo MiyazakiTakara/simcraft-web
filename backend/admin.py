@@ -144,6 +144,67 @@ async def admin_panel(request: Request):
         return HTMLResponse(f.read())
 
 
+# ---------- dashboard API ----------
+
+@router.get("/api/dashboard")
+async def get_dashboard(request: Request):
+    _require_admin(request)
+    import platform
+    import psutil
+    
+    with SessionLocal() as db:
+        total_sims = db.query(func.count(HistoryEntryModel.id)).scalar() or 0
+        total_users = db.query(HistoryEntryModel.user_id).distinct().count() or 0
+        
+        today_start = int(time.time()) - (24 * 60 * 60)
+        today_sims = db.query(func.count(HistoryEntryModel.id)).filter(
+            HistoryEntryModel.created_at >= today_start
+        ).scalar() or 0
+        
+        last_24h = int(time.time()) - (24 * 60 * 60)
+        daily_stats = db.query(
+            func.date_trunc('hour', func.to_timestamp(HistoryEntryModel.created_at)).label('hour'),
+            func.count(HistoryEntryModel.id).label('count'),
+        ).filter(
+            HistoryEntryModel.created_at >= last_24h
+        ).group_by('hour').order_by('hour').all()
+        
+        recent_sims = db.query(HistoryEntryModel).order_by(
+            HistoryEntryModel.created_at.desc()
+        ).limit(10).all()
+        
+        total_jobs = db.query(func.count(JobModel.job_id)).scalar() or 0
+        active_jobs = db.query(func.count(JobModel.job_id)).filter(
+            JobModel.status == 'running'
+        ).scalar() or 0
+    
+    import datetime
+    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.datetime.now() - boot_time
+    uptime_str = f"{uptime.days}d {uptime.seconds//3600}h {(uptime.seconds%3600)//60}m"
+    
+    return {
+        "stats": {
+            "total_simulations": total_sims,
+            "total_users": total_users,
+            "today_simulations": today_sims,
+            "total_jobs": total_jobs,
+            "active_jobs": active_jobs,
+            "cpu_percent": psutil.cpu_percent(),
+            "memory_percent": psutil.virtual_memory().percent,
+            "uptime": uptime_str,
+        },
+        "daily_trend": [{"hour": str(h), "count": c} for h, c in daily_stats],
+        "recent_sims": [{
+            "job_id": s.job_id,
+            "character_name": s.character_name,
+            "character_class": s.character_class,
+            "dps": s.dps,
+            "created_at": s.created_at,
+        } for s in recent_sims],
+    }
+
+
 # ---------- news API ----------
 
 class NewsCreate(BaseModel):

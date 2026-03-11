@@ -161,6 +161,10 @@
       color: #f4a01c; text-decoration: none; font-size: 0.8rem;
     }
     .sim-link:hover { text-decoration: underline; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; margin-bottom: 1.5rem; }
+    .stat-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .stat-value { font-size: 1.4rem; font-weight: 700; color: #f4a01c; }
+    .stat-label { font-size: 0.7rem; color: #666; margin-top: 0.2rem; }
   </style>
 </head>
 <body>
@@ -173,9 +177,26 @@
   </header>
 
   <div class="tabs">
-    <button class="tab active" data-tab="news">Newsy</button>
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="news">Newsy</button>
     <button class="tab" data-tab="users">Użytkownicy</button>
     <button class="tab" data-tab="logs">Logi</button>
+  </div>
+
+  <div class="tab-content active" id="tab-dashboard">
+    <h2>Statystyki serwera</h2>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="stat-total-sims">—</div><div class="stat-label">Wszystkich symulacji</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-total-users">—</div><div class="stat-label">Użytkowników</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-today-sims">—</div><div class="stat-label">Dziś</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-active-jobs">—</div><div class="stat-label">Aktywne zadania</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-cpu">—</div><div class="stat-label">CPU</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-memory">—</div><div class="stat-label">RAM</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-uptime">—</div><div class="stat-label">Uptime</div></div>
+    </div>
+    
+    <h2>Ostatnie symulacje</h2>
+    <div class="news-list" id="recent-sims"></div>
   </div>
 
   <div class="tab-content active" id="tab-news">
@@ -256,6 +277,40 @@
 
     function fmt(ts) {
       return new Date(ts * 1000).toLocaleString('pl-PL');
+    }
+
+    async function loadDashboard() {
+      const res = await fetch('/admin/api/dashboard');
+      if (res.status === 302 || res.redirected) {
+        window.location = '/admin/login'; return;
+      }
+      const data = await res.json();
+      
+      document.getElementById('stat-total-sims').textContent = data.stats.total_simulations.toLocaleString();
+      document.getElementById('stat-total-users').textContent = data.stats.total_users.toLocaleString();
+      document.getElementById('stat-today-sims').textContent = data.stats.today_simulations.toLocaleString();
+      document.getElementById('stat-active-jobs').textContent = data.stats.active_jobs;
+      document.getElementById('stat-cpu').textContent = data.stats.cpu_percent + '%';
+      document.getElementById('stat-memory').textContent = data.stats.memory_percent + '%';
+      document.getElementById('stat-uptime').textContent = data.stats.uptime;
+      
+      const recentList = document.getElementById('recent-sims');
+      if (!data.recent_sims.length) {
+        recentList.innerHTML = '<p class="empty">Brak symulacji.</p>';
+      } else {
+        recentList.innerHTML = data.recent_sims.map(s => `
+          <div class="news-card">
+            <div class="info">
+              <h3>${escHtml(s.character_name || '—')}</h3>
+              <div class="meta">${fmt(s.created_at)}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="stat-value" style="font-size:1rem">${Number(s.dps).toLocaleString()} DPS</div>
+              <a class="sim-link" href="/result/${s.job_id}" target="_blank">Zobacz ↗</a>
+            </div>
+          </div>
+        `).join('');
+      }
     }
 
     async function loadNews() {
@@ -437,7 +492,7 @@
       if (e.target === this) closeUserModal();
     });
 
-    loadNews();
+    loadDashboard();
   </script>
 </body>
 </html>
