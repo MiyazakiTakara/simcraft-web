@@ -1,4 +1,5 @@
 import os
+import html as html_lib
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -127,14 +128,18 @@ async def result_page(job_id: str):
         dps_str = str(int(dps))
 
     spec_class = f"{char_spec} {char_class}".strip()
-    og_title = f"{char_name} ({spec_class}) — {dps_str} DPS" if spec_class else f"{char_name} — {dps_str} DPS"
-    og_desc  = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
-    og_image = f"{BASE_URL}/api/result/{job_id}/dps-chart.png"
-    og_url   = f"{BASE_URL}/result/{job_id}"
+    raw_title = f"{char_name} ({spec_class}) — {dps_str} DPS" if spec_class else f"{char_name} — {dps_str} DPS"
+    raw_desc  = f"Symulacja SimCraft · {fight_style} · {dps_str} DPS. Sprawdź pełny breakdown spelli i wykres DPS."
+
+    # Escapowanie przed wstawieniem do HTML, żeby uniknąć XSS
+    og_title = html_lib.escape(raw_title)
+    og_desc  = html_lib.escape(raw_desc)
+    og_image = html_lib.escape(f"{BASE_URL}/api/result/{job_id}/dps-chart.png")
+    og_url   = html_lib.escape(f"{BASE_URL}/result/{job_id}")
 
     html_path = "/app/frontend/result.html"
     with open(html_path) as f:
-        html = f.read()
+        html_content = f.read()
 
     og_tags = f"""
     <meta property="og:title"       content="{og_title}"/>
@@ -148,8 +153,8 @@ async def result_page(job_id: str):
     <meta name="twitter:image"      content="{og_image}"/>
     <title>{og_title} — SimCraft Web</title>
 """
-    html = html.replace("<!-- OG_META_PLACEHOLDER -->", og_tags)
-    return HTMLResponse(content=html)
+    html_content = html_content.replace("<!-- OG_META_PLACEHOLDER -->", og_tags)
+    return HTMLResponse(content=html_content)
 
 
 def _restore_jobs():
