@@ -5,8 +5,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+
+
+def get_client_ip(request):
+    """Get client IP address, respecting Cloudflare headers."""
+    # Cloudflare sends the real client IP in CF-Connecting-IP
+    forwarded = request.headers.get("CF-Connecting-IP")
+    if forwarded:
+        return forwarded
+    
+    # Fallback to X-Forwarded-For (first IP in the chain)
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        # X-Forwarded-For can contain multiple IPs, take the first one
+        return forwarded.split(",")[0].strip()
+    
+    # Fallback to default behavior
+    return request.client.host if request.client else "unknown"
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from logging_config import setup_logging
@@ -40,7 +56,7 @@ _validate_env()
 init_db()
 log.info("database-initialized")
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_client_ip)
 
 app = FastAPI(title="SimCraft Web")
 app.state.limiter = limiter
