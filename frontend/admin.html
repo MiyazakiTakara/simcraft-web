@@ -198,7 +198,12 @@
   <div class="tab-content" id="tab-users">
     <h2>Użytkownicy</h2>
     <p style="color:#666;font-size:0.85rem;margin-bottom:1rem;">Lista użytkowników na podstawie historii symulacji.</p>
-    <button class="primary" onclick="loadUsers()" style="margin-bottom:1rem;">Odśwież</button>
+    <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center">
+      <button class="primary" onclick="loadUsers()">Odśwież</button>
+      <input type="text" id="user-search" placeholder="Szukaj..." 
+             style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;"
+             oninput="filterUsers()" />
+    </div>
     <div class="news-list" id="user-list">
       <p class="empty">Ładowanie...</p>
     </div>
@@ -348,12 +353,18 @@
       `).join('');
     }
 
+    let allUsers = [];
+
     async function loadUsers() {
       const res = await fetch('/admin/api/users?limit=50');
       if (res.status === 302 || res.redirected) {
         window.location = '/admin/login'; return;
       }
-      const users = await res.json();
+      allUsers = await res.json();
+      renderUsers(allUsers);
+    }
+
+    function renderUsers(users) {
       const list = document.getElementById('user-list');
       if (!users.length) {
         list.innerHTML = '<p class="empty">Brak użytkowników.</p>';
@@ -371,6 +382,19 @@
           </div>
         </div>
       `).join('');
+    }
+
+    function filterUsers() {
+      const query = document.getElementById('user-search').value.toLowerCase().trim();
+      if (!query) {
+        renderUsers(allUsers);
+        return;
+      }
+      const filtered = allUsers.filter(u => 
+        (u.user_id && u.user_id.toLowerCase().includes(query)) ||
+        (u.character_name && u.character_name.toLowerCase().includes(query))
+      );
+      renderUsers(filtered);
     }
 
     async function openUserModal(userId) {
