@@ -51,7 +51,6 @@ function app() {
     chartModal: null,
     hoveredSpell: null,
 
-    historySort: "date",
     historyPage: 1,
     historyPerPage: 5,
 
@@ -227,22 +226,13 @@ function app() {
     },
 
     get sortedHistory() {
-      const arr = [...this.history];
-      if (this.historySort === "dps")  arr.sort((a, b) => (b.dps ?? 0) - (a.dps ?? 0));
-      else if (this.historySort === "name") arr.sort((a, b) => (a.character_name || "").localeCompare(b.character_name || ""));
-      else arr.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
-      return arr;
+      return [...this.history];
     },
     get historyPageCount() {
-      return Math.max(1, Math.ceil(this.sortedHistory.length / this.historyPerPage));
+      return 1;
     },
     get pagedHistory() {
-      const start = (this.historyPage - 1) * this.historyPerPage;
-      return this.sortedHistory.slice(start, start + this.historyPerPage);
-    },
-    setHistorySort(s) {
-      this.historySort = s;
-      this.historyPage = 1;
+      return this.sortedHistory.slice(0, 5);
     },
     historyPages() {
       return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
@@ -467,6 +457,7 @@ function app() {
                 character_realm_slug: "",
                 dps:                  result.dps,
                 hps:                  result.hps || 0,
+                dtps:                 0,
                 role:                 guestRole,
                 fight_style:          this.guestSimOptions.fight_style,
                 user_id:              null,
@@ -584,6 +575,7 @@ function app() {
             character_realm_slug: this.selectedChar?.realm_slug || "",
             dps:                  this.simResult.dps,
             hps:                  this.simResult.hps || 0,
+            dtps:                 0,
             role:                 this.effectiveRole(),
             fight_style:          this.simOptions.fight_style,
             user_id:              this.sessionId || null,

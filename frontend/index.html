@@ -240,11 +240,6 @@
         <div class="landing-history-header">
           <h2>📈 Ostatnie symulacje</h2>
           <span x-text="history.length + ' wyników'"></span>
-          <div style="display:flex;gap:.3rem;margin-left:auto">
-            <button class="tab" :class="{active: historySort==='date'}" @click="setHistorySort('date')" style="font-size:.72rem;padding:.2rem .5rem">Data</button>
-            <button class="tab" :class="{active: historySort==='dps'}" @click="setHistorySort('dps')" style="font-size:.72rem;padding:.2rem .5rem">DPS</button>
-            <button class="tab" :class="{active: historySort==='name'}" @click="setHistorySort('name')" style="font-size:.72rem;padding:.2rem .5rem">Postać</button>
-          </div>
         </div>
 
         <template x-if="!pubResult || pubResult._source === 'addon'">
@@ -504,11 +499,6 @@
       <!-- Historia boczna -->
       <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
         <h2>Historia</h2>
-        <div class="history-sort-bar">
-          <button :class="{active: historySort==='date'}" @click="setHistorySort('date')">Data</button>
-          <button :class="{active: historySort==='dps'}" @click="setHistorySort('dps')">DPS ↓</button>
-          <button :class="{active: historySort==='name'}" @click="setHistorySort('name')">Postać</button>
-        </div>
         <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem">Brak symulacji</div>
         <div x-show="history.length > 0" class="history-list" style="flex:1">
           <template x-for="entry in pagedHistory" :key="entry.job_id">
@@ -585,11 +575,6 @@
       <template x-if="profileTab==='history'">
       <div>
         <h2 style="margin-bottom:1rem">📜 Historia symulacji</h2>
-        <div class="history-sort-bar">
-          <button :class="{active: historySort==='date'}" @click="setHistorySort('date')">Data</button>
-          <button :class="{active: historySort==='dps'}" @click="setHistorySort('dps')">DPS ↓</button>
-          <button :class="{active: historySort==='name'}" @click="setHistorySort('name')">Postać</button>
-        </div>
         <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem">Brak symulacji</div>
         <div x-show="history.length > 0" class="history-list" style="max-height:500px;overflow-y:auto">
           <template x-for="entry in pagedHistory" :key="entry.job_id">
