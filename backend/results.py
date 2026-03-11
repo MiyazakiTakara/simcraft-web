@@ -296,9 +296,11 @@ def parse_results(json_path: str):
         for ab in abilities:
             if not isinstance(ab, dict):
                 continue
-            dps     = ability_dps(ab)
-            tot_dmg = ability_total_dmg(ab)
-            if dps <= 0 and tot_dmg <= 0:
+            dps       = ability_dps(ab)
+            tot_dmg   = ability_total_dmg(ab)
+            hps       = ability_hps(ab)
+            tot_heal  = ability_total_heal(ab)
+            if dps <= 0 and tot_dmg <= 0 and hps <= 0 and tot_heal <= 0:
                 continue
 
             name                        = spell_display_name(ab)
@@ -312,6 +314,8 @@ def parse_results(json_path: str):
                 "name":       name,
                 "dps":        round(dps, 2),
                 "total_dmg":  round(tot_dmg),
+                "hps":        round(hps, 2),
+                "total_heal": round(tot_heal),
                 "crit_pct":   crit_pct,
                 "executes":   executes,
                 "count":      executes,
@@ -337,24 +341,34 @@ def parse_results(json_path: str):
                 })
 
         total_spell_dps = sum(s["dps"] for s in spells)
-        total_spell_dmg = sum(s["total_dmg"] for s in spells)
+        total_spell_dps   = sum(s["dps"] for s in spells)
+        total_spell_dmg   = sum(s["total_dmg"] for s in spells)
+        total_spell_hps  = sum(s["hps"] for s in spells)
+        total_spell_heal = sum(s["total_heal"] for s in spells)
 
         for s in spells:
-            s["dps_pct"] = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
-            s["dmg_pct"] = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
+            s["dps_pct"]    = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
+            s["dmg_pct"]    = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
+            s["hps_pct"]    = round((s["hps"] / total_spell_hps * 100), 1) if total_spell_hps > 0 else 0.0
+            s["heal_pct"]   = round((s["total_heal"] / total_spell_heal * 100), 1) if total_spell_heal > 0 else 0.0
 
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
         top_spells = spells[:25]
         other_dps  = sum(s["dps"] for s in spells[25:])
         other_dmg  = sum(s["total_dmg"] for s in spells[25:])
-        if other_dps > 0 or other_dmg > 0:
+        other_hps  = sum(s["hps"] for s in spells[25:])
+        other_heal = sum(s["total_heal"] for s in spells[25:])
+        if other_dps > 0 or other_dmg > 0 or other_hps > 0 or other_heal > 0:
             top_spells.append({
                 "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
+                "hps": round(other_hps, 2), "total_heal": round(other_heal),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "is_channel": False,
                 "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
                 "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
+                "hps_pct": round(other_hps / total_spell_hps * 100, 1) if total_spell_hps > 0 else 0.0,
+                "heal_pct": round(other_heal / total_spell_heal * 100, 1) if total_spell_heal > 0 else 0.0,
             })
 
         return {
