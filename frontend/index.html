@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SimCraft Web — Symulator DPS dla WoW</title>
+  <title>SimCraft Web — WoW DPS Simulator</title>
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
 
-  <meta name="description" content="Darmowy symulator DPS dla World of Warcraft. Zaloguj się przez Battle.net i sprawdz DPS swojej postaci."/>
-  <meta property="og:title"       content="SimCraft Web — Symulator DPS dla WoW"/>
-  <meta property="og:description" content="Darmowy symulator DPS dla World of Warcraft oparty na SimulationCraft."/>
+  <meta name="description" content="Free DPS simulator for World of Warcraft. Log in via Battle.net and check your character's DPS."/>
+  <meta property="og:title"       content="SimCraft Web — WoW DPS Simulator"/>
+  <meta property="og:description" content="Free DPS simulator for World of Warcraft powered by SimulationCraft."/>
   <meta property="og:type"        content="website"/>
   <meta property="og:url"         content="https://sim.miyazakitakara.ovh"/>
   <meta property="og:image"       content="https://sim.miyazakitakara.ovh/static/og-image.png"/>
@@ -31,6 +31,7 @@
   </script>
 
   <link rel="stylesheet" href="/style.css?v=7"/>
+  <script src="/i18n.js?v=1"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="/api.js?v=3"></script>
@@ -52,19 +53,31 @@
   <header class="header">
     <div class="header-logo" style="cursor:pointer" @click="navigateTo('home')" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
     <div style="display:flex;align-items:center;gap:.6rem">
-      <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? 'Przełącz na jasny' : 'Przełącz na ciemny'">
+
+      <!-- Przełącznik języka -->
+      <div style="display:flex;gap:.2rem">
+        <template x-for="lang in ['pl','en']" :key="lang">
+          <button
+            @click="$store.i18n.setLang(lang)"
+            :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.8rem', padding: '.2rem .35rem'}"
+            x-text="lang.toUpperCase()"
+          ></button>
+        </template>
+      </div>
+
+      <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? $store.i18n.t('header.theme_to_light') : $store.i18n.t('header.theme_to_dark')">
         <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
       </button>
       <template x-if="sessionId">
         <div class="header-user">
-          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="navigateTo('symulacje')">⚔️ Symulacje</button>
-          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="navigateTo('profil')">👤 Profil</button>
-          <span class="header-badge" x-text="characters.length + ' postaci'"></span>
-          <button class="btn btn-ghost" @click="logout()">Wyloguj</button>
+          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="navigateTo('symulacje')" x-text="$store.i18n.t('header.simulations')"></button>
+          <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="navigateTo('profil')" x-text="$store.i18n.t('header.profile')"></button>
+          <span class="header-badge" x-text="$store.i18n.t('header.characters_count', {count: characters.length})"></span>
+          <button class="btn btn-ghost" @click="logout()" x-text="$store.i18n.t('header.logout')"></button>
         </div>
       </template>
       <template x-if="!sessionId">
-        <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem">🔑 Zaloguj</a>
+        <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem" x-text="$store.i18n.t('header.login')"></a>
       </template>
     </div>
   </header>
@@ -81,20 +94,20 @@
             <img :src="charDetailsModal.avatar || '/static/default_avatar.png'" style="width:64px;height:64px;border-radius:8px"/>
             <div>
               <h2 style="margin:0" x-text="charDetailsModal.name"></h2>
-              <div style="color:var(--muted);font-size:.9rem" x-text="charDetailsModal.realm + ' · lv' + charDetailsModal.level + ' · ' + (charDetailsModal.spec ? charDetailsModal.spec + ' ' : '') + charDetailsModal.class"></div>
+              <div style="color:var(--muted);font-size:.9rem" x-text="charDetailsModal.realm + ' · ' + $store.i18n.t('chars.level_short') + charDetailsModal.level + ' · ' + (charDetailsModal.spec ? charDetailsModal.spec + ' ' : '') + charDetailsModal.class"></div>
             </div>
           </div>
           <button @click="closeCharDetails()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)">&times;</button>
         </div>
         <template x-if="loadingCharDetails">
-          <div style="text-align:center;padding:2rem;color:var(--muted)">Ładowanie...</div>
+          <div style="text-align:center;padding:2rem;color:var(--muted)" x-text="$store.i18n.t('common.loading')"></div>
         </template>
         <template x-if="charDetailsError">
-          <div style="text-align:center;padding:2rem;color:#f66" x-text="'Błąd: ' + charDetailsError"></div>
+          <div style="text-align:center;padding:2rem;color:#f66" x-text="$store.i18n.t('common.error_prefix') + charDetailsError"></div>
         </template>
         <template x-if="!loadingCharDetails && !charDetailsError">
           <div>
-            <h3 style="margin:1rem 0 .5rem">🎒 Gear</h3>
+            <h3 style="margin:1rem 0 .5rem" x-text="$store.i18n.t('chars.gear_title')"></h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem">
               <template x-for="item in charEquipment" :key="item.slot">
                 <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.8rem;position:relative"
@@ -113,7 +126,7 @@
             </div>
             <template x-if="charTalents.length > 0">
               <div>
-                <h3 style="margin:1rem 0 .5rem">✨ Talenty</h3>
+                <h3 style="margin:1rem 0 .5rem" x-text="$store.i18n.t('chars.talents_title')"></h3>
                 <div style="display:flex;gap:.5rem;flex-wrap:wrap">
                   <template x-for="talent in charTalents" :key="talent.tier">
                     <div style="width:50px;height:50px;background:var(--bg);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center" :title="talent.spell?.name">
@@ -129,13 +142,13 @@
               </div>
             </template>
             <div>
-              <h3 style="margin:1rem 0 .5rem">📈 DPS w czasie</h3>
+              <h3 style="margin:1rem 0 .5rem" x-text="$store.i18n.t('chars.dps_trend_title')"></h3>
               <div id="dps-trend-chart" style="width:100%;height:300px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"></div>
             </div>
           </div>
         </template>
         <div style="margin-top:1.5rem;display:flex;gap:.5rem">
-          <button class="btn btn-primary" @click="selectChar(charDetailsModal); closeCharDetails()">🏃 Uruchom symulację</button>
+          <button class="btn btn-primary" @click="selectChar(charDetailsModal); closeCharDetails()" x-text="$store.i18n.t('chars.simulate')"></button>
         </div>
       </div>
     </div>

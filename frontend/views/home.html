@@ -6,17 +6,17 @@
     </template>
     <template x-if="!appearance.hero_custom_text">
       <div>
-        <h1 class="landing-hero-title"><span x-text="appearance.emoji">⚔️</span> Symulator DPS<br/>dla <span x-text="appearance.hero_title">World of Warcraft</span></h1>
-        <p class="landing-hero-sub">Sprawdź i porównaj DPS swojej postaci oparty na SimulationCraft — bezpłatnie, w przeglądarce.</p>
+        <h1 class="landing-hero-title"><span x-text="appearance.emoji">⚔️</span> <span x-text="$store.i18n.t('home.hero_subtitle')"></span><br/><span x-text="appearance.hero_title">World of Warcraft</span></h1>
+        <p class="landing-hero-sub" x-text="$store.i18n.t('home.hero_description')"></p>
         <div class="landing-hero-btns">
           <template x-if="!sessionId">
-            <a href="/auth/login" class="btn btn-login">🔑 Zaloguj przez Battle.net</a>
+            <a href="/auth/login" class="btn btn-login" x-text="$store.i18n.t('header.login')"></a>
           </template>
           <template x-if="sessionId">
-            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Szybka symulacja z addona ↓</button>
+            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})" x-text="$store.i18n.t('home.quick_addon_scroll')"></button>
           </template>
           <template x-if="!sessionId">
-            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})">Spróbuj bez logowania ↓</button>
+            <button class="btn btn-ghost" @click="document.getElementById('addon-section').scrollIntoView({behavior:'smooth'})" x-text="$store.i18n.t('home.try_without_login')"></button>
           </template>
         </div>
       </div>
@@ -25,22 +25,40 @@
 
   <!-- Addon Export -->
   <div id="addon-section" class="panel" style="max-width:760px;margin:0 auto;width:100%">
-    <h2 style="font-size:1rem;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:.3rem">📋 Symuluj bez logowania — Addon Export</h2>
-    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem">Wpisz <code style="background:var(--bg);padding:.1rem .35rem;border-radius:4px;font-size:.8rem">/simc</code> w grze, skopiuj tekst z addona i wklej poniżej.</p>
+    <h2 style="font-size:1rem;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:.3rem" x-text="$store.i18n.t('home.addon_title')"></h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem">
+      <span x-text="$store.i18n.t('home.addon_hint_prefix')"></span>
+      <code style="background:var(--bg);padding:.1rem .35rem;border-radius:4px;font-size:.8rem">/simc</code>
+      <span x-text="$store.i18n.t('home.addon_hint_suffix')"></span>
+    </p>
 
     <template x-if="!pubResult || pubResult._source !== 'addon'">
       <div>
-        <textarea class="addon-box" placeholder="Wklej tutaj output z addona SimulationCraft..." x-model="guestAddonText" style="min-height:140px"></textarea>
+        <textarea class="addon-box" :placeholder="$store.i18n.t('sim.addon_placeholder')" x-model="guestAddonText" style="min-height:140px"></textarea>
         <div class="sim-options" style="margin-bottom:1rem">
-          <div class="sim-option"><label>Styl walki</label><select x-model="guestSimOptions.fight_style"><option value="Patchwerk">Patchwerk</option><option value="HecticAddCleave">HecticAddCleave</option><option value="LightMovement">LightMovement</option><option value="HeavyMovement">HeavyMovement</option></select></div>
-          <div class="sim-option"><label>Iteracje</label><input type="number" x-model.number="guestSimOptions.iterations" min="100" max="10000" step="100"/></div>
-          <div class="sim-option"><label>Target Error %</label><input type="number" x-model.number="guestSimOptions.target_error" min="0.1" max="5" step="0.1"/></div>
+          <div class="sim-option">
+            <label x-text="$store.i18n.t('sim.fight_style')"></label>
+            <select x-model="guestSimOptions.fight_style">
+              <option value="Patchwerk">Patchwerk</option>
+              <option value="HecticAddCleave">HecticAddCleave</option>
+              <option value="LightMovement">LightMovement</option>
+              <option value="HeavyMovement">HeavyMovement</option>
+            </select>
+          </div>
+          <div class="sim-option">
+            <label x-text="$store.i18n.t('sim.iterations')"></label>
+            <input type="number" x-model.number="guestSimOptions.iterations" min="100" max="10000" step="100"/>
+          </div>
+          <div class="sim-option">
+            <label x-text="$store.i18n.t('sim.target_error')"></label>
+            <input type="number" x-model.number="guestSimOptions.target_error" min="0.1" max="5" step="0.1"/>
+          </div>
         </div>
         <button class="btn btn-primary" @click="startGuestSim()" :disabled="guestLoadingSim">
           <span x-show="guestLoadingSim" class="spinner"></span>
-          <span x-show="!guestLoadingSim">▶ Uruchom symulację</span>
+          <span x-show="!guestLoadingSim" x-text="$store.i18n.t('sim.run_sim')"></span>
         </button>
-        <p x-show="guestLoadingSim" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku…</p>
+        <p x-show="guestLoadingSim" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)" x-text="$store.i18n.t('sim.running')"></p>
         <p x-show="guestSimError" style="margin-top:.5rem;font-size:.85rem;color:#f66" x-text="guestSimError"></p>
       </div>
     </template>
@@ -48,19 +66,19 @@
     <template x-if="pubResult && pubResult._source === 'addon'">
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-          <h2>Breakdown spelli</h2>
+          <h2 x-text="$store.i18n.t('result.spell_breakdown')"></h2>
           <div style="display:flex;gap:.3rem">
-            <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-            <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+            <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
+            <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
           </div>
         </div>
         <div class="spell-list">
           <template x-for="sp in pubSortedSpells" :key="sp.name">
             <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
               <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
-                <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
-                <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
-                <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
+                <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_executes')"></span><span x-text="sp.count ?? '—'"></span></div>
+                <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_avg_hit')"></span><span x-text="formatDmg(sp.avg_hit)"></span></div>
+                <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_crit')"></span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
                 <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
               </div>
               <div class="spell-head">
@@ -80,9 +98,12 @@
           <img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/>
         </div>
         <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
-          <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+          <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)" x-text="$store.i18n.t('result.raw_json')"></a>
           <span style="color:var(--border)">·</span>
-          <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
+          <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
+            @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)"
+            x-text="copiedJobId === pubJob.id ? $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('common.share')"
+          ></button>
         </div>
       </div>
     </template>
@@ -91,8 +112,8 @@
   <!-- Newsy -->
   <div class="landing-history-section" x-show="news.length > 0">
     <div class="landing-history-header">
-      <h2>📰 Aktualności</h2>
-      <span x-text="news.length + ' wpisów'"></span>
+      <h2 x-text="$store.i18n.t('news.title')"></h2>
+      <span x-text="news.length + ' ' + $store.i18n.t('news.entries')"></span>
     </div>
     <div class="landing-history-grid">
       <template x-for="n in pagedNews" :key="n.id">
@@ -124,14 +145,14 @@
   <!-- Publiczna historia -->
   <div class="landing-history-section">
     <div class="landing-history-header">
-      <h2>📈 Ostatnie symulacje</h2>
-      <span x-text="history.length + ' wyników'"></span>
+      <h2 x-text="$store.i18n.t('history.public_title')"></h2>
+      <span x-text="history.length + ' ' + $store.i18n.t('history.results_count')"></span>
     </div>
 
     <template x-if="!pubResult || pubResult._source === 'addon'">
       <div>
         <template x-if="history.length === 0">
-          <p style="color:var(--muted);font-size:.88rem">Brak publicznych symulacji.</p>
+          <p style="color:var(--muted);font-size:.88rem" x-text="$store.i18n.t('history.public_empty')"></p>
         </template>
         <div class="landing-history-grid">
           <template x-for="entry in pagedHistory" :key="entry.job_id">
@@ -158,7 +179,7 @@
 
     <template x-if="pubResult && pubResult._source !== 'addon'">
       <div>
-        <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Powrót do listy</button>
+        <button class="pub-result-back" @click="pubResult = null; pubJob = null" x-text="'← ' + $store.i18n.t('history.back_to_list')"></button>
         <div class="panel">
           <div class="result-hero">
             <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric(pubResult).value)"></div>
@@ -176,7 +197,7 @@
           </div>
           <div class="result-grid">
             <div>
-              <h2 style="margin-bottom:.6rem">Statystyki</h2>
+              <h2 style="margin-bottom:.6rem" x-text="$store.i18n.t('result.stats')"></h2>
               <div class="stat-list">
                 <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
                   <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
@@ -185,19 +206,19 @@
             </div>
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-                <h2>Breakdown spelli</h2>
+                <h2 x-text="$store.i18n.t('result.spell_breakdown')"></h2>
                 <div>
-                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                  <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
+                  <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
                 </div>
               </div>
               <div class="spell-list">
                 <template x-for="sp in pubSortedSpells" :key="sp.name">
                   <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                     <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
-                      <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
-                      <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
-                      <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
+                      <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_executes')"></span><span x-text="sp.count ?? '—'"></span></div>
+                      <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_avg_hit')"></span><span x-text="formatDmg(sp.avg_hit)"></span></div>
+                      <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_crit')"></span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
                       <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                     </div>
                     <div class="spell-head">
@@ -216,9 +237,12 @@
           </div>
           <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
           <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
-            <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
+            <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)" x-text="$store.i18n.t('result.raw_json')"></a>
             <span style="color:var(--border)">·</span>
-            <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0" @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)" x-text="copiedJobId === pubJob.id ? '✓ Skopiowano' : '🔗 Udostępnij'"></button>
+            <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
+              @click="copyToClipboard(getShareUrl(pubJob.id), pubJob.id)"
+              x-text="copiedJobId === pubJob.id ? $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('common.share')"
+            ></button>
           </div>
         </div>
       </div>
