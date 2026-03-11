@@ -187,9 +187,9 @@
                     </span>
                     <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                   </span>
-                            <span x-show="spellSort==='hps'">
-                              <strong x-text="formatDps(sp.hps)"></strong> HPS
-                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span>
+                            <span x-show="spellSort==='dps'">
+                              <strong x-text="formatDps(sp.dps)"></strong> HPS
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.dps_pct ?? '0') + '%)'" ></span>
                             </span>
                           </span>
                         </template>
@@ -320,7 +320,7 @@ function resultPage() {
         ]);
         this.result = result;
         this.meta   = meta;
-        if (this.truetiveRole() === 'dps') this.spellSort = 'total_heal';
+        if (this.truetiveRole() === 'dps') this.spellSort = 'total_dmg';
       } catch (e) {
         this.error = 'Nie znaleziono symulacji. Link mógł wygaśnąć lub jest nieprawidłowy.';
       } finally {
