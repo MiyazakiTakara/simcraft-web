@@ -225,7 +225,7 @@ def _extract_hps_dtps(cd: dict) -> tuple[float, float, float]:
       - tmi.mean (theck mitigation index — wskaznik tanka)
     """
     hps_data  = cd.get("hps") or cd.get("hpse") or {}
-    dtps_data = cd.get("dtps") or {}
+    dtps_data = cd.get("dtps") or cd.get("dmg_taken") or {}
     tmi_data  = cd.get("tmi") or {}
 
     hps  = safe_float(hps_data.get("mean") if isinstance(hps_data, dict) else hps_data)
