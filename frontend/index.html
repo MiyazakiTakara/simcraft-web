@@ -142,19 +142,13 @@
 
         <template x-if="pubResult && pubResult._source === 'addon'">
                 <div>
-                  <h2 style="margin-bottom:.6rem">Statystyki</h2>
-                  <div class="stat-list">
-                    <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
-                      <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
-                    </template>
-                  </div>
-                </div>
-                <div>
                   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                     <h2>Breakdown spelli</h2>
                     <div style="display:flex;gap:.3rem">
-                      <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                      <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                      <div>
+                        <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                        <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
+                      </div>
                     </div>
                   </div>
                   <div class="spell-list">
@@ -173,6 +167,12 @@
                               <strong x-text="formatDmg(sp.total_dmg)"></strong>
                               <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
                             </span>
+                            <span x-show="spellSort==='dps'">
+                              <strong x-text="formatDps(sp.dps)"></strong> DPS
+                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                            </span>
+                            <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                          </span>
                             <span x-show="spellSort==='dps'">
                               <strong x-text="formatDps(sp.dps)"></strong> DPS
                               <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
