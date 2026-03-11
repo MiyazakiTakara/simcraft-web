@@ -383,29 +383,7 @@ function app() {
     },
 
     async loadHistoryResult(jobId) {
-      try {
-        this.simResult = await API.getResultJson(jobId);
-        this.selectedHistory = jobId;
-        let entry = this.history.find(e => e.job_id === jobId);
-        if (!entry) entry = await API.getResultMeta(jobId);
-        const charName  = entry?.character_name || null;
-        const charClass = entry?.character_class || null;
-        const charSpec  = entry?.character_spec  || null;
-        const charObj   = charName ? this.characters.find(c => c.name === charName) : null;
-        if (entry?.role) this.simResult._role = entry.role;
-        if (this.effectiveRole() === 'healer') this.spellSort = 'total_heal';
-        else if (this.spellSort === 'total_heal') this.spellSort = 'total_dmg';
-        this.job = {
-          id:        jobId,
-          charName:  charName !== 'Addon Export' ? charName : null,
-          realmSlug: charObj?.realm_slug || entry?.character_realm_slug || null,
-          charClass: charClass || null,
-          charSpec:  charSpec || charObj?.spec || null,
-          role:      entry?.role || 'dps',
-        };
-      } catch (e) {
-        alert("Nie udało się załadować wyniku: " + e.message);
-      }
+      window.location.href = '/result/' + jobId;
     },
 
     openResultPage(jobId) {
