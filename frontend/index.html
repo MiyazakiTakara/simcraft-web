@@ -382,9 +382,10 @@
                           <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                         </div>
                         <div class="spell-head"><span x-text="sp.name"></span><span style="display:flex;gap:.6rem;align-items:center">
-                          <span x-show="dps === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="dps === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="dps !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                          <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                          <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
+                          <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                        </span>
                           <span x-show="dps !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
                           <span x-show="dps !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                         </span></div>
