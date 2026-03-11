@@ -45,7 +45,7 @@ function app() {
     newsPage: 1,
     newsPerPage: 5,
     expandedNews: null,
-    activeTab: "symulacje",
+    activeTab: "home",
     currentView: "home",
     charEquipment: [],
     charTalents: [],
@@ -82,6 +82,38 @@ function app() {
     getItemQualityColor(quality)  { return Utils.getItemQualityColor(quality); },
     copyToClipboard(text, jobId)  { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
 
+    // Gettery (deskryptory) — Alpine widzi je przez mergeMixins
+    get filteredChars() {
+      const q = (this.charFilter || '').toLowerCase();
+      return (this.characters || []).filter(
+        c => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
+      );
+    },
+    get historyPageCount() {
+      return Math.max(1, Math.ceil((this.history || []).length / (this.historyPerPage || 5)));
+    },
+    get pagedHistory() {
+      const start = ((this.historyPage || 1) - 1) * (this.historyPerPage || 5);
+      return (this.history || []).slice(start, start + (this.historyPerPage || 5));
+    },
+    get newsPageCount() {
+      return Math.max(1, Math.ceil((this.news || []).length / (this.newsPerPage || 5)));
+    },
+    get pagedNews() {
+      const start = ((this.newsPage || 1) - 1) * (this.newsPerPage || 5);
+      return (this.news || []).slice(start, start + (this.newsPerPage || 5));
+    },
+    get sortedSpells() {
+      if (!this.simResult?.spells) return [];
+      const key = this.spellSort || 'dps';
+      return [...this.simResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+    },
+    get pubSortedSpells() {
+      if (!this.pubResult?.spells) return [];
+      const key = this.spellSort || 'dps';
+      return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+    },
+
     // Role
     detectedRole()  { return 'dps'; },
     effectiveRole() {
@@ -93,8 +125,18 @@ function app() {
       }
       return 'dps';
     },
-    roleIcon()  { return '⚔️'; },
-    roleLabel() { return 'DPS'; },
+    roleIcon(role)  {
+      const r = role || this.effectiveRole();
+      if (r === 'heal') return '💚';
+      if (r === 'tank') return '🛡️';
+      return '⚔️';
+    },
+    roleLabel(role) {
+      const r = role || this.effectiveRole();
+      if (r === 'heal') return 'Heal';
+      if (r === 'tank') return 'Tank';
+      return 'DPS';
+    },
 
     // View loader
     async loadView(name) {
@@ -121,7 +163,6 @@ function app() {
     navigateTo(name) {
       this.currentView = name;
       this.activeTab = name;
-      this._viewCache = {}; // bust view cache przy nawigacji
       this.loadView(name);
     },
 
@@ -244,7 +285,7 @@ function app() {
     },
   };
 
-  // Kopiuj gettery z miksy zachowując deskryptory (Object.assign / spread tego nie robi poprawnie)
+  // Kopiuj gettery z miksinow zachowując deskryptory property
   mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
 
   return state;
