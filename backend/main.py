@@ -158,20 +158,32 @@ async def result_page(job_id: str):
 
 
 def _restore_jobs():
+    """
+    Przywraca joby po restarcie.
+    Priorytet: nowy format (katalog/<job_id>/output.json) > stary format (<job_id>.json).
+    Każdy job_id dodawany jest tylko raz — subdir ma pierwszeństwo.
+    """
+    # 1. Najpierw nowy format (katalogi) — mają wyższy priorytet
+    for entry in os.scandir(RESULTS_DIR):
+        if not entry.is_dir():
+            continue
+        out = os.path.join(entry.path, "output.json")
+        if os.path.exists(out):
+            jobs[entry.name] = {"status": "done", "json_path": out, "error": None, "counted": False}
+            create_job(entry.name, out)
+
+    # 2. Stary format (płaskie pliki .json) — tylko jeśli job nie został już dodany z katalogu
+    _SKIP = {"history.json", "sessions.json"}
     for fname in os.listdir(RESULTS_DIR):
-        if not fname.endswith(".json") or fname in ("history.json", "sessions.json"):
+        if not fname.endswith(".json") or fname in _SKIP:
             continue
         job_id = fname[:-5]
-        fpath  = os.path.join(RESULTS_DIR, fname)
-        jobs[job_id] = {"status": "done", "json_path": fpath, "error": None}
+        if job_id in jobs:
+            # Subdir już wygrał — pomijamy duplikat
+            continue
+        fpath = os.path.join(RESULTS_DIR, fname)
+        jobs[job_id] = {"status": "done", "json_path": fpath, "error": None, "counted": False}
         create_job(job_id, fpath)
-
-    for entry in os.scandir(RESULTS_DIR):
-        if entry.is_dir():
-            out = os.path.join(entry.path, "output.json")
-            if os.path.exists(out):
-                jobs[entry.name] = {"status": "done", "json_path": out, "error": None}
-                create_job(entry.name, out)
 
     log.info("jobs-restored", count=len(jobs))
 
