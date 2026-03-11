@@ -12,6 +12,25 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - **Panel admina** — zarządzanie newsami, limitami, health check, zadaniami (Keycloak OAuth2)
 - **Rate limiting** — ochrona przed nadużywaniem API
 
+## TODO
+
+### Funkcje społecznościowe
+
+> ⚠️ Wymagają przemyślenia systemu tożsamości użytkowników — aktualnie użytkownicy identyfikowani są przez UUID sesji Battle.net, bez żadnej nazwy wyświetlanej ani profilu. Przed implementacją poniższych funkcji warto rozważyć: czy wystarczy wyświetlać nick postaci WoW (np. `Thrall-Draenor`), czy potrzebny jest osobny profil użytkownika?
+
+- [ ] **Profile użytkowników** — strona `/u/{battletag_lub_uuid}` z historią symulacji danej osoby, ulubionymi postaciami, statystykami
+- [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style, aktualizowana na bieżąco z historii
+- [ ] **Komentarze / reakcje** — możliwość zostawienia komentarza lub emoji-reakcji pod wynikiem symulacji (powiązanym z `job_id`)
+- [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji (addon text + parametry) jako publiczny link do ponownego uruchomienia
+- [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli i DPS obok siebie
+- [ ] **Obserwowanie postaci** — zapisanie postaci do "ulubionych" i śledzenie jej historii DPS na wykresie trendów
+
+### Techniczne
+
+- [ ] **Race condition w `simulation.py`** — `out_path` czytany z `jobs[]` poza `_running_lock`; przekazać jako argument do `_run_sim()`
+- [ ] **Pinowanie wersji w `requirements.txt`** — zastąpić unpinned dependencies wynikiem `pip freeze`
+- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli jako CSV
+
 ## Wymagania
 
 - Python 3.10+
@@ -85,12 +104,12 @@ simcraft-web/
 │   └── admin.py         # Panel admina (Keycloak)
 ├── frontend/
 │   ├── index.html       # Główna strona
-│   ├── admin.html       # Panel admina (nowe zakladki: limity, health, zadania)
+│   ├── admin.html       # Panel admina
 │   ├── result.html      # Strona wyniku (dla social sharing)
-│   ├── app.js          # Logika Alpine.js
-│   ├── api.js          # API client
-│   ├── admin.js        # Logika panelu admina
-│   └── style.css       # Style
+│   ├── app.js           # Logika Alpine.js
+│   ├── api.js           # API client
+│   ├── admin.js         # Logika panelu admina
+│   └── style.css        # Style
 ├── docker-compose.yml
 ├── Dockerfile
 └── requirements.txt
