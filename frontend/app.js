@@ -100,6 +100,8 @@ function app() {
       haste:       "Haste",
       mastery:     "Mastery",
       versatility: "Versatility",
+      dtps:        "DTPS",
+      tmi:         "TMI",
     },
 
     CLASS_COLORS: {

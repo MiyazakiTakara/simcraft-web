@@ -382,7 +382,7 @@ def parse_results(json_path: str):
             "tmi":          tmi,
             "role":         role,
             "fight_length": round(fight_length, 1),
-            "stats":        stats,
+            "stats":        {**(stats or {}), "dtps": round(dtps, 1), "tmi": round(tmi, 1)},
             "spells":       top_spells,
         }
 
