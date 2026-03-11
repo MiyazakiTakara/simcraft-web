@@ -11,7 +11,8 @@ def _get_job(job_id: str):
     from database import get_job
     db_job = get_job(job_id)
     if db_job:
-        return {"status": db_job.status, "json_path": db_job.json_path, "error": db_job.error}
+        # get_job() zwraca dict od czasu poprawki DetachedInstanceError
+        return {"status": db_job["status"], "json_path": db_job["json_path"], "error": db_job["error"]}
     return jobs.get(job_id)
 
 
@@ -250,11 +251,9 @@ def parse_results(json_path: str):
 
         hps, dtps, tmi = _extract_hps_dtps(cd)
 
-        # HPS std dev
         hps_std_data = cd.get("hps") or cd.get("hpse") or {}
         hps_std = safe_float(hps_std_data.get("mean_std_dev", 0) if isinstance(hps_std_data, dict) else 0)
 
-        # DTPS std dev
         dtps_std_data = cd.get("dtps") or {}
         dtps_std = safe_float(dtps_std_data.get("mean_std_dev", 0) if isinstance(dtps_std_data, dict) else 0)
 
@@ -280,17 +279,14 @@ def parse_results(json_path: str):
         if not isinstance(abilities, list):
             abilities = []
 
-        # Auto-detect roli na podstawie danych
-        # Najpierw sprawdź collected_data hps, potem fallback na spells
         main_hps = hps
         if main_hps <= 0:
-            # Fallback: użyj max hps ze spelli
             for ab in abilities:
                 if isinstance(ab, dict):
                     spell_hps = ability_hps(ab)
                     if spell_hps > main_hps:
                         main_hps = spell_hps
-        
+
         if main_hps > 100:
             role = "healer"
         else:
@@ -344,17 +340,16 @@ def parse_results(json_path: str):
                     "dps_pct": 0.0, "dmg_pct": 0.0,
                 })
 
-        total_spell_dps = sum(s["dps"] for s in spells)
-        total_spell_dps   = sum(s["dps"] for s in spells)
-        total_spell_dmg   = sum(s["total_dmg"] for s in spells)
+        total_spell_dps  = sum(s["dps"] for s in spells)
+        total_spell_dmg  = sum(s["total_dmg"] for s in spells)
         total_spell_hps  = sum(s["hps"] for s in spells)
         total_spell_heal = sum(s["total_heal"] for s in spells)
 
         for s in spells:
-            s["dps_pct"]    = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
-            s["dmg_pct"]    = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
-            s["hps_pct"]    = round((s["hps"] / total_spell_hps * 100), 1) if total_spell_hps > 0 else 0.0
-            s["heal_pct"]   = round((s["total_heal"] / total_spell_heal * 100), 1) if total_spell_heal > 0 else 0.0
+            s["dps_pct"]  = round((s["dps"] / total_spell_dps * 100), 1) if total_spell_dps > 0 else 0.0
+            s["dmg_pct"]  = round((s["total_dmg"] / total_spell_dmg * 100), 1) if total_spell_dmg > 0 else 0.0
+            s["hps_pct"]  = round((s["hps"] / total_spell_hps * 100), 1) if total_spell_hps > 0 else 0.0
+            s["heal_pct"] = round((s["total_heal"] / total_spell_heal * 100), 1) if total_spell_heal > 0 else 0.0
 
         spells = sorted(spells, key=lambda x: x["total_dmg"], reverse=True)
 
@@ -369,9 +364,9 @@ def parse_results(json_path: str):
                 "hps": round(other_hps, 2), "total_heal": round(other_heal),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "is_channel": False,
-                "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
-                "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
-                "hps_pct": round(other_hps / total_spell_hps * 100, 1) if total_spell_hps > 0 else 0.0,
+                "dps_pct":  round(other_dps  / total_spell_dps  * 100, 1) if total_spell_dps  > 0 else 0.0,
+                "dmg_pct":  round(other_dmg  / total_spell_dmg  * 100, 1) if total_spell_dmg  > 0 else 0.0,
+                "hps_pct":  round(other_hps  / total_spell_hps  * 100, 1) if total_spell_hps  > 0 else 0.0,
                 "heal_pct": round(other_heal / total_spell_heal * 100, 1) if total_spell_heal > 0 else 0.0,
             })
 
@@ -393,11 +388,6 @@ def parse_results(json_path: str):
 
 
 def generate_dps_chart(json_path: str, role: str = None) -> str:
-    """
-    Generuje wykres pie chart.
-    role: 'dps' | 'healer' | 'tank' | None (auto-detect)
-    Healer -> healing breakdown, tank -> damage taken, dps -> damage breakdown.
-    """
     try:
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
@@ -417,7 +407,6 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
         if not isinstance(abilities, list):
             return None
 
-        # Auto-detect roli jesli nie podano
         if role is None:
             hps, dtps, tmi = _extract_hps_dtps(cd)
             if hps > 100:
@@ -425,9 +414,9 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
             else:
                 role = "dps"
 
-        real_dps  = safe_float(cd.get("dps",  {}).get("mean", 0))
-        real_dmg  = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
-        real_hps  = safe_float((cd.get("hps") or cd.get("hpse") or {}).get("mean", 0))
+        real_dps = safe_float(cd.get("dps",  {}).get("mean", 0))
+        real_dmg = safe_float(cd.get("compound_dmg", {}).get("mean", 0))
+        real_hps = safe_float((cd.get("hps") or cd.get("hpse") or {}).get("mean", 0))
 
         TOP_N  = 12
         COLORS = [
@@ -452,6 +441,7 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
                     rows.append({"name": name, "value": val})
             if not rows:
                 return [], []
+            import pandas as pd
             df = pd.DataFrame(rows).sort_values("value", ascending=False).reset_index(drop=True)
             if len(df) > TOP_N:
                 other = df.iloc[TOP_N:]["value"].sum()
@@ -474,12 +464,9 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
         player_name = player.get("name", "?")
 
         if role == "healer":
-            # Healing breakdown: total heal | HPS
             heal_names, heal_vals = build_data(ability_total_heal)
             hps_names,  hps_vals  = build_data(ability_hps)
-
             if not heal_vals and not hps_vals:
-                # Fallback do damage jesli nie ma heal data
                 role = "dps"
             else:
                 left_title  = f"Total Heal  ({fmt_dmg(real_hps * safe_float(cd.get('fight_length', {}).get('mean', 1)))})" if real_hps > 0 else "Total Heal"
@@ -492,10 +479,8 @@ def generate_dps_chart(json_path: str, role: str = None) -> str:
         if role == "dps":
             dmg_names, dmg_vals = build_data(ability_total_dmg)
             dps_names, dps_vals = build_data(ability_dps)
-
             if not dmg_vals and not dps_vals:
                 return None
-
             left_title  = f"Total DMG  ({fmt_dmg(real_dmg)})" if real_dmg > 0 else "Total DMG"
             right_title = f"DPS  ({fmt_dps(real_dps)})"       if real_dps > 0 else "DPS"
             chart_title = f"{player_name} \u2014 Damage Breakdown"
