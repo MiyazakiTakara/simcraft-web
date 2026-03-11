@@ -432,8 +432,9 @@ async def health_check(request: Request):
     
     # Check database
     try:
+        from sqlalchemy import text
         with SessionLocal() as db:
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
         health_status["database"] = "ok"
     except Exception as e:
         health_status["database"] = f"error: {str(e)}"
@@ -450,7 +451,9 @@ async def health_check(request: Request):
     try:
         cfg = _cfg()
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{cfg['oidc_base']}/userinfo", timeout=5)
+            # Check OIDC configuration endpoint (public, no auth required)
+            url = f"{cfg['oidc_base'].split('/protocol')[0]}/.well-known/openid-configuration"
+            resp = await client.get(url, timeout=5)
             health_status["keycloak"] = "ok" if resp.status_code == 200 else f"error: {resp.status_code}"
     except Exception as e:
         health_status["keycloak"] = f"error: {str(e)}"
