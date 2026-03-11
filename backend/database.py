@@ -137,9 +137,20 @@ def update_job_status(job_id: str, status: str, error: str = None):
             db.commit()
 
 
-def get_job(job_id: str):
+def get_job(job_id: str) -> dict | None:
+    """Zwraca job jako słownik — nie ORM obiekt — żeby uniknąć DetachedInstanceError poza sesją."""
     with SessionLocal() as db:
-        return db.query(JobModel).filter(JobModel.job_id == job_id).first()
+        job = db.query(JobModel).filter(JobModel.job_id == job_id).first()
+        if not job:
+            return None
+        return {
+            "job_id":       job.job_id,
+            "status":       job.status,
+            "json_path":    job.json_path,
+            "error":        job.error,
+            "started_at":   job.started_at,
+            "completed_at": job.completed_at,
+        }
 
 
 def add_log(level: str, message: str, context: str = None):
