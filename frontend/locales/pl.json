@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "title": "SimCraft Web — Symulator DPS dla WoW",
+    "description": "Darmowy symulator DPS dla World of Warcraft. Zaloguj się przez Battle.net i sprawdź DPS swojej postaci."
+  },
+  "header": {
+    "simulations": "⚔️ Symulacje",
+    "profile": "👤 Profil",
+    "characters_count": "{{count}} postaci",
+    "logout": "Wyloguj",
+    "login": "🔑 Zaloguj",
+    "theme_to_light": "Przełącz na jasny",
+    "theme_to_dark": "Przełącz na ciemny"
+  },
+  "nav": {
+    "home": "Home",
+    "simulations": "Symulacje",
+    "profile": "Profil"
+  },
+  "lang": {
+    "pl": "PL",
+    "en": "EN"
+  },
+  "common": {
+    "loading": "Ładowanie...",
+    "error": "Błąd",
+    "error_prefix": "Błąd: ",
+    "close": "Zamknij",
+    "cancel": "Anuluj",
+    "save": "Zapisz",
+    "run": "Uruchom",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano!",
+    "share": "Udostępnij",
+    "unknown": "Nieznany",
+    "yes": "Tak",
+    "no": "Nie"
+  },
+  "home": {
+    "hero_subtitle": "Symulator DPS dla",
+    "guest_title": "Symuluj bez logowania",
+    "guest_subtitle": "Wklej tekst z addona SimulationCraft i uruchom symulację",
+    "login_cta": "Zaloguj się przez Battle.net aby wybrać postać z Armory",
+    "or_separator": "lub"
+  },
+  "sim": {
+    "mode_armory": "Z Armory",
+    "mode_addon": "Addon Export",
+    "fight_style": "Styl walki",
+    "iterations": "Iteracje",
+    "target_error": "Target error (%)",
+    "run_sim": "🚀 Symuluj",
+    "running": "⏳ Symulowanie...",
+    "select_char": "Wybierz postać",
+    "addon_placeholder": "Wklej tutaj tekst z addona SimulationCraft...",
+    "no_char_selected": "Nie wybrano postaci",
+    "error_no_input": "Podaj addon_text lub wybierz postać",
+    "queue_position": "Pozycja w kolejce: {{pos}}",
+    "sim_complete": "Symulacja zakończona!"
+  },
+  "result": {
+    "dps": "DPS",
+    "total_dmg": "Total DMG",
+    "fight_length": "Czas walki",
+    "spell_breakdown": "Breakdown spelli",
+    "spell_name": "Spell",
+    "spell_dps": "DPS",
+    "spell_total_dmg": "Total DMG",
+    "spell_dps_pct": "% DPS",
+    "spell_dmg_pct": "% DMG",
+    "spell_executes": "Casts",
+    "spell_avg_hit": "Avg Hit",
+    "spell_crit": "Crit %",
+    "spell_miss": "Miss %",
+    "stats": "Statystyki postaci",
+    "share_result": "Udostępnij wynik",
+    "view_chart": "📊 Pokaż wykres",
+    "download_chart": "⬇️ Pobierz wykres",
+    "open_armory": "🔗 Armory",
+    "raw_json": "Raw JSON",
+    "seconds_short": "s"
+  },
+  "chars": {
+    "title": "Twoje postacie",
+    "filter_placeholder": "Szukaj postaci...",
+    "no_chars": "Brak postaci (min. poziom 10)",
+    "loading": "Ładowanie postaci...",
+    "error": "Błąd ładowania postaci",
+    "level_short": "lv",
+    "simulate": "🏃 Uruchom symulację",
+    "gear_title": "🎒 Gear",
+    "talents_title": "✨ Talenty",
+    "dps_trend_title": "📈 DPS w czasie"
+  },
+  "history": {
+    "title": "Historia symulacji",
+    "public_title": "Ostatnie symulacje",
+    "empty": "Brak historii",
+    "public_empty": "Brak publicznych symulacji",
+    "loading": "Ładowanie historii...",
+    "fight_style": "Styl walki",
+    "view_result": "Zobacz wynik",
+    "page": "Strona {{page}} z {{total}}",
+    "prev": "← Poprzednia",
+    "next": "Następna →"
+  },
+  "news": {
+    "title": "📰 Aktualności",
+    "empty": "Brak aktualności",
+    "read_more": "Czytaj więcej",
+    "collapse": "Zwiń"
+  },
+  "profile": {
+    "title": "Profil",
+    "tab_chars": "Postacie",
+    "tab_history": "Historia",
+    "tab_settings": "Ustawienia"
+  },
+  "errors": {
+    "view_load_failed": "Błąd ładowania widoku: {{name}}",
+    "chars_load_failed": "Błąd ładowania postaci",
+    "sim_failed": "Symulacja zakończona błędem",
+    "result_not_ready": "Wynik nie jest jeszcze gotowy",
+    "network": "Błąd sieci — sprawdź połączenie"
+  }
+}
