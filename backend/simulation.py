@@ -22,20 +22,21 @@ log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/app/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-SIMC_PATH = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
-JOB_TIMEOUT = int(os.environ.get("JOB_TIMEOUT", "360"))
-
+SIMC_PATH    = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
+JOB_TIMEOUT  = int(os.environ.get("JOB_TIMEOUT", "360"))
 SIMC_APIKEY_PATH = os.environ.get("SIMC_APIKEY_PATH", "/root/.simc_apikey")
+
+# Stale wpisy starsze niż JOBS_TTL sekund są usuwane przez watchdog
+JOBS_TTL = int(os.environ.get("JOBS_TTL", str(60 * 60 * 4)))  # domyślnie 4h
 
 MAX_ADDON_TEXT_LENGTH = 50000
 
 ADDON_TEXT_BLOCKED_PATTERNS = [
     re.compile(r"^#\s*(quit|exit|delete|rm|del)", re.MULTILINE | re.IGNORECASE),
     re.compile(r"^\s*!\s*.*", re.MULTILINE),
-    re.compile(r"exec\s+['\"]", re.IGNORECASE),
+    re.compile(r"exec\s+['\"\"]]", re.IGNORECASE),
     re.compile(r"source\s+.*\.sh", re.IGNORECASE),
     re.compile(r"\|.*sh", re.IGNORECASE),
-    # Blokada dyrektyw wczytujących pliki z dysku
     re.compile(r"^\s*include\s*=", re.MULTILINE | re.IGNORECASE),
     re.compile(r"^\s*file\s*=", re.MULTILINE | re.IGNORECASE),
     re.compile(r"^\s*output\s*=", re.MULTILINE | re.IGNORECASE),
@@ -48,14 +49,11 @@ ADDON_TEXT_BLOCKED_PATTERNS = [
 def _validate_addon_text(text: str) -> str:
     if not text:
         return text
-
     if len(text) > MAX_ADDON_TEXT_LENGTH:
         raise HTTPException(400, f"Addon text too long (max {MAX_ADDON_TEXT_LENGTH} chars)")
-
     for pattern in ADDON_TEXT_BLOCKED_PATTERNS:
         if pattern.search(text):
             raise HTTPException(400, "Invalid characters or commands in addon text")
-
     return text
 
 
@@ -63,13 +61,10 @@ jobs: dict = {}
 
 MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT_SIMS", "3"))
 
-# Zamiast globalnego licznika _running_sims śledzi per-job flagę "counted",
-# żeby watchdog i _run_sim nie mogły zmniejszyć licznika dwa razy dla tego samego joba.
 _running_lock = threading.Lock()
 
 
 def _count_running() -> int:
-    """Zlicza joby ze statusem 'running' i flagą counted=True."""
     return sum(1 for j in jobs.values() if j.get("counted"))
 
 
@@ -121,13 +116,12 @@ def _run_sim(job_id: str, simc_input: str):
         f.write(simc_input)
 
     try:
-        blizzard_id = os.environ.get("BLIZZARD_CLIENT_ID")
+        blizzard_id     = os.environ.get("BLIZZARD_CLIENT_ID")
         blizzard_secret = os.environ.get("BLIZZARD_CLIENT_SECRET")
         if blizzard_id and blizzard_secret:
-            api_key_path = SIMC_APIKEY_PATH
-            with open(api_key_path, "w") as f:
+            with open(SIMC_APIKEY_PATH, "w") as f:
                 f.write(f"{blizzard_id}:{blizzard_secret}")
-            os.chmod(api_key_path, 0o600)
+            os.chmod(SIMC_APIKEY_PATH, 0o600)
 
         result = subprocess.run(
             [SIMC_PATH, inp_path],
@@ -153,18 +147,32 @@ def _run_sim(job_id: str, simc_input: str):
 
 
 def _watchdog():
+    """Co 60s: timeout aktywnych jobów + czyszczenie starych wpisów z jobs{}."""
     while True:
         time.sleep(60)
         now = time.time()
+        to_delete = []
+
         for job_id, job in list(jobs.items()):
-            if job.get("counted"):
-                started = job.get("started_at", now)
-                if now - started > JOB_TIMEOUT + 60:
-                    jobs[job_id]["status"] = "error"
-                    jobs[job_id]["error"]  = "Job timeout (watchdog)"
-                    update_job_status(job_id, "error", "Job timeout (watchdog)")
-                    _release_slot(job_id)
-                    log.warning("job-timeout", job_id=job_id)
+            started = job.get("started_at", now)
+
+            # Timeout aktywnego joba
+            if job.get("counted") and now - started > JOB_TIMEOUT + 60:
+                jobs[job_id]["status"] = "error"
+                jobs[job_id]["error"]  = "Job timeout (watchdog)"
+                update_job_status(job_id, "error", "Job timeout (watchdog)")
+                _release_slot(job_id)
+                log.warning("job-timeout", job_id=job_id)
+
+            # Usunięcie zakończonych/błędnych wpisów starszych niż JOBS_TTL
+            if not job.get("counted") and now - started > JOBS_TTL:
+                to_delete.append(job_id)
+
+        for job_id in to_delete:
+            jobs.pop(job_id, None)
+
+        if to_delete:
+            log.info("jobs-dict-cleanup", removed=len(to_delete))
 
 
 threading.Thread(target=_watchdog, daemon=True).start()
@@ -190,7 +198,7 @@ async def start_sim(request: Request, req: SimRequest):
             "json_path":  out_path,
             "error":      None,
             "started_at": time.time(),
-            "counted":    True,   # per-job flaga zastępująca globalny licznik
+            "counted":    True,
         }
 
     log.info("sim-started", job_id=job_id, addon_text=bool(req.addon_text), character=req.name, realm=req.realm_slug)

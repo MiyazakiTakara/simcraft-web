@@ -1,11 +1,10 @@
-import json
 import os
-import time
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, HistoryEntryModel, detect_role_from_result
+from database import SessionLocal, HistoryEntryModel, JobModel, detect_role_from_result
 
 router = APIRouter()
 
@@ -35,7 +34,8 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
         "role":                 e.role,
         "fight_style":          e.fight_style,
         "user_id":              e.user_id,
-        "created_at":           e.created_at,
+        # created_at to DateTime — serializujemy jako ISO string
+        "created_at":           e.created_at.isoformat() if e.created_at else None,
     }
 
 
@@ -53,11 +53,11 @@ async def get_history(page: int = 1, limit: int = 50):
         )
         total = db.query(HistoryEntryModel).count()
     return {
-        "items": [_entry_to_dict(r) for r in rows],
-        "page": page,
-        "limit": limit,
-        "total": total,
-        "total_pages": (total + limit - 1) // limit
+        "items":       [_entry_to_dict(r) for r in rows],
+        "page":        page,
+        "limit":       limit,
+        "total":       total,
+        "total_pages": (total + limit - 1) // limit,
     }
 
 
@@ -69,7 +69,7 @@ async def get_my_history(session: str, page: int = 1, limit: int = 20):
     offset = (page - 1) * limit
     with SessionLocal() as db:
         query = db.query(HistoryEntryModel).filter(HistoryEntryModel.user_id == session)
-        rows = (
+        rows  = (
             query
             .order_by(HistoryEntryModel.created_at.desc())
             .offset(offset)
@@ -78,11 +78,11 @@ async def get_my_history(session: str, page: int = 1, limit: int = 20):
         )
         total = query.count()
     return {
-        "items": [_entry_to_dict(r) for r in rows],
-        "page": page,
-        "limit": limit,
-        "total": total,
-        "total_pages": (total + limit - 1) // limit
+        "items":       [_entry_to_dict(r) for r in rows],
+        "page":        page,
+        "limit":       limit,
+        "total":       total,
+        "total_pages": (total + limit - 1) // limit,
     }
 
 
@@ -99,10 +99,13 @@ async def get_result_meta(job_id: str):
 @router.post("/api/history")
 async def add_history(entry: HistoryEntry):
     with SessionLocal() as db:
+        # Walidacja: job musi istnieć w tabeli jobs zanim trafi do historii
+        job_exists = db.query(JobModel).filter(JobModel.job_id == entry.job_id).first()
+        if not job_exists:
+            raise HTTPException(404, "Job not found — cannot add to history")
+
         exists = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == entry.job_id).first()
         if not exists:
-            role = entry.role or "dps"
-
             row = HistoryEntryModel(
                 job_id               = entry.job_id,
                 character_name       = entry.character_name,
@@ -110,10 +113,10 @@ async def add_history(entry: HistoryEntry):
                 character_spec       = entry.character_spec,
                 character_realm_slug = entry.character_realm_slug or "",
                 dps                  = entry.dps,
-                role                 = role,
+                role                 = entry.role or "dps",
                 fight_style          = entry.fight_style,
                 user_id              = entry.user_id,
-                created_at           = int(time.time()),
+                # created_at ma default=datetime.utcnow w modelu — nie ustawiamy ręcznie
             )
             db.add(row)
             db.commit()
@@ -147,16 +150,16 @@ async def get_character_trend(
         )
 
     return {
-        "character_name": character_name,
+        "character_name":       character_name,
         "character_realm_slug": character_realm_slug,
-        "fight_style": fight_style,
+        "fight_style":          fight_style,
         "points": [
             {
-                "timestamp": r.created_at,
-                "dps":  r.dps,
-                "role": r.role,
-                "job_id": r.job_id,
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "dps":       r.dps,
+                "role":      r.role,
+                "job_id":    r.job_id,
             }
             for r in rows
-        ]
+        ],
     }
