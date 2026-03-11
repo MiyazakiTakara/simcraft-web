@@ -24,6 +24,7 @@
     <button class="tab" data-tab="limits">Limity</button>
     <button class="tab" data-tab="health">Health</button>
     <button class="tab" data-tab="tasks">Zadania</button>
+    <button class="tab" data-tab="appearance">Wygląd</button>
   </div>
 
   <div class="tab-content active" id="tab-dashboard">
@@ -142,6 +143,42 @@
         <p class="empty">Ładowanie...</p>
       </div>
       <button class="primary" onclick="loadTasks()" style="margin-top:1rem">Odśwież</button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-appearance">
+    <h2>Wygląd strony</h2>
+    <div class="form-box">
+      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem;">Dostosuj wygląd strony głównej.</p>
+      
+      <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
+        <label style="width:200px">Tytuł w headerze:</label>
+        <input type="text" id="appearance-header-title" placeholder="SimCraft Web" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
+      </div>
+      
+      <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
+        <label style="width:200px">Tytuł landing hero:</label>
+        <input type="text" id="appearance-hero-title" placeholder="Symulator DPS dla World of Warcraft" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;" />
+      </div>
+      
+      <div style="margin-bottom:1rem">
+        <label style="display:block;margin-bottom:0.5rem">Ikona strony (emoji):</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="emoji-picker">
+          <button class="emoji-btn" data-emoji="⚔️">⚔️</button>
+          <button class="emoji-btn" data-emoji="🛡️">🛡️</button>
+          <button class="emoji-btn" data-emoji="💀">💀</button>
+          <button class="emoji-btn" data-emoji="🐉">🐉</button>
+          <button class="emoji-btn" data-emoji="🔥">🔥</button>
+          <button class="emoji-btn" data-emoji="❄️">❄️</button>
+          <button class="emoji-btn" data-emoji="⚡">⚡</button>
+          <button class="emoji-btn" data-emoji="🏹">🏹</button>
+          <button class="emoji-btn" data-emoji="✨">✨</button>
+          <button class="emoji-btn" data-emoji="🏆">🏆</button>
+        </div>
+      </div>
+      
+      <button class="primary" onclick="saveAppearance()">Zapisz wygląd</button>
+      <p id="appearance-result" style="margin-top:0.75rem;font-size:0.85rem;"></p>
     </div>
   </div>
 

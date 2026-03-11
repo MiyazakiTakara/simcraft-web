@@ -189,3 +189,22 @@ button.danger:hover { background: #2a1010; }
 }
 .stat-value { font-size: 1.4rem; font-weight: 700; color: #f4a01c; }
 .stat-label { font-size: 0.7rem; color: #666; margin-top: 0.2rem; }
+
+.emoji-btn {
+  font-size: 1.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.emoji-btn:hover {
+  border-color: #f4a01c;
+  transform: scale(1.1);
+}
+.emoji-btn.selected {
+  border-color: #f4a01c;
+  background: #2a2010;
+  box-shadow: 0 0 10px rgba(244, 160, 28, 0.3);
+}

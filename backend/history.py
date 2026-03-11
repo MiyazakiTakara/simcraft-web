@@ -143,3 +143,14 @@ async def get_character_trend(
         "fight_style": fight_style,
         "points": [{"timestamp": r.created_at, "dps": r.dps, "job_id": r.job_id} for r in rows]
     }
+
+
+@router.get("/api/appearance")
+async def get_appearance():
+    """Public endpoint to get appearance settings."""
+    import os
+    return {
+        "header_title": os.environ.get("APPEARANCE_HEADER_TITLE", "SimCraft Web"),
+        "hero_title": os.environ.get("APPEARANCE_HERO_TITLE", "Symulator DPS dla World of Warcraft"),
+        "emoji": os.environ.get("APPEARANCE_EMOJI", "⚔️"),
+    }

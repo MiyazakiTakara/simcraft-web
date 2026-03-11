@@ -97,8 +97,18 @@ function app() {
       "Warrior":       "#C69B3A",
     },
 
+    // Appearance settings
+    appearance: {
+      header_title: "SimCraft Web",
+      hero_title: "Symulator DPS dla World of Warcraft",
+      emoji: "⚔️"
+    },
+
     init() {
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+
+      // Load appearance settings
+      this.loadAppearance();
 
       const params = new URLSearchParams(window.location.search);
       const sessionFromUrl = params.get("session");
@@ -119,6 +129,36 @@ function app() {
       } else {
         this.loadPublicHistory();
         this.loadNews();
+      }
+    },
+
+    async loadAppearance() {
+      try {
+        const res = await fetch('/api/appearance');
+        if (res.ok) {
+          const data = await res.json();
+          this.appearance = data;
+          // Update DOM
+          const titleEl = document.querySelector('title');
+          if (titleEl) titleEl.textContent = data.header_title + ' — ' + data.hero_title;
+          
+          const headerLogo = document.querySelector('.header-logo');
+          if (headerLogo) headerLogo.innerHTML = data.emoji + ' ' + data.header_title;
+          
+          // Update hero title (replace entire inner HTML)
+          const heroTitleEl = document.querySelector('.landing-hero-title');
+          if (heroTitleEl) {
+            // Keep the emoji and line break, only replace the text part
+            // The current format is: "⚔️ Symulator DPS<br/>dla <span>World of Warcraft</span>"
+            // We want to keep emoji and "Symulator DPS<br/>dla" but update the span content
+            const spanEl = heroTitleEl.querySelector('span');
+            if (spanEl) {
+              spanEl.textContent = data.hero_title;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load appearance:', e);
       }
     },
 

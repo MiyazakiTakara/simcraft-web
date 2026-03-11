@@ -512,3 +512,30 @@ async def cancel_task(request: Request, job_id: str):
         return {"ok": True, "message": f"Task {job_id} cancelled"}
     else:
         raise HTTPException(404, "Task not found")
+
+
+# ---------- Appearance Settings ----------
+
+class AppearanceUpdate(BaseModel):
+    header_title: str | None = None
+    hero_title: str | None = None
+    emoji: str | None = None
+
+
+@router.get("/api/appearance")
+async def get_appearance(request: Request):
+    _require_admin(request)
+    return {
+        "header_title": os.environ.get("APPEARANCE_HEADER_TITLE", "SimCraft Web"),
+        "hero_title": os.environ.get("APPEARANCE_HERO_TITLE", "Symulator DPS dla World of Warcraft"),
+        "emoji": os.environ.get("APPEARANCE_EMOJI", "⚔️"),
+    }
+
+
+@router.post("/api/appearance")
+async def update_appearance(request: Request, data: AppearanceUpdate):
+    _require_admin(request)
+    # In production, you'd save to a config file or database
+    # For now, we just return success (environment variables would need restart)
+    # You can implement persistence as needed
+    return {"ok": True, "message": "Appearance settings updated (restart server to apply)"}

@@ -357,6 +357,75 @@ async function cancelTask(jobId) {
   }
 }
 
+// Appearance settings
+document.querySelectorAll('.emoji-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    btn.dataset.selected = 'true';
+  });
+});
+
+async function loadAppearance() {
+  try {
+    const res = await fetch('/admin/api/appearance');
+    if (res.status === 302 || res.redirected) {
+      window.location = '/admin/login'; return;
+    }
+    const data = await res.json();
+    
+    document.getElementById('appearance-header-title').value = data.header_title || '';
+    document.getElementById('appearance-hero-title').value = data.hero_title || '';
+    
+    // Select emoji
+    const selectedEmoji = data.emoji || '⚔️';
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+      btn.classList.remove('selected');
+      if (btn.dataset.emoji === selectedEmoji) {
+        btn.classList.add('selected');
+      }
+    });
+  } catch (e) {
+    console.error('Error loading appearance:', e);
+  }
+}
+
+async function saveAppearance() {
+  const headerTitle = document.getElementById('appearance-header-title').value;
+  const heroTitle = document.getElementById('appearance-hero-title').value;
+  const selectedEmojiBtn = document.querySelector('.emoji-btn.selected');
+  const emoji = selectedEmojiBtn ? selectedEmojiBtn.dataset.emoji : '⚔️';
+  
+  try {
+    const res = await fetch('/admin/api/appearance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ header_title: headerTitle, hero_title: heroTitle, emoji: emoji })
+    });
+    
+    const result = await res.json();
+    if (res.ok) {
+      document.getElementById('appearance-result').textContent = 'Zapisano!';
+      document.getElementById('appearance-result').style.color = '#4c4';
+      toast('Wygląd zapisany', '#4c4');
+    } else {
+      document.getElementById('appearance-result').textContent = 'Błąd: ' + (result.detail || 'Nieznany błąd');
+      document.getElementById('appearance-result').style.color = '#e55';
+    }
+  } catch (e) {
+    document.getElementById('appearance-result').textContent = 'Błąd połączenia';
+    document.getElementById('appearance-result').style.color = '#e55';
+  }
+}
+
+// Load appearance when tab is clicked
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.tab === 'appearance') loadAppearance();
+  });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
+  loadAppearance();
 });
