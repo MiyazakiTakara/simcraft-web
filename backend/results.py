@@ -281,7 +281,17 @@ def parse_results(json_path: str):
             abilities = []
 
         # Auto-detect roli na podstawie danych
-        if hps > 100:
+        # Najpierw sprawdź collected_data, potem fallback na spells
+        main_hps = hps
+        if main_hps <= 0:
+            # Fallback: użyj max hps ze spelli
+            for ab in abilities:
+                if isinstance(ab, dict):
+                    spell_hps = ability_hps(ab)
+                    if spell_hps > main_hps:
+                        main_hps = spell_hps
+        
+        if main_hps > 100:
             role = "healer"
         else:
             role = "dps"
@@ -292,9 +302,9 @@ def parse_results(json_path: str):
                 continue
             dps       = ability_dps(ab)
             tot_dmg   = ability_total_dmg(ab)
-            hps       = ability_hps(ab)
+            spell_hps = ability_hps(ab)
             tot_heal  = ability_total_heal(ab)
-            if dps <= 0 and tot_dmg <= 0 and hps <= 0 and tot_heal <= 0:
+            if dps <= 0 and tot_dmg <= 0 and spell_hps <= 0 and tot_heal <= 0:
                 continue
 
             name                        = spell_display_name(ab)
@@ -308,7 +318,7 @@ def parse_results(json_path: str):
                 "name":       name,
                 "dps":        round(dps, 2),
                 "total_dmg":  round(tot_dmg),
-                "hps":        round(hps, 2),
+                "hps":        round(spell_hps, 2),
                 "total_heal": round(tot_heal),
                 "crit_pct":   crit_pct,
                 "executes":   executes,
@@ -369,7 +379,7 @@ def parse_results(json_path: str):
             "name":         player.get("name", "?"),
             "dps":          round(dps_mean, 1),
             "dps_std":      round(dps_std, 1),
-            "hps":          hps,
+            "hps":          main_hps,
             "hps_std":      round(hps_std, 1),
             "role":         role,
             "fight_length": round(fight_length, 1),
