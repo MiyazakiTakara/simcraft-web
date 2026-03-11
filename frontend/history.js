@@ -29,20 +29,11 @@ const HistoryMixin = {
     return body.length > 150 ? body.slice(0, 150) + "..." : body;
   },
 
-  get newsPageCount() {
-    return Math.max(1, Math.ceil(this.news.length / this.newsPerPage));
-  },
-  get pagedNews() {
-    const start = (this.newsPage - 1) * this.newsPerPage;
-    return this.news.slice(start, start + this.newsPerPage);
-  },
+  // gettery przeniesione do app() — nie umieszczaj ich tutaj!
   newsPages() {
     return Array.from({ length: this.newsPageCount }, (_, i) => i + 1);
   },
 
-  get sortedHistory() { return [...this.history]; },
-  get historyPageCount() { return 1; },
-  get pagedHistory() { return this.sortedHistory.slice(0, 5); },
   historyPages() {
     return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
   },

@@ -53,13 +53,32 @@ function app() {
     ...CharsMixin,
     ...HistoryMixin,
 
-    // getter MUSI byc tutaj, po spreadach — inaczej Alpine ewaluuje go przed inicjalizacja stanu
+    // -------------------------------------------------------
+    // WSZYSTKIE GETTERY MUSZA BYC TUTAJ, po spreadach mixinow.
+    // Alpine ewaluuje gettery natychmiast przy budowaniu obiektu
+    // x-data — jesli sa w mixinie, this.* jest jeszcze undefined.
+    // -------------------------------------------------------
+
     get filteredChars() {
       const q = (this.charFilter || '').toLowerCase();
       return (this.characters || []).filter(
         (c) => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q)
       );
     },
+
+    get newsPageCount() {
+      return Math.max(1, Math.ceil((this.news || []).length / (this.newsPerPage || 3)));
+    },
+    get pagedNews() {
+      const start = (this.newsPage - 1) * this.newsPerPage;
+      return (this.news || []).slice(start, start + this.newsPerPage);
+    },
+
+    get sortedHistory() { return [...(this.history || [])]; },
+    get historyPageCount() { return 1; },
+    get pagedHistory() { return this.sortedHistory.slice(0, 5); },
+
+    // -------------------------------------------------------
 
     async init() {
       this.applyTheme();
