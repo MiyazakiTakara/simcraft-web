@@ -233,6 +233,7 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   min-width: 160px;
   max-width: 250px;
 }
+.spell-row:hover .spell-tooltip { display:block; }
 .spell-tooltip-row { display: flex; justify-content: space-between; gap: 1rem; padding: .1rem 0; }
 .spell-tooltip-row span:first-child { color: var(--muted); }
 .spell-tooltip-row span:last-child  { font-weight: 600; }
