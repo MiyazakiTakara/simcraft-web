@@ -75,10 +75,9 @@
 
           <!-- DPS Hero -->
           <div class="result-hero">
-            <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric().value)"></div>
+            <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric().value)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
-              <span class="role-badge" x-text="roleIcon(effectiveRole()) + ' ' + roleLabel(effectiveRole())" style="background:var(--accent);color:#fff;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:700"></span>
-              <span x-text="'(±' + formatDps(resultMetric().std) + ')'"></span>
+              <span x-text="'DPS (±' + formatDps(resultMetric().std) + ')'"></span>
 
               <!-- Badge postaci z linkiem do Armory -->
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && armoryUrl()">
@@ -131,45 +130,32 @@
                 </template>
               </div>
             </div>
-            <div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-                <h2>Breakdown spelli</h2>
-                <div style="display:flex;gap:.3rem">
-                  <template x-if="effectiveRole() === 'healer'">
-                    <div>
-                      <button class="tab" :class="{active: spellSort==='total_heal'}" @click="spellSort='total_heal'" style="font-size:.75rem;padding:.25rem .6rem">Total Heal</button>
-                      <button class="tab" :class="{active: spellSort==='hps'}" @click="spellSort='hps'" style="font-size:.75rem;padding:.25rem .6rem">HPS</button>
-                    </div>
-                  </template>
-                  <template x-if="effectiveRole() !== 'healer'">
-                    <div>
-                      <button class="tab" :class="{active: spellSort==='total_dmg' || effectiveRole() === 'healer'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                      <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
-                    </div>
-                  </template>
-                </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+            <h2>Breakdown spelli</h2>
+            <div style="display:flex;gap:.3rem">
+              <div>
+                <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
               </div>
-                  </template>
-                  <template x-if="effectiveRole() !== 'healer'">
-                    <div>
-                      <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                      <button class="tab" :class="{active: spellSort==='dps'}"       @click="spellSort='dps'"       style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
-                    </div>
-                  </template>
-                </div>
-              </div>
-              <div class="spell-list">
-                <template x-for="sp in sortedSpells" :key="sp.name">
-                  <div class="spell-row">
-                    <div class="spell-head">
-                      <span x-text="sp.name"></span>
-                      <span style="display:flex;gap:.6rem;align-items:center">
-                        <template x-if="effectiveRole() === 'healer'">
-                          <span>
-                            <span x-show="spellSort==='total_heal'">
-                              <strong x-text="formatDmg(sp.total_heal)"></strong>
-                              <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span>
-                            </span>
+            </div>
+          </div>
+          <div class="spell-list">
+            <template x-for="sp in sortedSpells" :key="sp.name">
+              <div class="spell-row">
+                <div class="spell-head">
+                  <span x-text="sp.name"></span>
+                  <span style="display:flex;gap:.6rem;align-items:center">
+                    <span x-show="spellSort==='total_dmg'">
+                      <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                    </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
                             <span x-show="spellSort==='hps'">
                               <strong x-text="formatDps(sp.hps)"></strong> HPS
                               <span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span>
@@ -226,7 +212,7 @@
             <h2>🥧 DPS Pie Chart</h2>
             <img
               class="dps-chart-img"
-              :src="'/api/result/' + jobId + '/dps-chart.png?role=' + effectiveRole() + '&t=' + ts"
+              :src="'/api/result/' + jobId + '/dps-chart.png?t=' + ts"
               alt="DPS Chart"
               @click="chartModal = $el.src"
               loading="lazy"
@@ -320,8 +306,17 @@ function resultPage() {
 
     get sortedSpells() {
       if (!this.result?.spells) return [];
-      const sortKey = this.effectiveRole() === 'healer' ? 'total_heal' : this.spellSort;
-      return [...this.result.spells].sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0));
+      return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
+    },
+
+    effectiveRole() { return 'dps'; },
+
+    roleIcon(role) { return '⚔️'; },
+    roleLabel(role) { return 'DPS'; },
+
+    resultMetric() {
+      if (!this.result) return { value: 0, std: 0, label: 'DPS' };
+      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0, label: 'DPS' };
     },
 
     effectiveRole() {

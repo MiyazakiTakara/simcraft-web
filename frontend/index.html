@@ -144,44 +144,91 @@
           <div>
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Nowa symulacja</button>
             <div class="result-hero" style="padding:.8rem 0">
-              <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(pubResult).value)"></div>
+               <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric(pubResult).value)"></div>
               <div class="dps-label" x-text="resultMetric(pubResult).label + ' (±' + formatDps(resultMetric(pubResult).std) + ') · ' + (pubResult.name || '')"></div>
             </div>
             <div class="result-grid">
-              <div>
-                <h2 style="margin-bottom:.6rem">Statystyki</h2>
-                <div class="stat-list">
-                  <template x-for="[key, val] in Object.entries(pubResult.stats)" :key="key">
-                    <div class="stat-row"><span class="stat-name" x-text="formatStatName(key)"></span><span class="stat-val" x-text="formatStatValue(key, val)"></span></div>
-                  </template>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+            <h2>Breakdown spelli</h2>
+              <div style="display:flex;gap:.3rem">
+                <div>
+                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
+                  <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
                 </div>
               </div>
-              <div>
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-                  <h2>Breakdown spelli</h2>
-                  <div style="display:flex;gap:.3rem">
-                    <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
-                    <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
-                  </div>
-                </div>
-                <div class="spell-list">
-                  <template x-for="sp in pubSortedSpells" :key="sp.name">
-                    <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
-                      <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
-                        <div class="spell-tooltip-row"><span>Hits</span><span x-text="sp.count ?? '—'"></span></div>
-                        <div class="spell-tooltip-row"><span>Avg hit</span><span x-text="formatDmg(sp.avg_hit)"></span></div>
-                        <div class="spell-tooltip-row"><span>Crit</span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
-                        <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
-                      </div>
-                      <div class="spell-head">
-                        <span x-text="sp.name"></span>
-                        <span style="display:flex;gap:.6rem;align-items:center">
-                          <span x-show="effectiveRole() === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="effectiveRole() === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
-                        </span>
+            </div>
+          </div>
+          <div class="spell-list">
+            <template x-for="sp in sortedSpells" :key="sp.name">
+              <div class="spell-row">
+                <div class="spell-head">
+                  <span x-text="sp.name"></span>
+                  <span style="display:flex;gap:.6rem;align-items:center">
+                    <span x-show="spellSort==='total_dmg'">
+                      <strong x-text="formatDmg(sp.total_dmg)"></strong>
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                    </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
+                    <span x-show="spellSort==='dps'">
+                      <strong x-text="formatDps(sp.dps)"></strong> DPS
+                      <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                    </span>
+                    <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                  </span>
                       </div>
                       <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div></div>
                     </div>
@@ -191,7 +238,7 @@
             </div>
             <div class="chart-section">
               <h2>🥧 DPS Pie Chart</h2>
-              <img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?role=' + effectiveRole() + '&t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/>
+              <img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/>
             </div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
@@ -275,7 +322,7 @@
             <button class="pub-result-back" @click="pubResult = null; pubJob = null">← Powrót do listy</button>
             <div class="panel">
               <div class="result-hero">
-                <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(pubResult).value)"></div>
+                <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric(pubResult).value)"></div>
                 <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
                   <span x-text="resultMetric(pubResult).label + ' (±' + formatDps(resultMetric(pubResult).std) + ')'"></span>
                   <template x-if="pubJob && pubJob.charName && armoryUrl(pubJob.realmSlug, pubJob.charName)">
@@ -301,13 +348,13 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                   <h2>Breakdown spelli</h2>
                   <div style="display:flex;gap:.3rem">
-                    <template x-if="effectiveRole() === 'healer'">
+                    <template x-if="dps === 'healer'">
                       <div>
                         <button class="tab" :class="{active: spellSort==='total_heal'}" @click="spellSort='total_heal'" style="font-size:.75rem;padding:.25rem .6rem">Total Heal</button>
                         <button class="tab" :class="{active: spellSort==='hps'}" @click="spellSort='hps'" style="font-size:.75rem;padding:.25rem .6rem">HPS</button>
                       </div>
                     </template>
-                    <template x-if="effectiveRole() !== 'healer'">
+                    <template x-if="dps !== 'healer'">
                       <div>
                         <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
                         <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
@@ -325,11 +372,11 @@
                           <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                         </div>
                         <div class="spell-head"><span x-text="sp.name"></span><span style="display:flex;gap:.6rem;align-items:center">
-                          <span x-show="effectiveRole() === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="effectiveRole() === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
-                          <span x-show="effectiveRole() !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                          <span x-show="dps === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
+                          <span x-show="dps === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
+                          <span x-show="dps !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                          <span x-show="dps !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
+                          <span x-show="dps !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                         </span></div>
                         <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], pubSortedSpells, spellSort)}"></div></div>
                       </div>
@@ -337,7 +384,7 @@
                   </div>
                 </div>
               </div>
-              <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?role=' + effectiveRole() + '&t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
+              <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + pubJob.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
               <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
                 <a :href="'/api/result/' + pubJob.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
                 <span style="color:var(--border)">·</span>
@@ -416,7 +463,7 @@
           </div>
           <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
             <span x-show="loadingSim" class="spinner"></span>
-            <span x-show="!loadingSim" x-text="'▶ Uruchom (' + roleIcon(effectiveRole()) + ' ' + roleLabel(effectiveRole()) + ')'"></span>
+            <span x-show="!loadingSim" x-text="'▶ Uruchom (⚔️ DPS)'"></span>
           </button>
           <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">⏳ Symulacja w toku… (job: <span x-text="job?.id?.slice(0,8)"></span>…)</p>
         </div>
@@ -424,7 +471,7 @@
         <template x-if="simResult">
           <div class="panel">
             <div class="result-hero">
-              <div class="dps-value" x-text="(effectiveRole() === 'healer' ? '💚 ' : '⚔️ ') + formatDps(resultMetric(simResult).value)"></div>
+               <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric(simResult).value)"></div>
               <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
                 <span x-text="resultMetric(simResult).label + ' (±' + formatDps(resultMetric(simResult).std) + ')'"></span>
                 <template x-if="job.charName">
@@ -450,13 +497,13 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                   <h2>Breakdown spelli</h2>
                   <div style="display:flex;gap:.3rem">
-                    <template x-if="effectiveRole() === 'healer'">
+                    <template x-if="dps === 'healer'">
                       <div>
                         <button class="tab" :class="{active: spellSort==='total_heal'}" @click="spellSort='total_heal'" style="font-size:.75rem;padding:.25rem .6rem">Total Heal</button>
                         <button class="tab" :class="{active: spellSort==='hps'}" @click="spellSort='hps'" style="font-size:.75rem;padding:.25rem .6rem">HPS</button>
                       </div>
                     </template>
-                    <template x-if="effectiveRole() !== 'healer'">
+                    <template x-if="dps !== 'healer'">
                       <div>
                         <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem">Total Dmg</button>
                         <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem">DPS</button>
@@ -474,11 +521,11 @@
                         <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                       </div>
                       <div class="spell-head"><span x-text="sp.name"></span><span style="display:flex;gap:.6rem;align-items:center">
-                        <span x-show="effectiveRole() === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
-                        <span x-show="effectiveRole() === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
-                        <span x-show="effectiveRole() !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span>
-                        <span x-show="effectiveRole() !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span>
-                        <span x-show="effectiveRole() !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                        <span x-show="dps === 'healer' && spellSort==='total_heal'"><strong x-text="formatDmg(sp.total_heal)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.heal_pct ?? '0') + '%)'" ></span></span>
+                        <span x-show="dps === 'healer' && spellSort==='hps'"><strong x-text="formatDps(sp.hps)"></strong> HPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + (sp.hps_pct ?? '0') + '%)'" ></span></span>
+                        <span x-show="dps !== 'healer' && spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span>
+                        <span x-show="dps !== 'healer' && spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span>
+                        <span x-show="dps !== 'healer'" style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                       </span></div>
                       <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div></div>
                     </div>
@@ -486,7 +533,7 @@
                 </div>
               </div>
             </div>
-            <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + job.id + '/dps-chart.png?role=' + effectiveRole() + '&t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
+            <div class="chart-section"><h2>🥧 DPS Pie Chart</h2>              <img class="dps-chart-img" :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
             <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
               <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)">Raw JSON</a>
               <span style="color:var(--border)">·</span>
