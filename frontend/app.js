@@ -40,6 +40,8 @@ function app() {
     historyPage: 1,
     historyPerPage: 5,
 
+    profileTab: "sim",
+
     newsPage: 1,
     newsPerPage: 5,
     expandedNews: null,
