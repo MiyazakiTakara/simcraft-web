@@ -1,12 +1,12 @@
 <div style="max-width:1200px;margin:0 auto;padding:1rem">
   <div class="sim-tabs" style="margin-bottom:1rem">
-    <button class="tab" :class="{active: profileTab==='chars'}" @click="profileTab='chars'">Postacie</button>
-    <button class="tab" :class="{active: profileTab==='history'}" @click="profileTab='history'; loadHistory()">Historia</button>
+    <button class="tab" :class="{active: profileTab==='chars'}" @click="profileTab='chars'" x-text="$store.i18n.t('profile.tab_chars')"></button>
+    <button class="tab" :class="{active: profileTab==='history'}" @click="profileTab='history'; loadHistory()" x-text="$store.i18n.t('profile.tab_history')"></button>
   </div>
 
   <template x-if="profileTab==='chars'">
     <div>
-      <h2 style="margin-bottom:1rem">👤 Twoje Postacie</h2>
+      <h2 style="margin-bottom:1rem" x-text="'👤 ' + $store.i18n.t('chars.title')"></h2>
       <div class="char-grid">
         <template x-for="char in characters" :key="char.id">
           <div class="char-card" @click="openCharDetails(char)">
@@ -14,7 +14,7 @@
               <img class="char-card-avatar" :src="char.avatar || '/static/default_avatar.png'" :alt="char.name"/>
               <div class="char-card-info">
                 <div class="char-card-name" x-text="char.name"></div>
-                <div class="char-card-meta" x-text="char.realm + ' · lv' + char.level"></div>
+                <div class="char-card-meta" x-text="char.realm + ' · ' + $store.i18n.t('chars.level_short') + char.level"></div>
                 <div class="char-card-meta" :style="{color: classColor(char.class)}" x-text="(char.spec ? char.spec + ' ' : '') + (char.class || '')"></div>
               </div>
             </div>
@@ -22,19 +22,21 @@
               <div>
                 <div class="char-card-dps" x-text="'⚔️ ' + formatDps(getCharDps(char.name).latest)"></div>
                 <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
-                <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)" x-text="getCharDps(char.name).count + ' symulacji · ' + formatTime(getCharDps(char.name).lastSim)"></div>
+                <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)"
+                  x-text="getCharDps(char.name).count + ' ' + $store.i18n.t('profile.simulations_count') + ' · ' + formatTime(getCharDps(char.name).lastSim)"
+                ></div>
               </div>
             </template>
             <template x-if="!getCharDps(char.name)">
-              <div style="color:var(--muted);font-size:.85rem">Brak symulacji</div>
+              <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
             </template>
           </div>
         </template>
       </div>
       <template x-if="characters.length === 0">
         <div style="text-align:center;padding:3rem;color:var(--muted)">
-          <p>Brak postaci do wyświetlenia.</p>
-          <p style="font-size:.85rem">Twoje postacie WoW pojawią się automatycznie po zalogowaniu.</p>
+          <p x-text="$store.i18n.t('chars.no_chars')"></p>
+          <p style="font-size:.85rem" x-text="$store.i18n.t('chars.no_chars_auto')"></p>
         </div>
       </template>
     </div>
@@ -42,8 +44,8 @@
 
   <template x-if="profileTab==='history'">
     <div>
-      <h2 style="margin-bottom:1rem">📜 Historia symulacji</h2>
-      <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem">Brak symulacji</div>
+      <h2 style="margin-bottom:1rem" x-text="'📜 ' + $store.i18n.t('history.title')"></h2>
+      <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
       <div x-show="history.length > 0" class="history-list" style="max-height:500px;overflow-y:auto">
         <template x-for="entry in pagedHistory" :key="entry.job_id">
           <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
@@ -58,7 +60,11 @@
               <div class="history-time" x-text="formatTime(entry.created_at)"></div>
               <div class="history-style" x-text="entry.fight_style"></div>
             </div>
-            <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)" x-text="copiedJobId === entry.job_id ? '✓' : '🔗'" title="Skopiuj link"></button>
+            <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0"
+              @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
+              x-text="copiedJobId === entry.job_id ? '✓' : '🔗'"
+              :title="$store.i18n.t('common.copy')"
+            ></button>
           </div>
         </template>
       </div>
