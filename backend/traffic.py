@@ -4,23 +4,27 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from database import SessionLocal, PageVisitModel
 
 
-# ścieżki które pomijamy (statyczne zasoby, API, admin)
 SKIP_PREFIXES = (
     "/admin",
     "/static",
     "/favicon",
     "/_",
+    "/api",
 )
 SKIP_EXTENSIONS = (".js", ".css", ".png", ".ico", ".svg", ".woff", ".woff2", ".map")
+
+# strony które chcemy śledzic (prefix)
+TRACK_PATHS = ("/", "/rankings", "/history", "/result", "/profile", "/news")
 
 
 class TrafficMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         should_track = (
-            not any(path.startswith(p) for p in SKIP_PREFIXES)
+            request.method == "GET"
+            and not any(path.startswith(p) for p in SKIP_PREFIXES)
             and not any(path.endswith(e) for e in SKIP_EXTENSIONS)
-            and request.method == "GET"
+            and any(path == p or path.startswith(p + "/") for p in TRACK_PATHS)
         )
         if should_track:
             try:
