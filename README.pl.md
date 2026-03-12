@@ -42,6 +42,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji jako publiczny link do ponownego uruchomienia
 - [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli
 - [ ] **Strona ustawień** — zmiana głównej postaci, preferencje języka i motywu
+- [ ] **Przeprojektowanie graficzne panelu admina** — nowy layout (sidebar zamiast tabs), spójny design system z resztą aplikacji, responsywność mobilna
 
 ## Wymagania
 
