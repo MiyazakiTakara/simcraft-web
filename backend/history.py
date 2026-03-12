@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
@@ -5,6 +6,8 @@ from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
 from sqlalchemy import text, func
 
 router = APIRouter()
+
+_UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
 
 
 class HistorySaveRequest(BaseModel):
@@ -25,18 +28,21 @@ class HistorySaveRequest(BaseModel):
 @router.post("/api/history", status_code=201)
 def save_history(body: HistorySaveRequest):
     """Zapisuje wynik symulacji do historii."""
-    # Sanitize source — tylko dozwolone wartości
     source = body.source if body.source in ("web", "addon") else "web"
 
+    # Jesli user_id wyglada jak UUID sesji — zamien na prawdziwy bnet_id
+    resolved_user_id = body.user_id
+    if resolved_user_id and _UUID_RE.match(resolved_user_id):
+        resolved_user_id = get_bnet_id_by_session(resolved_user_id) or None
+
     with SessionLocal() as db:
-        # Unikaj duplikatów — jeden job_id = jeden wpis
         existing = db.query(HistoryEntryModel).filter(
             HistoryEntryModel.job_id == body.job_id
         ).first()
         if existing:
             return {"ok": True, "duplicate": True}
 
-        is_guest = not bool(body.user_id)
+        is_guest = not bool(resolved_user_id)
         entry = HistoryEntryModel(
             job_id               = body.job_id,
             character_name       = (body.character_name or "Unknown").strip() or "Unknown",
@@ -46,7 +52,7 @@ def save_history(body: HistorySaveRequest):
             dps                  = body.dps or 0.0,
             role                 = body.role or "dps",
             fight_style          = body.fight_style or "Patchwerk",
-            user_id              = body.user_id or None,
+            user_id              = resolved_user_id,
             is_guest             = is_guest,
             source               = source,
         )

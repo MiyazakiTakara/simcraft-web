@@ -64,7 +64,7 @@ const SimMixin = {
           dtps:                 0,
           role:                 this.effectiveRole(),
           fight_style:          this.simOptions.fight_style,
-          user_id:              this.sessionId || null,
+          user_id:              this.sessionId || null,  // backend sam rozwiaze UUID -> bnet_id
           source:               this.job.source || 'web',
         });
         this.loadHistory();
