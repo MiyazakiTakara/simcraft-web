@@ -51,4 +51,8 @@ async def public_appearance():
 async def page_rankings():
     return FileResponse("/app/frontend/rankings.html")
 
+@app.get("/result/{job_id}")
+async def page_result(job_id: str):
+    return FileResponse("/app/frontend/result.html")
+
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")
