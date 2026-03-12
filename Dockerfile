@@ -14,7 +14,7 @@ WORKDIR /build/simc
 RUN cmake -DBUILD_GUI=OFF -DCMAKE_BUILD_TYPE=Release -S . -B build \
     && cmake --build build --parallel $(nproc)
 
-# ── runtime ──────────────────────────────────────────────────────────────────
+# ── runtime ────────────────────────────────────────────────────────────────────────────
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -37,6 +37,9 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
+
+# frontend kopiowany osobno na końcu — zmiana dowolnego pliku JS/HTML
+# unieważnia tylko tę warstwę, a nie cały obraz
 COPY frontend/ ./frontend/
 
 RUN mkdir -p /app/results && \
