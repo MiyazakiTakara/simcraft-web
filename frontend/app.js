@@ -559,6 +559,11 @@ function app() {
       // handleHash wywoła navigateTo, które samo zadecyduje czy ładować publiczną czy prywatną historię
       this.handleHash();
       window.addEventListener('hashchange', () => this.handleHash());
+
+      // If starting on settings page, load settings
+      if (this.currentView === 'ustawienia' && this.sessionId) {
+        this.loadSettings();
+      }
     },
   };
 
@@ -566,8 +571,3 @@ function app() {
 
   return state;
 }
-
-// Initialize global settings mixin for compatibility
-window.settingsMixin = function() {
-  return app();
-};
