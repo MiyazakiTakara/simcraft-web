@@ -461,6 +461,12 @@ function app() {
     },
   };
 
+  // Merge settingsMixin if available
+  if (typeof settingsMixin !== 'undefined') {
+    mergeMixins(state, settingsMixin());
+  } else {
+    console.warn('settingsMixin not found in app.js');
+  }
   mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
 
   return state;
