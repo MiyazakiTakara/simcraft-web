@@ -252,5 +252,36 @@ function settingsMixin() {
   };
 }
 
+// Make functions available globally for Alpine in dynamically loaded views
+window.toggleCharPrivacyGlobal = async function(name, realm) {
+  const app = window.__alpineApp;
+  if (!app) {
+    console.error('No __alpineApp');
+    return;
+  }
+  const session = app.sessionId || localStorage.getItem('simcraft_session');
+  if (!session) return;
+  
+  const key = name + '|' + realm;
+  const isPrivate = !app.charPrivacies[key];
+  
+  try {
+    const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        character_name: name,
+        character_realm: realm,
+        is_private: isPrivate,
+      }),
+    });
+    if (res.ok) {
+      app.charPrivacies[key] = isPrivate;
+    }
+  } catch (e) {
+    console.error('Failed to toggle char privacy', e);
+  }
+};
+
 // Make settingsMixin available globally
 window.settingsMixin = settingsMixin;
