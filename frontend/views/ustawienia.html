@@ -1,4 +1,4 @@
-<div class="settings-view" x-data="window.settingsMixin ? window.settingsMixin() : {}" x-init="console.log('form_main_character_name:', form_main_character_name); init()">
+<div class="settings-view" x-data="window.settingsMixin()" x-init="console.log('form_main_character_name:', form_main_character_name); init()">
 
   <!-- Ładowanie -->
   <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
