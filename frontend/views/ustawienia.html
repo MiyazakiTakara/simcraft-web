@@ -1,25 +1,17 @@
-<div class="settings-view" x-data="settingsMixin()" x-init="init()">
+<div class="settings-view">
 
   <!-- Ładowanie -->
-  <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
+  <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
     <span x-text="$store.i18n.t('common.loading')"></span>
   </div>
 
   <!-- Błąd -->
-  <div x-show="!loading && error" class="settings-error-banner">
-    <span x-text="error"></span>
+  <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
+    <span x-text="settingsError"></span>
   </div>
 
-  <!-- Niezalogowany -->
-  <div x-show="!loading && !isLoggedIn" style="max-width:600px;margin:4rem auto;text-align:center">
-    <div style="font-size:2.5rem;margin-bottom:1rem">🔒</div>
-    <h2 x-text="$store.i18n.t('settings.login_required')"></h2>
-    <p style="color:var(--muted)" x-text="$store.i18n.t('settings.login_required_hint')"></p>
-    <a href="/auth/login" class="btn-primary" style="display:inline-block;margin-top:1.5rem" x-text="$store.i18n.t('header.login')"></a>
-  </div>
-
-  <!-- Treść ustawień -->
-  <div x-show="!loading && isLoggedIn" style="max-width:680px;margin:2rem auto">
+  <!-- Treść ustawień (gdy zalogowany) -->
+  <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
     <h2 style="margin-bottom:1.5rem" x-text="$store.i18n.t('settings.title')"></h2>
 
     <!-- ── Sekcja: Postać ── -->
@@ -170,11 +162,10 @@
     <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
       <button
         class="btn-primary"
-        :disabled="saving"
-        @click="save()"
-        x-text="saving ? $store.i18n.t('settings.saving') : $store.i18n.t('settings.save')"
+        @click="saveSettings()"
+        x-text="$store.i18n.t('settings.save')"
       ></button>
-      <span x-show="saveMsg" x-text="saveMsg" :class="saveMsgOk ? 'settings-ok' : 'settings-err'"></span>
+      <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
     </div>
 
   </div>
