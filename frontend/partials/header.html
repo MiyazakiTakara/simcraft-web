@@ -1,0 +1,68 @@
+<header class="header" x-data="header()" x-init="init()">
+  <div class="header-logo" style="cursor:pointer" @click="goHome()" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
+
+  <nav style="display:flex;align-items:center;gap:.5rem">
+
+    <!-- Rankingi -->
+    <a href="/rankings" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">🏆 <span x-text="$store.i18n.t('nav.rankings')">Rankingi</span></a>
+
+    <!-- Symulacje (tylko zalogowani) -->
+    <template x-if="sessionId">
+      <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="goSim()" x-text="$store.i18n.t('header.simulations')"></button>
+    </template>
+
+    <!-- Przełącznik języka -->
+    <div style="display:flex;gap:.2rem">
+      <template x-for="lang in ['pl','en']" :key="lang">
+        <button
+          @click="$store.i18n.setLang(lang)"
+          :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.8rem', padding: '.2rem .35rem'}"
+          x-text="lang.toUpperCase()"
+        ></button>
+      </template>
+    </div>
+
+    <!-- Theme toggle -->
+    <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? $store.i18n.t('header.theme_to_light') : $store.i18n.t('header.theme_to_dark')">
+      <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
+    </button>
+
+    <!-- Zalogowany: dropdown użytkownika -->
+    <template x-if="sessionId">
+      <div style="position:relative" x-data="{open:false}" @click.outside="open=false">
+        <button
+          @click="open=!open"
+          class="header-badge"
+          style="cursor:pointer;display:flex;align-items:center;gap:.35rem;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.35rem .7rem;font-size:.85rem"
+        >
+          <template x-if="mainChar">
+            <span>⚔️ <span x-text="mainChar.name"></span></span>
+          </template>
+          <template x-if="!mainChar">
+            <span x-text="$store.i18n.t('header.account')">Konto</span>
+          </template>
+          <span style="font-size:.65rem;opacity:.6" x-text="open ? '▴' : '▾'"></span>
+        </button>
+
+        <div
+          x-show="open"
+          x-cloak
+          @click="open=false"
+          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:170px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden"
+        >
+          <button class="dropdown-item" @click="goTo('/#profil-chars')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">👤 <span x-text="$store.i18n.t('header.characters')">Postacie</span></button>
+          <button class="dropdown-item" @click="goTo('/#profil-history')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">📜 <span x-text="$store.i18n.t('header.history')">Historia</span></button>
+          <button class="dropdown-item" @click="goTo('/#ustawienia')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⚙️ <span x-text="$store.i18n.t('header.settings')">Ustawienia</span></button>
+          <div style="border-top:1px solid var(--border);margin:.3rem 0"></div>
+          <button class="dropdown-item" @click="logout()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:#f66;font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🚪 <span x-text="$store.i18n.t('header.logout')">Wyloguj</span></button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Niezalogowany: przycisk logowania -->
+    <template x-if="!sessionId">
+      <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem" x-text="$store.i18n.t('header.login')">Zaloguj</a>
+    </template>
+
+  </nav>
+</header>
