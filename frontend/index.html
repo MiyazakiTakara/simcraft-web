@@ -42,7 +42,7 @@
   <script src="/history.js?v=2"></script>
   <script src="/settings.js?v=17"></script>
   <script src="/header.js?v=2"></script>
-  <script src="/app.js?v=33"></script>
+  <script src="/app.js?v=34"></script>
   <script src="/partials.js?v=1"></script>
 </head>
 <body>
@@ -108,6 +108,80 @@
 
   <!-- Kontener widoków -->
   <div id="view-container"></div>
+
+  <!-- SETTINGS VIEW (inline to use same Alpine scope) -->
+  <div x-show="currentView === 'ustawienia'" x-cloak>
+    <div class="settings-view">
+
+      <!-- Ładowanie -->
+      <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
+        <span x-text="$store.i18n.t('common.loading')"></span>
+      </div>
+
+      <!-- Błąd -->
+      <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
+        <span x-text="settingsError"></span>
+      </div>
+
+      <!-- Treść ustawień (gdy zalogowany) -->
+      <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
+        <h2 style="margin-bottom:1.5rem" x-text="$store.i18n.t('settings.title')"></h2>
+
+        <!-- Postać -->
+        <section class="settings-section">
+          <h3 x-text="$store.i18n.t('settings.section_char')"></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('settings.section_char_hint')"></p>
+          <div class="settings-row">
+            <label x-text="$store.i18n.t('settings.char_name')"></label>
+            <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
+              <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
+                <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
+                <template x-for="ch in characters" :key="ch.id">
+                  <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
+                </template>
+              </select>
+              <div style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:.5rem">
+                <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer">
+                  <input type="checkbox" x-model="form.manualEntry" @change="onManualToggle()" />
+                  <span x-text="$store.i18n.t('settings.manual_entry')"></span>
+                </label>
+              </div>
+              <template x-if="form.manualEntry">
+                <div style="display:flex;flex-direction:column;gap:.5rem">
+                  <input type="text" x-model="form.main_character_name" :placeholder="$store.i18n.t('settings.char_name_placeholder')" class="settings-input" />
+                  <input type="text" x-model="form.main_character_realm" :placeholder="$store.i18n.t('settings.char_realm_placeholder')" class="settings-input" />
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <!-- Prywatność -->
+        <section class="settings-section">
+          <h3 x-text="$store.i18n.t('settings.section_privacy')"></h3>
+          <div class="settings-toggle-row">
+            <div>
+              <div class="settings-toggle-label" x-text="$store.i18n.t('settings.private_profile')"></div>
+              <div class="settings-hint" x-text="$store.i18n.t('settings.private_profile_hint')"></div>
+            </div>
+            <button class="toggle-btn" :class="{ active: form.profile_private }" @click="form.profile_private = !form.profile_private">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+          <div x-show="form.profile_private" class="settings-private-banner">
+            <span>🔒</span>
+            <span x-text="$store.i18n.t('settings.private_active_info')"></span>
+          </div>
+        </section>
+
+        <!-- Zapis -->
+        <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
+          <button class="btn-primary" @click="saveSettings()" x-text="$store.i18n.t('settings.save')"></button>
+          <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Shared footer (partial) -->
   <div id="site-footer"></div>
@@ -185,6 +259,107 @@
 </div>
 
 <div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
+
+<style>
+.settings-view { padding: 1rem; }
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.settings-section h3 {
+  margin: 0 0 .25rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+.settings-hint {
+  font-size: .82rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+.settings-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+.settings-row label {
+  width: 160px;
+  min-width: 140px;
+  font-size: .88rem;
+  color: var(--muted);
+  padding-top: .55rem;
+}
+.settings-input {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .5rem .75rem;
+  font-size: .9rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.settings-input:focus { border-color: #f4a01c; }
+.settings-input option { background: var(--bg); color: var(--text); }
+.settings-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.settings-toggle-label {
+  font-size: .9rem;
+  color: var(--text);
+  font-weight: 500;
+}
+.toggle-btn {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  background: #333;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle-btn.active { background: #f4a01c; }
+.toggle-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  pointer-events: none;
+}
+.toggle-btn.active .toggle-knob { transform: translateX(22px); }
+.settings-private-banner {
+  margin-top: .75rem;
+  background: rgba(244,160,28,.08);
+  border: 1px solid rgba(244,160,28,.25);
+  border-radius: 8px;
+  padding: .6rem 1rem;
+  font-size: .83rem;
+  color: #f4a01c;
+  display: flex;
+  gap: .5rem;
+}
+.settings-error-banner {
+  background: rgba(229,85,85,.1);
+  border: 1px solid rgba(229,85,85,.3);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  color: #e55;
+  font-size: .88rem;
+  margin-bottom: 1rem;
+}
+.settings-ok { color: #4c4; font-size: .88rem; }
+.settings-err { color: #e55; font-size: .88rem; }
+</style>
 
 </body>
 </html>

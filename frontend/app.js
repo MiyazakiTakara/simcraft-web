@@ -401,11 +401,21 @@ function app() {
       this.currentView = name;
       this.activeTab = name;
       window.location.hash = name === 'home' ? '' : name;
-      this.loadView(name);
+
+      // Settings page is inline, don't load via AJAX
+      if (name !== 'ustawienia') {
+        this.loadView(name);
+      } else {
+        // Clear container for settings view
+        const container = document.getElementById('view-container');
+        if (container) container.innerHTML = '';
+        // Load settings data
+        if (this.sessionId) {
+          this.loadSettings();
+        }
+      }
 
       // Przełączaj historię zależnie od widoku:
-      // home — publiczna (ostatnie symulacje wszystkich)
-      // symulacje / profil — prywatna zalogowanego usera (fallback: publiczna)
       this.historyPage = 1;
       if (name === 'home') {
         this.loadPublicHistory();
@@ -414,10 +424,6 @@ function app() {
           this.loadHistory();
         } else {
           this.loadPublicHistory();
-        }
-      } else if (name === 'ustawienia') {
-        if (this.sessionId) {
-          this.loadSettings();
         }
       }
     },
