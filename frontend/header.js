@@ -8,7 +8,6 @@ function header() {
     async init() {
       const isIndex = window.location.pathname === '/';
 
-      // Na index.html — dane pobiera app(), czekamy aż będzie gotowy
       if (isIndex) {
         const waitForApp = (resolve) => {
           if (window.__alpineApp) {
@@ -19,18 +18,31 @@ function header() {
         };
         const appInstance = await new Promise(waitForApp);
 
-        // Sync reaktywny: obserwuj zmiany w app()
-        this.$watch('_tick', () => {});
         const sync = () => {
-          this.appearance = appInstance.appearance;
-          this.sessionId  = appInstance.sessionId;
-          this.mainChar   = appInstance.mainChar
-            ? appInstance.mainChar
-            : (appInstance.mainCharSaved ? { name: appInstance.mainChar?.name } : null);
-          this.theme      = appInstance.theme;
+          const a = appInstance.appearance;
+          if (
+            a.header_title     !== this.appearance.header_title ||
+            a.hero_title       !== this.appearance.hero_title ||
+            a.emoji            !== this.appearance.emoji ||
+            a.hero_custom_text !== this.appearance.hero_custom_text
+          ) {
+            this.appearance = { ...a };
+          }
+
+          const newSession = appInstance.sessionId;
+          if (newSession !== this.sessionId) this.sessionId = newSession;
+
+          const mc = appInstance.mainChar;
+          const newName = mc ? mc.name : null;
+          if (newName !== (this.mainChar ? this.mainChar.name : null)) {
+            this.mainChar = mc ? { ...mc } : null;
+          }
+
+          const newTheme = appInstance.theme;
+          if (newTheme !== this.theme) this.theme = newTheme;
         };
+
         sync();
-        // Polling co 300ms żeby łapać zmiany (mainChar, sesja, theme)
         setInterval(sync, 300);
         return;
       }
