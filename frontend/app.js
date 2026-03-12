@@ -268,7 +268,7 @@ function app() {
         container.innerHTML = this._viewCache[name];
       } else {
         try {
-          const res = await fetch('/views/' + name + '.html?v=7');
+          const res = await fetch('/views/' + name + '.html?v=8');
           if (!res.ok) throw new Error('View not found: ' + name);
           const html = await res.text();
           this._viewCache[name] = html;
