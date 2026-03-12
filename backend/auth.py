@@ -222,39 +222,56 @@ async def skip_first_login(session: str):
 async def get_character_privacy(session: str):
     """Pobiera mapowanie postaci do ich statusu prywatności."""
     from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
+    import httpx
     
     bnet_id = get_bnet_id_by_session(session)
     if not bnet_id:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
     
-    with SessionLocal() as db:
-        rows = db.query(
-            HistoryEntryModel.character_name,
-            HistoryEntryModel.character_realm_slug,
-        ).filter(
-            HistoryEntryModel.user_id == bnet_id,
-        ).distinct().all()
+    # Pobierz postacie z Battle.net API
+    try:
+        access_token = await get_session_token(session)
+        if not access_token:
+            return {"privacies": {}}
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://eu.api.blizzard.com/profile/user/wow?namespace=profile-eu&locale=en_GB",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                return {"privacies": {}}
+            
+            data = resp.json()
+            chars = data.get("characters", [])[:20]
+    except Exception:
+        return {"privacies": {}}
     
-    privacies = {}
-    for char_name, realm in rows:
-        key = char_name + '|' + realm
-        privacies[key] = False
+    # Zbuduj listę wszystkich postaci (name|realm_slug)
+    all_chars = {}
+    for ch in chars:
+        realm_slug = ch.get("realm", {}).get("slug", "")
+        if realm_slug:
+            key = ch["name"] + "|" + realm_slug
+            all_chars[key] = False
     
-    # Pobierz faktyczne statusy
+    # Pobierz statusy prywatności z historii
     with SessionLocal() as db:
         private_rows = db.query(
             HistoryEntryModel.character_name,
             HistoryEntryModel.character_realm_slug,
         ).filter(
             HistoryEntryModel.user_id == bnet_id,
-            HistoryEntryModel.is_private == True,
+            HistoryEntryModel.is_private == True,  # noqa: E712
         ).distinct().all()
     
     for char_name, realm in private_rows:
-        key = char_name + '|' + realm
-        privacies[key] = True
+        key = char_name + "|" + realm
+        if key in all_chars:
+            all_chars[key] = True
     
-    return {"privacies": privacies}
+    return {"privacies": all_chars}
 
 
 class CharPrivacyRequest(BaseModel):
