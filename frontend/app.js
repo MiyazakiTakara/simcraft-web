@@ -163,6 +163,7 @@ function app() {
     navigateTo(name) {
       this.currentView = name;
       this.activeTab = name;
+      window.location.hash = name === 'home' ? '' : name;
       this.loadView(name);
     },
 
@@ -281,7 +282,9 @@ function app() {
         this.loadNews();
       }
 
-      this.loadView('home');
+      // Persist active view via URL hash
+      this.handleHash();
+      window.addEventListener('hashchange', () => this.handleHash());
     },
   };
 
