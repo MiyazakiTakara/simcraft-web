@@ -42,7 +42,7 @@
   <script src="/history.js?v=2"></script>
   <script src="/settings.js?v=17"></script>
   <script src="/header.js?v=2"></script>
-   <script src="/app.js?v=41"></script>
+   <script src="/app.js?v=42"></script>
   <script src="/partials.js?v=1"></script>
 </head>
 <body>
@@ -112,17 +112,17 @@
   <!-- SETTINGS VIEW -->
   <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;">
     <!-- Ładowanie -->
-    <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
+    <div x-show="$root.settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
       <span>Ładowanie...</span>
     </div>
     
     <!-- Błąd -->
-    <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
-      <span x-text="settingsError"></span>
+    <div x-show="!$root.settingsLoading && $root.settingsError" class="settings-error-banner">
+      <span x-text="$root.settingsError"></span>
     </div>
 
     <!-- Treść ustawień -->
-    <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
+    <div x-show="!$root.settingsLoading && $root.sessionId" style="max-width:680px;margin:2rem auto">
       <h2 style="margin-bottom:1.5rem">Ustawienia</h2>
 
       <!-- Postać -->
@@ -132,9 +132,9 @@
         <div class="settings-row">
           <label>Nazwa postaci</label>
           <div style="flex:1">
-            <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input">
+            <select x-model="$root.form.main_character_name" @change="$root.onCharSelect()" class="settings-input">
               <option value="">Wybierz postać</option>
-              <template x-for="ch in characters" :key="ch.id">
+              <template x-for="ch in $root.characters" :key="ch.id">
                 <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
               </template>
             </select>
@@ -150,7 +150,7 @@
             <div class="settings-toggle-label">Ukryj profil publiczny</div>
             <div class="settings-hint">Gdy włączone, Twój profil nie będzie widoczny dla innych.</div>
           </div>
-          <button class="toggle-btn" :class="{ active: form.profile_private }" @click="form.profile_private = !form.profile_private">
+          <button class="toggle-btn" :class="{ active: $root.form.profile_private }" @click="$root.form.profile_private = !$root.form.profile_private">
             <span class="toggle-knob"></span>
           </button>
         </div>
@@ -158,8 +158,8 @@
 
       <!-- Zapis -->
       <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
-        <button class="btn-primary" @click="saveSettings()" x-text="'Zapisz'"></button>
-        <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
+        <button class="btn-primary" @click="$root.saveSettings()" x-text="'Zapisz'"></button>
+        <span x-show="$root.settingsSaveMsg" x-text="$root.settingsSaveMsg" :class="$root.settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
       </div>
     </div>
   </div>
