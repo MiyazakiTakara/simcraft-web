@@ -303,12 +303,9 @@ function app() {
         console.log('Loading ustawienia view, window.settingsMixin:', typeof window.settingsMixin);
         // Ensure Alpine is loaded and container is ready
         if (typeof Alpine !== 'undefined') {
-          // Wait a bit longer to ensure settingsMixin is registered
-          setTimeout(() => {
-            Alpine.nextTick(() => {
-              Alpine.initTree(container);
-            });
-          }, 2000);
+          Alpine.nextTick(() => {
+            Alpine.initTree(container);
+          });
         }
       }
     },
