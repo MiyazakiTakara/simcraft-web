@@ -48,7 +48,7 @@ function app() {
     newsPerPage: 5,
     expandedNews: null,
     activeTab: "home",
-    currentView: "home",
+    currentView: null,
     charEquipment: [],
     charTalents: [],
     loadingCharDetails: false,
