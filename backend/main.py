@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
@@ -40,9 +41,14 @@ app.include_router(rankings.router)
 app.include_router(reactions.router)
 app.include_router(characters.router)
 
-# Publiczny endpoint wyglądu — bez autoryzacji, tylko odczyt
+# Publiczny endpoint wygladu — bez autoryzacji, tylko odczyt
 @app.get("/api/appearance")
 async def public_appearance():
     return admin.load_appearance_config()
+
+# Explicit HTML page routes (StaticFiles html=True nie mapuje /foo -> /foo.html)
+@app.get("/rankings")
+async def page_rankings():
+    return FileResponse("/app/frontend/rankings.html")
 
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")
