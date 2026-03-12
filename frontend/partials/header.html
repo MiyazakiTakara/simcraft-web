@@ -1,17 +1,18 @@
 <header class="header" x-data="header()" x-init="init()">
+
+  <!-- Desktop: logo -->
   <div class="header-logo" style="cursor:pointer" @click="goHome()" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
 
-  <nav style="display:flex;align-items:center;gap:.5rem">
+  <!-- Desktop nav -->
+  <nav class="header-nav-desktop" style="display:flex;align-items:center;gap:.5rem">
 
-    <!-- Rankingi -->
     <a href="/rankings" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">🏆 <span x-text="$store.i18n.t('nav.rankings')">Rankingi</span></a>
 
-    <!-- Symulacje (tylko zalogowani) -->
     <template x-if="sessionId">
       <button class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" @click="goSim()" x-text="$store.i18n.t('header.simulations')"></button>
     </template>
 
-    <!-- Przełącznik języka -->
+    <!-- Język -->
     <div style="display:flex;gap:.2rem">
       <template x-for="lang in ['pl','en']" :key="lang">
         <button
@@ -22,12 +23,12 @@
       </template>
     </div>
 
-    <!-- Theme toggle -->
+    <!-- Theme -->
     <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? $store.i18n.t('header.theme_to_light') : $store.i18n.t('header.theme_to_dark')">
       <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
     </button>
 
-    <!-- Zalogowany: dropdown użytkownika -->
+    <!-- Zalogowany: dropdown -->
     <template x-if="sessionId">
       <div style="position:relative" x-data="{open:false}" @click.outside="open=false">
         <button
@@ -39,30 +40,94 @@
             <span>⚔️ <span x-text="mainChar.name"></span></span>
           </template>
           <template x-if="!mainChar">
-            <span x-text="$store.i18n.t('header.account')">Konto</span>
+            <span x-text="$store.i18n.t('header.account')"></span>
           </template>
           <span style="font-size:.65rem;opacity:.6" x-text="open ? '▴' : '▾'"></span>
         </button>
-
-        <div
-          x-show="open"
-          x-cloak
-          @click="open=false"
-          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:170px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden"
-        >
-          <button class="dropdown-item" @click="goTo('/#profil-chars')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">👤 <span x-text="$store.i18n.t('header.characters')">Postacie</span></button>
-          <button class="dropdown-item" @click="goTo('/#profil-history')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">📜 <span x-text="$store.i18n.t('header.history')">Historia</span></button>
-          <button class="dropdown-item" @click="goTo('/#ustawienia')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⚙️ <span x-text="$store.i18n.t('header.settings')">Ustawienia</span></button>
+        <div x-show="open" x-cloak @click="open=false"
+          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:170px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden">
+          <button class="dropdown-item" @click="goTo('/#profil-chars')"   style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">👤 <span x-text="$store.i18n.t('header.characters')"></span></button>
+          <button class="dropdown-item" @click="goTo('/#profil-history')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">📜 <span x-text="$store.i18n.t('header.history')"></span></button>
+          <button class="dropdown-item" @click="goTo('/#ustawienia')"     style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
           <div style="border-top:1px solid var(--border);margin:.3rem 0"></div>
-          <button class="dropdown-item" @click="logout()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:#f66;font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🚪 <span x-text="$store.i18n.t('header.logout')">Wyloguj</span></button>
+          <button class="dropdown-item" @click="logout()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:#f66;font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>
         </div>
       </div>
     </template>
 
-    <!-- Niezalogowany: przycisk logowania -->
+    <!-- Niezalogowany -->
     <template x-if="!sessionId">
-      <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem" x-text="$store.i18n.t('header.login')">Zaloguj</a>
+      <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem" x-text="$store.i18n.t('header.login')"></a>
     </template>
 
   </nav>
+
+  <!-- Mobile: hamburger button -->
+  <button
+    class="header-hamburger"
+    @click="$dispatch('toggle-mobile-menu')"
+    aria-label="Menu"
+    style="display:none;background:none;border:1px solid var(--border);border-radius:6px;padding:.35rem .55rem;cursor:pointer;color:var(--text);font-size:1.2rem;line-height:1"
+  >☰</button>
+
+  <!-- Mobile menu dropdown -->
+  <div
+    class="header-mobile-menu"
+    x-data="{open: false}"
+    @toggle-mobile-menu.window="open = !open"
+    @click.outside="open = false"
+    x-show="open"
+    x-cloak
+    x-transition:enter="transition-mobile-enter"
+    x-transition:enter-start="mobile-menu-hidden"
+    x-transition:enter-end="mobile-menu-visible"
+    x-transition:leave="transition-mobile-leave"
+    x-transition:leave-start="mobile-menu-visible"
+    x-transition:leave-end="mobile-menu-hidden"
+    style="display:none"
+  >
+    <a href="/" class="mobile-menu-item" x-text="$store.i18n.t('nav.home')">Strona główna</a>
+    <a href="/rankings" class="mobile-menu-item">🏆 <span x-text="$store.i18n.t('nav.rankings')">Rankingi</span></a>
+
+    <template x-if="sessionId">
+      <button class="mobile-menu-item" @click="goSim()" x-text="$store.i18n.t('header.simulations')"></button>
+    </template>
+
+    <div class="mobile-menu-divider"></div>
+
+    <!-- Język + theme w jednej linii -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem">
+      <div style="display:flex;gap:.4rem">
+        <template x-for="lang in ['pl','en']" :key="lang">
+          <button
+            @click="$store.i18n.setLang(lang)"
+            :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.85rem', padding: '.2rem .4rem'}"
+            x-text="lang.toUpperCase()"
+          ></button>
+        </template>
+      </div>
+      <button class="theme-toggle" @click="toggleTheme()">
+        <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
+      </button>
+    </div>
+
+    <template x-if="sessionId">
+      <div>
+        <div class="mobile-menu-divider"></div>
+        <template x-if="mainChar">
+          <div style="padding:.4rem 1rem;font-size:.8rem;color:var(--muted)">⚔️ <span x-text="mainChar.name"></span></div>
+        </template>
+        <button class="mobile-menu-item" @click="goTo('/#profil-chars')">👤 <span x-text="$store.i18n.t('header.characters')"></span></button>
+        <button class="mobile-menu-item" @click="goTo('/#profil-history')">📜 <span x-text="$store.i18n.t('header.history')"></span></button>
+        <button class="mobile-menu-item" @click="goTo('/#ustawienia')">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
+        <div class="mobile-menu-divider"></div>
+        <button class="mobile-menu-item" style="color:#f66" @click="logout()">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>
+      </div>
+    </template>
+
+    <template x-if="!sessionId">
+      <a href="/auth/login" class="mobile-menu-item" style="color:var(--accent2);font-weight:700" x-text="$store.i18n.t('header.login')"></a>
+    </template>
+  </div>
+
 </header>

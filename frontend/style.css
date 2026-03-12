@@ -28,11 +28,65 @@ body { background: var(--bg); color: var(--text); font-family: "Segoe UI", syste
 
 .container { max-width: 1600px; margin: 0 auto; padding: 0 1rem 3rem; }
 
-/* Header */
-.header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+/* =====================
+   HEADER
+   ===================== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  position: relative;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
 .header-logo { font-size: 1.3rem; font-weight: 700; color: var(--accent); letter-spacing: .03em; }
 .header-user { display: flex; align-items: center; gap: .75rem; }
 .header-badge { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: .2rem .75rem; font-size: .82rem; color: var(--muted); }
+
+/* Hamburger — ukryty na desktop, widoczny na mobile */
+.header-hamburger { display: none !important; }
+@media (max-width: 680px) {
+  .header-hamburger   { display: inline-flex !important; align-items: center; justify-content: center; }
+  .header-nav-desktop { display: none !important; }
+}
+
+/* Mobile menu dropdown */
+.header-mobile-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  z-index: 600;
+  box-shadow: 0 8px 32px rgba(0,0,0,.45);
+  overflow: hidden;
+  padding: .5rem 0;
+}
+.mobile-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: .7rem 1rem;
+  cursor: pointer;
+  color: var(--text);
+  font-size: .95rem;
+  text-decoration: none;
+  transition: background .12s;
+}
+.mobile-menu-item:hover { background: var(--surface); }
+.mobile-menu-divider { border-top: 1px solid var(--border); margin: .35rem 0; }
+
+/* Animacja mobile menu */
+.transition-mobile-enter, .transition-mobile-leave { transition: opacity .18s ease, transform .18s ease; }
+.mobile-menu-hidden  { opacity: 0; transform: translateY(-8px); }
+.mobile-menu-visible { opacity: 1; transform: translateY(0); }
 
 /* Theme toggle */
 .theme-toggle {
@@ -54,6 +108,54 @@ body { background: var(--bg); color: var(--text); font-family: "Segoe UI", syste
 .btn-primary  { background: var(--accent); color: #000; }
 .btn-ghost    { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-login    { background: var(--accent2); color: #fff; font-size: 1.05rem; padding: .65rem 1.6rem; }
+
+/* =====================
+   SKELETON LOADERS
+   ===================== */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .45; }
+}
+.skeleton {
+  background: var(--surface);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  display: block;
+}
+.skeleton-text  { height: .85rem; border-radius: 4px; margin-bottom: .4rem; }
+.skeleton-title { height: 1.4rem; border-radius: 4px; margin-bottom: .6rem; }
+.skeleton-card  {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.skeleton-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--border);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.skeleton-avatar-lg {
+  width: 48px; height: 48px;
+  border-radius: 8px;
+  background: var(--border);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* =====================
+   VIEW TRANSITIONS
+   ===================== */
+@keyframes view-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.view-enter {
+  animation: view-fade-in .22s ease both;
+}
 
 /* =====================
    LANDING PAGE
@@ -282,50 +384,15 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   line-height: 1.4;
   display: none;
 }
-.item-tooltip-title {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
-}
-.item-tooltip-slot {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-}
-.item-tooltip-stats {
-  margin-bottom: 0.5rem;
-}
-.item-tooltip-stat {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-}
-.item-tooltip-spell {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-}
-.item-tooltip-spell-name {
-  font-weight: 600;
-  color: var(--accent);
-  font-size: 0.85rem;
-}
-.item-tooltip-spell-desc {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-top: 0.25rem;
-}
-.item-tooltip-enchant {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #4caf50;
-}
-.item-tooltip-gem {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #9c27b0;
-}
+.item-tooltip-title { font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; }
+.item-tooltip-slot { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+.item-tooltip-stats { margin-bottom: 0.5rem; }
+.item-tooltip-stat { display: flex; justify-content: space-between; font-size: 0.8rem; }
+.item-tooltip-spell { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+.item-tooltip-spell-name { font-weight: 600; color: var(--accent); font-size: 0.85rem; }
+.item-tooltip-spell-desc { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+.item-tooltip-enchant { margin-top: 0.5rem; font-size: 0.8rem; color: #4caf50; }
+.item-tooltip-gem { margin-top: 0.5rem; font-size: 0.8rem; color: #9c27b0; }
 
 /* =====================
    CHART & MODALS
@@ -365,7 +432,7 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
 .role-badge { display: inline-block; font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; background: var(--bg2, #2a2a2a); color: var(--muted); margin-left: .3rem; vertical-align: middle; }
 
 /* =====================
-   RANKINGS PODIUM (pełna strona /rankings)
+   RANKINGS PODIUM
    ===================== */
 .rankings-podium {
   display: flex;
@@ -374,7 +441,6 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   gap: 1rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
-  /* Zapas na koronę wystającą ponad bloki */
   padding-top: 1.4rem;
 }
 .podium-card {
@@ -382,8 +448,6 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   flex-direction: column;
   align-items: center;
   text-align: center;
-  /* Jednolity padding-top na wszystkich kartach — content zaczyna się w tym samym miejscu.
-     Korona (absolute top: -1.1rem) wychodzi poza blok w górę, nie przesuwa contentu. */
   padding: 1.4rem 1.2rem 1.2rem;
   border-radius: 14px;
   border: 2px solid var(--border);
@@ -397,13 +461,9 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   overflow: visible;
 }
 .podium-card:hover { transform: translateY(-4px); }
-
-/* Efekt podestu — gold jest wyżej przez większy min-height i padding-bottom */
 .podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; min-height: 260px; padding-bottom: 2rem; }
 .podium-silver { background: rgba(192,192,192,.07); border-color: var(--silver); order: 1; min-height: 220px; }
 .podium-bronze { background: rgba(205,127,50,.07);  border-color: var(--bronze); order: 3; min-height: 220px; }
-
-/* Korona: wychodzi ponad krawędź bloku */
 .podium-crown { font-size: 1.8rem; position: absolute; top: -1.3rem; left: 50%; transform: translateX(-50%); line-height: 1; }
 .podium-medal { font-size: 2rem; margin-bottom: .3rem; }
 .podium-rank  { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
@@ -412,31 +472,14 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
 .podium-dps   { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
 .podium-realm { font-size: .72rem; color: var(--muted); margin-top: .2rem; }
 
-/* Rankings table (miejsca 4-10) */
-.rankings-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .9rem;
-}
-.rankings-table th {
-  text-align: left;
-  padding: .65rem 1rem;
-  font-size: .75rem;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.rankings-table td {
-  padding: .7rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
+.rankings-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.rankings-table th { text-align: left; padding: .65rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface); }
+.rankings-table td { padding: .7rem 1rem; border-bottom: 1px solid var(--border); }
 .rankings-table tbody tr:hover { background: rgba(200,154,60,.05); }
 .rankings-table tbody tr:last-child td { border-bottom: none; }
 
 /* =====================
-   HOME PODIUM (top 3 na stronie głównej)
+   HOME PODIUM
    ===================== */
 .home-podium {
   display: flex;
@@ -451,7 +494,6 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   flex-direction: column;
   align-items: center;
   text-align: center;
-  /* Jednolity padding-top — content wyrównany na wszystkich kartach */
   padding: 1.2rem .9rem 1rem;
   border-radius: 12px;
   border: 2px solid var(--border);
@@ -465,12 +507,9 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   overflow: visible;
 }
 .home-podium-card:hover { transform: translateY(-3px); }
-
 .home-podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; min-height: 200px; padding-bottom: 1.6rem; }
 .home-podium-silver { background: rgba(192,192,192,.07); border-color: var(--silver); order: 1; min-height: 170px; }
 .home-podium-bronze { background: rgba(205,127,50,.07);  border-color: var(--bronze); order: 3; min-height: 170px; }
-
-/* Korona wycentrowana horyzontalnie, wychodzi ponad krawędź */
 .home-podium-crown { font-size: 1.4rem; position: absolute; top: -1rem; left: 50%; transform: translateX(-50%); line-height: 1; }
 .home-podium-medal { font-size: 1.6rem; margin-bottom: .25rem; }
 .home-podium-name  { font-size: .95rem; font-weight: 700; margin-bottom: .15rem; }

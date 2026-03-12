@@ -10,6 +10,7 @@
     "history": "Historia",
     "settings": "Ustawienia",
     "characters_count": "{{count}} postaci",
+    "account": "Konto",
     "logout": "Wyloguj",
     "login": "🔑 Zaloguj",
     "theme_to_light": "Przełącz na jasny",
@@ -17,6 +18,7 @@
   },
   "nav": {
     "home": "Strona główna",
+    "rankings": "Rankingi",
     "simulations": "Symulacje",
     "profile": "Profil"
   },
@@ -42,7 +44,7 @@
   "main_char": {
     "title": "Wybierz główną postać",
     "subtitle": "Twoja główna postać będzie widoczna na profilu publicznym. Zawsze możesz to zmienić w ustawieniach.",
-    "skip": "Pominą na teraz",
+    "skip": "Pomij na teraz",
     "set_as_main": "⚔️ Ustaw jako main",
     "change": "Kliknij aby zmienić główną postać",
     "saved": "Główna postać zapisana!"

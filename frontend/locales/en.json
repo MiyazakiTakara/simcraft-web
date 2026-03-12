@@ -10,6 +10,7 @@
     "history": "History",
     "settings": "Settings",
     "characters_count": "{{count}} characters",
+    "account": "Account",
     "logout": "Log out",
     "login": "🔑 Log in",
     "theme_to_light": "Switch to light mode",
@@ -17,6 +18,7 @@
   },
   "nav": {
     "home": "Home",
+    "rankings": "Rankings",
     "simulations": "Simulations",
     "profile": "Profile"
   },
