@@ -35,13 +35,18 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **Main Character** — modal on first login to select main character; saved permanently to Battle.net account (`users` table); displayed in header dropdown
 - **User Dropdown Menu** — header dropdown under the main character name with: Characters, History, Settings, Logout
 - **View Persistence** — active view (home/simulations/profile/settings) persisted via URL hash; browser back/forward works correctly
+- **Settings Page** — change main character, language preference, theme preference; profile privacy toggle
+- **Sliding Session** — session TTL extended by 30 days on every active use; no forced re-logins during normal usage
 
 ## Roadmap
 
 - [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
 - [ ] **Build sharing** — export simulation config as a public link to re-run
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
-- [ ] **Settings page** — change main character, language preference, theme preference
+- [ ] **Settings: character picker** — replace manual name/realm text inputs with character list (same as simulation tab); user clicks to select, no typing
+- [ ] **Settings: per-character privacy** — in addition to global account privacy toggle, allow hiding/showing individual characters from public profile
+- [ ] **Rankings: exclude addon simulations** — filter out results submitted via the WoW addon (`source=addon` flag); only web simulations should appear in rankings
+- [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
 
 ## Requirements
 
@@ -217,6 +222,8 @@ simcraft-web/
 │   ├── sim.js             # Simulation form logic (SimMixin)
 │   ├── chars.js           # Character list, equipment, talents (CharsMixin)
 │   ├── history.js         # History widget (HistoryMixin)
+│   ├── settings.js        # Settings mixin (main char, privacy, theme, language)
+│   ├── header.js          # Header mixin (session, dropdown)
 │   ├── api.js             # API client (fetch wrapper)
 │   ├── utils.js           # Helpers (number formatting, class colors, etc.)
 │   ├── admin.js           # Admin panel logic
@@ -226,7 +233,7 @@ simcraft-web/
 │   │   ├── home.html        # Home view (hero, addon form, top 3 podium, public history, news)
 │   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
 │   │   ├── profil.html      # Profile view (characters, history, DPS trend chart)
-│   │   └── ustawienia.html  # Settings view (WIP)
+│   │   └── ustawienia.html  # Settings view (main char, privacy, theme, language)
 │   └── locales/
 │       ├── pl.json          # Polish translations
 │       └── en.json          # English translations
@@ -294,6 +301,8 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 | `GET` | `/auth/callback` | OAuth callback (fetches `bnet_id` from `/userinfo`) |
 | `GET` | `/auth/logout` | Logout |
 | `GET` | `/auth/session/info` | Session info (main character, is_first_login) |
+| `GET` | `/auth/session/settings` | Get user settings (main char, privacy) |
+| `PATCH` | `/auth/session/settings` | Save user settings |
 | `PATCH` | `/auth/session/main-character` | Set main character |
 | `POST` | `/auth/session/skip-first-login` | Skip main character selection modal |
 
@@ -313,8 +322,8 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 
 | Table | Description |
 |-------|-------------|
-| `users` | Battle.net accounts; stores `bnet_id`, main character |
-| `sessions` | Active OAuth sessions; stores `bnet_id`, access token, expiry |
+| `users` | Battle.net accounts; stores `bnet_id`, main character, privacy settings |
+| `sessions` | Active OAuth sessions; sliding 30-day TTL extended on every active use |
 | `history` | All simulation results; tied to `bnet_id` or guest |
 | `jobs` | Simulation job queue; status tracking |
 | `reactions` | Emoji reactions per `job_id`; `UNIQUE(job_id, user_key)` |
