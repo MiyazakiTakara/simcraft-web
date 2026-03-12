@@ -9,3 +9,6 @@ results/
 
 # Environment
 .env
+
+# Debug files
+DEBUG_SETTINGS_VIEW.md
