@@ -88,6 +88,10 @@ function settingsMixin() {
         if (res.ok) {
           const data = await res.json();
           this.charPrivacies = data.privacies || {};
+          // Also sync to window.__alpineApp for template access
+          if (window.__alpineApp) {
+            window.__alpineApp.charPrivacies = this.charPrivacies;
+          }
         }
       } catch (e) {
         console.warn('Failed to load char privacies', e);
@@ -168,6 +172,10 @@ function settingsMixin() {
           if (charsRes.ok) {
             const chars = await charsRes.json();
             this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+            // Also sync to window.__alpineApp for template access
+            if (window.__alpineApp) {
+              window.__alpineApp.characters = this.characters;
+            }
             await this.loadCharPrivacies();
           }
         } catch (e) {
