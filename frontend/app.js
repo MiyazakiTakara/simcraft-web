@@ -462,7 +462,7 @@ function app() {
   console.log('Checking window.settingsMixin in app.js:', typeof window.settingsMixin);
   if (typeof window.settingsMixin !== 'undefined') {
     console.log('Merging window.settingsMixin into app state');
-    mergeMixins(state, window.settingsMixin);
+    mergeMixins(state, window.settingsMixin());
   } else {
     console.warn('window.settingsMixin not found in app.js');
   }

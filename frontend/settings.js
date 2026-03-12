@@ -329,7 +329,7 @@ window.toggleCharPrivacyGlobal = async function(name, realm) {
 if (window.settingsMixin) {
   console.warn('window.settingsMixin already defined, overwriting!');
 }
-window.settingsMixin = settingsMixin();
+window.settingsMixin = settingsMixin;
 console.log('window.settingsMixin defined:', typeof window.settingsMixin);
 console.log('window.settingsMixin is function:', typeof window.settingsMixin === 'function');
 
