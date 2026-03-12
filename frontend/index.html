@@ -42,7 +42,7 @@
   <script src="/history.js?v=2"></script>
   <script src="/settings.js?v=17"></script>
   <script src="/header.js?v=2"></script>
-   <script src="/app.js?v=43"></script>
+   <script src="/app.js?v=44"></script>
   <script src="/partials.js?v=1"></script>
 </head>
 <body>
@@ -110,7 +110,7 @@
   <div id="view-container"></div>
 
   <!-- SETTINGS VIEW -->
-  <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;">
+  <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;" x-data="{}">
     <!-- Ładowanie -->
     <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
       <span>Ładowanie...</span>
