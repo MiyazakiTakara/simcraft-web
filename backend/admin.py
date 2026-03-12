@@ -174,12 +174,25 @@ async def admin_callback(code: str, state: str = None):
 
 @router.get("/logout")
 async def admin_logout(request: Request):
+    # Usun lokalna sesje admina
     session_id = request.cookies.get(ADMIN_COOKIE)
     if session_id:
         with SessionLocal() as db:
             db.query(AdminSessionModel).filter(AdminSessionModel.session_id == session_id).delete()
             db.commit()
-    response = RedirectResponse("/admin/login", status_code=302)
+
+    # Zbuduj URL wylogowania Keycloak (end_session) z post_logout_redirect_uri
+    # dzieki temu Keycloak rowniez konczy sesje SSO i nie loguje od razu z powrotem
+    cfg = _cfg()
+    app_base = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    post_logout_uri = f"{app_base}/admin/login" if app_base else "/admin/login"
+    keycloak_logout_url = (
+        f"{cfg['oidc_base']}/logout"
+        f"?client_id={cfg['client_id']}"
+        f"&post_logout_redirect_uri={post_logout_uri}"
+    )
+
+    response = RedirectResponse(keycloak_logout_url, status_code=302)
     response.delete_cookie(ADMIN_COOKIE)
     return response
 
@@ -615,7 +628,7 @@ def load_appearance_config():
     default_config = {
         "header_title":     "SimCraft Web",
         "hero_title":       "World of Warcraft",
-        "emoji":            "⚔️",
+        "emoji":            "\u2694\ufe0f",
         "hero_custom_text": "",
     }
     try:
@@ -682,7 +695,6 @@ async def get_traffic_stats(request: Request):
         week_visits    = db.query(func.count(PageVisitModel.id)).filter(PageVisitModel.created_at >= last_7d).scalar() or 0
         month_visits   = db.query(func.count(PageVisitModel.id)).filter(PageVisitModel.created_at >= last_30d).scalar() or 0
 
-        # unikalne IP (na podstawie ip_hash) w ostatnich 30 dniach
         unique_30d = db.query(func.count(func.distinct(PageVisitModel.ip_hash))).filter(
             PageVisitModel.created_at >= last_30d,
             PageVisitModel.ip_hash.isnot(None)
@@ -693,7 +705,6 @@ async def get_traffic_stats(request: Request):
             PageVisitModel.ip_hash.isnot(None)
         ).scalar() or 0
 
-        # trend dzienny — ostatnie 30 dni
         daily_rows = db.query(
             func.date_trunc('day', PageVisitModel.created_at).label('day'),
             func.count(PageVisitModel.id).label('total'),
@@ -702,7 +713,6 @@ async def get_traffic_stats(request: Request):
             PageVisitModel.created_at >= last_30d
         ).group_by('day').order_by('day').all()
 
-        # top 10 stron
         top_pages_rows = db.query(
             PageVisitModel.path,
             func.count(PageVisitModel.id).label('count'),
@@ -712,7 +722,6 @@ async def get_traffic_stats(request: Request):
             func.count(PageVisitModel.id).desc()
         ).limit(10).all()
 
-        # rozkład godzinowy (ostatnie 7 dni)
         hourly_rows = db.query(
             func.extract('hour', PageVisitModel.created_at).label('hour'),
             func.count(PageVisitModel.id).label('count'),
