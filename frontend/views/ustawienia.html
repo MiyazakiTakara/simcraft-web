@@ -104,7 +104,9 @@
                 <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
               </div>
               <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.85rem">
-                <input type="checkbox" :checked="getCharPrivacy(ch)" @click="toggleCharPrivacy(ch, $event)" />
+                <input type="checkbox" 
+                       :checked="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)]" 
+                       @click="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] = !charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)]; toggleCharPrivacyDirect(ch.name, ch.realm_slug || ch.realm)" />
                 <span x-text="$store.i18n.t('settings.char_private')"></span>
               </label>
             </div>

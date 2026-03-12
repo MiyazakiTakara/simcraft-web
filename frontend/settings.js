@@ -24,6 +24,31 @@ function settingsMixin() {
       return this.charPrivacies[key] || false;
     },
 
+    async toggleCharPrivacyDirect(name, realm) {
+      const session = this._getSession();
+      if (!session) return;
+      const key = name + '|' + realm;
+      const isPrivate = !this.charPrivacies[key];
+      console.log('Toggle privacy:', name, 'realm:', realm, 'isPrivate:', isPrivate);
+      try {
+        const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            character_name: name,
+            character_realm: realm,
+            is_private: isPrivate,
+          }),
+        });
+        console.log('Response:', res.status);
+        if (res.ok) {
+          this.charPrivacies[key] = isPrivate;
+        }
+      } catch (e) {
+        console.error('Failed to toggle char privacy', e);
+      }
+    },
+
     async toggleCharPrivacy(ch, event) {
       event.preventDefault();
       event.stopPropagation();
