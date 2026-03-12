@@ -462,6 +462,7 @@ function app() {
   };
 
   // Merge settingsMixin if available
+  console.log('Checking window.settingsMixin in app.js:', typeof window.settingsMixin);
   if (typeof window.settingsMixin !== 'undefined') {
     console.log('Merging window.settingsMixin into app state');
     mergeMixins(state, window.settingsMixin());
