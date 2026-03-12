@@ -146,8 +146,8 @@
                   <div class="spell-head">
                     <span x-text="sp.name"></span>
                     <span style="display:flex;gap:.6rem;align-items:center">
-                      <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span></span>
-                      <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span></span>
+                      <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                      <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
                       <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                     </span>
                   </div>
@@ -173,8 +173,22 @@
   <!-- Historia boczna -->
   <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
     <h2 x-text="$store.i18n.t('history.title')"></h2>
-    <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
-    <div x-show="history.length > 0" class="history-list" style="flex:1">
+
+    <!-- Skeleton: ładowanie historii -->
+    <template x-if="loadingHistory">
+      <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
+        <template x-for="i in [1,2,3,4,5]" :key="i">
+          <div style="display:flex;flex-direction:column;gap:.4rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+            <div class="skeleton skeleton-text" style="width:55%"></div>
+            <div class="skeleton skeleton-text" style="width:35%"></div>
+            <div class="skeleton skeleton-text" style="width:45%"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <div x-show="!loadingHistory && history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
+    <div x-show="!loadingHistory && history.length > 0" class="history-list" style="flex:1">
       <template x-for="entry in pagedHistory" :key="entry.job_id">
         <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
           <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">

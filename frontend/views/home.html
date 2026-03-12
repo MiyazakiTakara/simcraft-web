@@ -154,7 +154,6 @@
       <a href="/rankings" style="font-size:.85rem;color:var(--accent);text-decoration:none">Zobacz pełne rankingi →</a>
     </div>
 
-    <!-- Skeleton: ładowanie podium -->
     <template x-if="top3Loading">
       <div class="home-podium">
         <template x-for="i in [1,2,3]" :key="i">
@@ -174,7 +173,6 @@
 
     <template x-if="!top3Loading && top3.length > 0">
       <div class="home-podium">
-        <!-- #2 srebro (jeśli istnieje) -->
         <template x-if="top3.length >= 2">
           <a :href="'/result/' + top3[1].job_id" class="home-podium-card home-podium-silver">
             <div class="home-podium-medal">🥈</div>
@@ -183,7 +181,6 @@
             <div class="home-podium-dps" x-text="formatDps(top3[1].dps)"></div>
           </a>
         </template>
-        <!-- #1 złoto -->
         <a :href="'/result/' + top3[0].job_id" class="home-podium-card home-podium-gold">
           <div class="home-podium-crown">👑</div>
           <div class="home-podium-medal">🥇</div>
@@ -191,7 +188,6 @@
           <div class="home-podium-spec" x-text="(top3[0].character_spec||'') + ' ' + top3[0].character_class"></div>
           <div class="home-podium-dps" x-text="formatDps(top3[0].dps)"></div>
         </a>
-        <!-- #3 brąz (jeśli istnieje) -->
         <template x-if="top3.length >= 3">
           <a :href="'/result/' + top3[2].job_id" class="home-podium-card home-podium-bronze">
             <div class="home-podium-medal">🥉</div>
@@ -213,8 +209,8 @@
 
     <template x-if="!pubResult || pubResult._source === 'addon'">
       <div>
-        <!-- Skeleton: ładowanie publicznej historii -->
-        <template x-if="historyLoading">
+        <!-- Skeleton: ładowanie historii -->
+        <template x-if="loadingHistory">
           <div class="landing-history-grid">
             <template x-for="i in [1,2,3,4,5,6]" :key="i">
               <div class="pub-history-card skeleton-card">
@@ -230,7 +226,7 @@
         </template>
 
         <!-- Załadowana historia -->
-        <template x-if="!historyLoading">
+        <template x-if="!loadingHistory">
           <div>
             <template x-if="history.length === 0">
               <p style="color:var(--muted);font-size:.88rem" x-text="$store.i18n.t('history.public_empty')"></p>
