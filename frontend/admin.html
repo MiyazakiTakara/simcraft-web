@@ -6,64 +6,85 @@
   <title>SimCraft — Panel Admina</title>
   <link rel="stylesheet" href="/admin.css" />
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <style>
+    .lang-btn {
+      background: none;
+      border: 1px solid #444;
+      color: #777;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all .15s;
+    }
+    .lang-btn.active {
+      border-color: #f4a01c;
+      color: #f4a01c;
+      font-weight: 700;
+    }
+    .lang-btn:hover { border-color: #888; color: #ccc; }
+  </style>
 </head>
 <body>
   <header>
     <h1>⚙️ SimCraft Admin</h1>
-    <div>
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <div style="display:flex;gap:0.3rem">
+        <button class="lang-btn" data-lang="pl" onclick="adminSetLang('pl')">PL</button>
+        <button class="lang-btn" data-lang="en" onclick="adminSetLang('en')">EN</button>
+      </div>
       <span id="username"></span>
-      <a class="logout" href="/admin/logout">Wyloguj</a>
+      <a class="logout" href="/admin/logout" data-i18n="admin.logout">Wyloguj</a>
     </div>
   </header>
 
   <div class="container">
-    <button class="tab active" data-tab="dashboard">Dashboard</button>
-    <button class="tab" data-tab="traffic">📈 Ruch</button>
-    <button class="tab" data-tab="news">Newsy</button>
-    <button class="tab" data-tab="users">Użytkownicy</button>
-    <button class="tab" data-tab="logs">Logi</button>
-    <button class="tab" data-tab="maintenance">Utrzymanie</button>
-    <button class="tab" data-tab="limits">Limity</button>
-    <button class="tab" data-tab="health">Health</button>
-    <button class="tab" data-tab="tasks">Zadania</button>
-    <button class="tab" data-tab="appearance">Wygląd</button>
+    <button class="tab active" data-tab="dashboard" data-i18n="admin.tabs.dashboard">Dashboard</button>
+    <button class="tab" data-tab="traffic" data-i18n="admin.tabs.traffic">📈 Ruch</button>
+    <button class="tab" data-tab="news" data-i18n="admin.tabs.news">Newsy</button>
+    <button class="tab" data-tab="users" data-i18n="admin.tabs.users">Użytkownicy</button>
+    <button class="tab" data-tab="logs" data-i18n="admin.tabs.logs">Logi</button>
+    <button class="tab" data-tab="maintenance" data-i18n="admin.tabs.maintenance">Utrzymanie</button>
+    <button class="tab" data-tab="limits" data-i18n="admin.tabs.limits">Limity</button>
+    <button class="tab" data-tab="health" data-i18n="admin.tabs.health">Health</button>
+    <button class="tab" data-tab="tasks" data-i18n="admin.tabs.tasks">Zadania</button>
+    <button class="tab" data-tab="appearance" data-i18n="admin.tabs.appearance">Wygląd</button>
   </div>
 
   <!-- ========== DASHBOARD ========== -->
   <div class="tab-content active" id="tab-dashboard">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem">
-      <h2 style="margin:0">Statystyki serwera</h2>
+      <h2 style="margin:0" data-i18n="admin.dashboard.title">Statystyki serwera</h2>
       <span id="refresh-label-dashboard" style="font-size:0.75rem;color:#444"></span>
     </div>
     <div class="stats-grid" id="stats-grid">
-      <div class="stat-card" data-tooltip="Łączna liczba wszystkich symulacji w bazie danych"><div class="stat-value" id="stat-total-sims">—</div><div class="stat-label">Wszystkich symulacji</div></div>
-      <div class="stat-card" data-tooltip="Liczba unikalnych użytkowników"><div class="stat-value" id="stat-total-users">—</div><div class="stat-label">Użytkowników</div></div>
-      <div class="stat-card" data-tooltip="Ostatnie 24h"><div class="stat-value" id="stat-today-sims">—</div><div class="stat-label">Dziś</div></div>
-      <div class="stat-card" data-tooltip="Ostatnie 7 dni"><div class="stat-value" id="stat-week-sims">—</div><div class="stat-label">Ostatnie 7 dni</div></div>
-      <div class="stat-card" data-tooltip="Ostatnie 30 dni"><div class="stat-value" id="stat-month-sims">—</div><div class="stat-label">Ostatnie 30 dni</div></div>
-      <div class="stat-card" data-tooltip="Aktualnie uruchomione symulacje"><div class="stat-value" id="stat-active-jobs">—</div><div class="stat-label">Aktywne zadania</div></div>
-      <div class="stat-card" data-tooltip="CPU"><div class="stat-value" id="stat-cpu">—</div><div class="stat-label">CPU</div></div>
-      <div class="stat-card" data-tooltip="RAM"><div class="stat-value" id="stat-memory">—</div><div class="stat-label">RAM</div></div>
-      <div class="stat-card" data-tooltip="Czas od uruchomienia serwera"><div class="stat-value" id="stat-uptime">—</div><div class="stat-label">Uptime</div></div>
+      <div class="stat-card" data-tooltip="Łączna liczba wszystkich symulacji w bazie danych"><div class="stat-value" id="stat-total-sims">—</div><div class="stat-label" data-i18n="admin.dashboard.total_sims">Wszystkich symulacji</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-total-users">—</div><div class="stat-label" data-i18n="admin.dashboard.total_users">Użytkowników</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-today-sims">—</div><div class="stat-label" data-i18n="admin.dashboard.today">Dziś</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-week-sims">—</div><div class="stat-label" data-i18n="admin.dashboard.last_7d">Ostatnie 7 dni</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-month-sims">—</div><div class="stat-label" data-i18n="admin.dashboard.last_30d">Ostatnie 30 dni</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-active-jobs">—</div><div class="stat-label" data-i18n="admin.dashboard.active_jobs">Aktywne zadania</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-cpu">—</div><div class="stat-label" data-i18n="admin.dashboard.cpu">CPU</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-memory">—</div><div class="stat-label" data-i18n="admin.dashboard.ram">RAM</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-uptime">—</div><div class="stat-label" data-i18n="admin.dashboard.uptime">Uptime</div></div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem">
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Symulacje — ostatnie 30 dni</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.dashboard.chart_trend">Symulacje — ostatnie 30 dni</h3>
         <div id="chart-trend" style="height:240px"></div>
       </div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Rozkład klas</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.dashboard.chart_classes">Rozkład klas</h3>
         <div id="chart-classes" style="height:240px"></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem">
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Fight Style</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.dashboard.chart_fightstyle">Fight Style</h3>
         <div id="chart-fightstyle" style="height:220px"></div>
       </div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Top 10 DPS</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.dashboard.chart_top10">Top 10 DPS</h3>
         <div id="chart-top10" style="font-size:0.82rem"></div>
       </div>
     </div>
@@ -72,92 +93,92 @@
   <!-- ========== TRAFFIC ========== -->
   <div class="tab-content" id="tab-traffic">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem">
-      <h2 style="margin:0">Ruch na stronie</h2>
+      <h2 style="margin:0" data-i18n="admin.traffic.title">Ruch na stronie</h2>
       <span id="refresh-label-traffic" style="font-size:0.75rem;color:#444"></span>
     </div>
-    <div class="stats-grid" id="traffic-stats-grid">
-      <div class="stat-card"><div class="stat-value" id="tr-today">—</div><div class="stat-label">Dziś</div></div>
-      <div class="stat-card"><div class="stat-value" id="tr-unique-today">—</div><div class="stat-label">Unikalni dziś</div></div>
-      <div class="stat-card"><div class="stat-value" id="tr-week">—</div><div class="stat-label">7 dni</div></div>
-      <div class="stat-card"><div class="stat-value" id="tr-month">—</div><div class="stat-label">30 dni</div></div>
-      <div class="stat-card"><div class="stat-value" id="tr-unique-30d">—</div><div class="stat-label">Unikalni 30 dni</div></div>
-      <div class="stat-card"><div class="stat-value" id="tr-total">—</div><div class="stat-label">Wszystkich wizyt</div></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="tr-today">—</div><div class="stat-label" data-i18n="admin.traffic.today">Dziś</div></div>
+      <div class="stat-card"><div class="stat-value" id="tr-unique-today">—</div><div class="stat-label" data-i18n="admin.traffic.unique_today">Unikalni dziś</div></div>
+      <div class="stat-card"><div class="stat-value" id="tr-week">—</div><div class="stat-label" data-i18n="admin.traffic.week">7 dni</div></div>
+      <div class="stat-card"><div class="stat-value" id="tr-month">—</div><div class="stat-label" data-i18n="admin.traffic.month">30 dni</div></div>
+      <div class="stat-card"><div class="stat-value" id="tr-unique-30d">—</div><div class="stat-label" data-i18n="admin.traffic.unique_30d">Unikalni 30 dni</div></div>
+      <div class="stat-card"><div class="stat-value" id="tr-total">—</div><div class="stat-label" data-i18n="admin.traffic.total">Wszystkich wizyt</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem">
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Odwiedziny — ostatnie 30 dni</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.traffic.chart_daily">Odwiedziny — ostatnie 30 dni</h3>
         <div id="chart-traffic-daily" style="height:240px"></div>
       </div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
-        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Aktywność wg godziny (7 dni)</h3>
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.traffic.chart_hourly">Aktywność wg godziny (7 dni)</h3>
         <div id="chart-traffic-hourly" style="height:240px"></div>
       </div>
     </div>
     <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem;margin-top:1.5rem">
-      <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Top 10 podstron (30 dni)</h3>
+      <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em" data-i18n="admin.traffic.top_pages">Top 10 podstron (30 dni)</h3>
       <div id="traffic-top-pages"></div>
     </div>
     <div style="margin-top:1rem;text-align:right">
-      <button class="primary" onclick="loadTraffic()">Odśwież</button>
+      <button class="primary" onclick="loadTraffic()" data-i18n="admin.traffic.refresh">Odśwież</button>
     </div>
   </div>
 
   <!-- ========== NEWS ========== -->
   <div class="tab-content" id="tab-news">
-    <h2>Dodaj news</h2>
+    <h2 data-i18n="admin.news.add_title">Dodaj news</h2>
     <div class="form-box">
-      <input type="text" id="news-title" placeholder="Tytuł newsa..." />
-      <textarea id="news-body" placeholder="Treść..."></textarea>
-      <label><input type="checkbox" id="news-published" checked /> Opublikowany</label>
-      <button class="primary" onclick="createNews()">Dodaj news</button>
+      <input type="text" id="news-title" data-i18n-placeholder="admin.news.title_placeholder" placeholder="Tytuł newsa..." />
+      <textarea id="news-body" data-i18n-placeholder="admin.news.body_placeholder" placeholder="Treść..."></textarea>
+      <label><input type="checkbox" id="news-published" checked /> <span data-i18n="admin.news.published_label">Opublikowany</span></label>
+      <button class="primary" onclick="createNews()" data-i18n="admin.news.add_btn">Dodaj news</button>
     </div>
-    <h2>Newsy</h2>
-    <div class="news-list" id="news-list"><p class="empty">Ładowanie...</p></div>
+    <h2 data-i18n="admin.news.list_title">Newsy</h2>
+    <div class="news-list" id="news-list"><p class="empty" data-i18n="common.loading">Ładowanie...</p></div>
   </div>
 
   <!-- ========== USERS ========== -->
   <div class="tab-content" id="tab-users">
-    <h2>Użytkownicy</h2>
-    <p style="color:#666;font-size:0.85rem;margin-bottom:1rem">Lista użytkowników na podstawie historii symulacji.</p>
+    <h2 data-i18n="admin.users.title">Użytkownicy</h2>
+    <p style="color:#666;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.users.subtitle">Lista użytkowników na podstawie historii symulacji.</p>
     <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center">
-      <button class="primary" onclick="loadUsers()">Odśwież</button>
-      <input type="text" id="user-search" placeholder="Szukaj..."
+      <button class="primary" onclick="loadUsers()" data-i18n="admin.users.refresh">Odśwież</button>
+      <input type="text" id="user-search" data-i18n-placeholder="admin.users.search_placeholder" placeholder="Szukaj..."
              style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px"
              oninput="filterUsers()" />
     </div>
-    <div class="news-list" id="user-list"><p class="empty">Ładowanie...</p></div>
+    <div class="news-list" id="user-list"><p class="empty" data-i18n="common.loading">Ładowanie...</p></div>
   </div>
 
   <!-- ========== LOGS ========== -->
   <div class="tab-content" id="tab-logs">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem">
-      <h2 style="margin:0">Logi</h2>
+      <h2 style="margin:0" data-i18n="admin.logs.title">Logi</h2>
       <span id="refresh-label-logs" style="font-size:0.75rem;color:#444"></span>
     </div>
     <div style="margin-bottom:1rem">
-      <button class="primary" onclick="loadLogs()">Odśwież</button>
+      <button class="primary" onclick="loadLogs()" data-i18n="admin.logs.refresh">Odśwież</button>
       <select id="log-level" onchange="loadLogs()" style="background:#111;color:#ccc;padding:0.4rem;border:1px solid #333;border-radius:4px">
-        <option value="">Wszystkie</option>
+        <option value="" data-i18n="admin.logs.filter_all">Wszystkie</option>
         <option value="INFO">INFO</option>
         <option value="WARNING">WARNING</option>
         <option value="ERROR">ERROR</option>
       </select>
     </div>
     <div class="log-list" id="log-list" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;max-height:500px;overflow-y:auto">
-      <p class="empty">Ładowanie...</p>
+      <p class="empty" data-i18n="common.loading">Ładowanie...</p>
     </div>
   </div>
 
   <!-- ========== MAINTENANCE ========== -->
   <div class="tab-content" id="tab-maintenance">
-    <h2>Zarządzanie symulacjami</h2>
+    <h2 data-i18n="admin.maintenance.title">Zarządzanie symulacjami</h2>
     <div class="form-box">
-      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem">Usuń stare symulacje z bazy danych.</p>
+      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.maintenance.subtitle">Usuń stare symulacje z bazy danych.</p>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-        <input type="number" id="delete-days" placeholder="Dni (np. 30)" min="1"
+        <input type="number" id="delete-days" data-i18n-placeholder="admin.maintenance.days_placeholder" placeholder="Dni (np. 30)" min="1"
                style="width:120px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;margin:0" />
-        <button class="primary" onclick="deleteOldSims()">Usuń starsze niż X dni</button>
-        <button class="danger" onclick="deleteAllSims()" style="margin-left:auto">Usuń WSZYSTKIE</button>
+        <button class="primary" onclick="deleteOldSims()" data-i18n="admin.maintenance.delete_older">Usuń starsze niż X dni</button>
+        <button class="danger" onclick="deleteAllSims()" style="margin-left:auto" data-i18n="admin.maintenance.delete_all">Usuń WSZYSTKIE</button>
       </div>
       <p id="delete-result" style="margin-top:0.75rem;font-size:0.85rem"></p>
     </div>
@@ -165,22 +186,22 @@
 
   <!-- ========== LIMITS ========== -->
   <div class="tab-content" id="tab-limits">
-    <h2>Zarządzanie limitami</h2>
+    <h2 data-i18n="admin.limits.title">Zarządzanie limitami</h2>
     <div class="form-box">
-      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem">Zmiana limitów systemowych.</p>
+      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.limits.subtitle">Zmiana limitów systemowych.</p>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem">
-        <label style="width:200px">Max jednoczesnych symulacji:</label>
+        <label style="width:200px" data-i18n="admin.limits.concurrent">Max jednoczesnych symulacji:</label>
         <input type="number" id="limit-concurrent" min="1" max="20" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px" />
       </div>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem">
-        <label style="width:200px">Limit zapytań/min:</label>
+        <label style="width:200px" data-i18n="admin.limits.rate">Limit zapytań/min:</label>
         <input type="number" id="limit-rate" min="1" max="60" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px" />
       </div>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
-        <label style="width:200px">Timeout symulacji (s):</label>
+        <label style="width:200px" data-i18n="admin.limits.timeout">Timeout symulacji (s):</label>
         <input type="number" id="limit-timeout" min="60" max="3600" style="width:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px" />
       </div>
-      <button class="primary" onclick="saveLimits()">Zapisz limity</button>
+      <button class="primary" onclick="saveLimits()" data-i18n="admin.limits.save">Zapisz limity</button>
       <p id="limits-result" style="margin-top:0.75rem;font-size:0.85rem"></p>
     </div>
   </div>
@@ -188,47 +209,47 @@
   <!-- ========== HEALTH ========== -->
   <div class="tab-content" id="tab-health">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem">
-      <h2 style="margin:0">Health Check</h2>
+      <h2 style="margin:0" data-i18n="admin.health.title">Health Check</h2>
       <span id="refresh-label-health" style="font-size:0.75rem;color:#444"></span>
     </div>
     <div class="form-box">
-      <div id="health-status"><p class="empty">Ładowanie...</p></div>
-      <button class="primary" onclick="loadHealth()" style="margin-top:1rem">Odśwież</button>
+      <div id="health-status"><p class="empty" data-i18n="common.loading">Ładowanie...</p></div>
+      <button class="primary" onclick="loadHealth()" style="margin-top:1rem" data-i18n="admin.health.refresh">Odśwież</button>
     </div>
   </div>
 
   <!-- ========== TASKS ========== -->
   <div class="tab-content" id="tab-tasks">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem">
-      <h2 style="margin:0">Zarządzanie zadaniami</h2>
+      <h2 style="margin:0" data-i18n="admin.tasks.title">Zarządzanie zadaniami</h2>
       <span id="refresh-label-tasks" style="font-size:0.75rem;color:#444"></span>
     </div>
     <div class="form-box">
-      <div id="tasks-list"><p class="empty">Ładowanie...</p></div>
-      <button class="primary" onclick="loadTasks()" style="margin-top:1rem">Odśwież</button>
+      <div id="tasks-list"><p class="empty" data-i18n="common.loading">Ładowanie...</p></div>
+      <button class="primary" onclick="loadTasks()" style="margin-top:1rem" data-i18n="admin.tasks.refresh">Odśwież</button>
     </div>
   </div>
 
   <!-- ========== APPEARANCE ========== -->
   <div class="tab-content" id="tab-appearance">
-    <h2>Wygląd strony</h2>
+    <h2 data-i18n="admin.appearance.title">Wygląd strony</h2>
     <div class="form-box">
-      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem">Dostosuj wygląd strony głównej.</p>
+      <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.appearance.subtitle">Dostosuj wygląd strony głównej.</p>
       <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
-        <label style="width:200px">Tytuł w headerze:</label>
+        <label style="width:200px" data-i18n="admin.appearance.header_title">Tytuł w headerze:</label>
         <input type="text" id="appearance-header-title" placeholder="SimCraft Web" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px" />
       </div>
       <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
-        <label style="width:200px">Tytuł landing hero:</label>
+        <label style="width:200px" data-i18n="admin.appearance.hero_title">Tytuł landing hero:</label>
         <input type="text" id="appearance-hero-title" placeholder="World of Warcraft" style="flex:1;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px" />
       </div>
       <div style="margin-bottom:1.5rem">
-        <label style="display:block;margin-bottom:0.4rem;color:#aaa;font-size:0.85rem">Własny tekst hero (opcjonalnie)</label>
-        <p style="color:#666;font-size:0.8rem;margin-bottom:0.5rem">Jeśli wpiszesz tekst poniżej, zastąpi on cały domyślny blok hero.</p>
-        <textarea id="appearance-hero-custom" placeholder="Np. Witaj na naszym serwerze!" style="width:100%;min-height:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;font-family:inherit;font-size:0.9rem;box-sizing:border-box"></textarea>
+        <label style="display:block;margin-bottom:0.4rem;color:#aaa;font-size:0.85rem" data-i18n="admin.appearance.hero_custom_label">Własny tekst hero (opcjonalnie)</label>
+        <p style="color:#666;font-size:0.8rem;margin-bottom:0.5rem" data-i18n="admin.appearance.hero_custom_hint">Jeśli wpiszesz tekst poniżej, zastąpi on cały domyślny blok hero.</p>
+        <textarea id="appearance-hero-custom" style="width:100%;min-height:100px;background:#111;color:#ccc;padding:0.5rem;border:1px solid #333;border-radius:6px;font-family:inherit;font-size:0.9rem;box-sizing:border-box"></textarea>
       </div>
       <div style="margin-bottom:1rem">
-        <label style="display:block;margin-bottom:0.5rem">Ikona strony (emoji):</label>
+        <label style="display:block;margin-bottom:0.5rem" data-i18n="admin.appearance.emoji_label">Ikona strony (emoji):</label>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="emoji-picker">
           <button class="emoji-btn" data-emoji="⚔️">⚔️</button>
           <button class="emoji-btn" data-emoji="🛡️">🛡️</button>
@@ -242,7 +263,7 @@
           <button class="emoji-btn" data-emoji="🏆">🏆</button>
         </div>
       </div>
-      <button class="primary" onclick="saveAppearance()">Zapisz wygląd</button>
+      <button class="primary" onclick="saveAppearance()" data-i18n="admin.appearance.save">Zapisz wygląd</button>
       <p id="appearance-result" style="margin-top:0.75rem;font-size:0.85rem"></p>
     </div>
   </div>
@@ -252,12 +273,15 @@
   <div id="user-modal" class="modal-overlay hidden">
     <div class="modal">
       <button class="modal-close" onclick="closeUserModal()">&times;</button>
-      <h3>Symulacje użytkownika</h3>
+      <h3 data-i18n="admin.users.modal_title">Symulacje użytkownika</h3>
       <div id="user-sim-list"></div>
     </div>
   </div>
 
-  <!-- moduły JS — kolejność ma znaczenie -->
+  <!-- i18n musi być pierwszy -->
+  <script src="/admin/i18n.js"></script>
+
+  <!-- moduły JS -->
   <script src="/admin/core.js"></script>
   <script src="/admin/dashboard.js"></script>
   <script src="/admin/traffic.js"></script>
@@ -269,5 +293,10 @@
   <script src="/admin/limits.js"></script>
   <script src="/admin/appearance.js"></script>
   <script src="/admin/tabs.js"></script>
+
+  <script>
+    // Inicjuj i18n po załadowaniu wszystkich modułów
+    document.addEventListener('DOMContentLoaded', () => initAdminI18n());
+  </script>
 </body>
 </html>

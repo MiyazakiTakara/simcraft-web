@@ -155,5 +155,121 @@
     "sim_failed": "Simulation ended with an error",
     "result_not_ready": "Result is not ready yet",
     "network": "Network error — check your connection"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "logout": "Log out",
+    "tabs": {
+      "dashboard": "Dashboard",
+      "traffic": "📈 Traffic",
+      "news": "News",
+      "users": "Users",
+      "logs": "Logs",
+      "maintenance": "Maintenance",
+      "limits": "Limits",
+      "health": "Health",
+      "tasks": "Tasks",
+      "appearance": "Appearance"
+    },
+    "dashboard": {
+      "title": "Server Statistics",
+      "total_sims": "Total simulations",
+      "total_users": "Users",
+      "today": "Today",
+      "last_7d": "Last 7 days",
+      "last_30d": "Last 30 days",
+      "active_jobs": "Active jobs",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "uptime": "Uptime",
+      "chart_trend": "Simulations — last 30 days",
+      "chart_classes": "Class distribution",
+      "chart_fightstyle": "Fight Style",
+      "chart_top10": "Top 10 DPS"
+    },
+    "traffic": {
+      "title": "Site Traffic",
+      "today": "Today",
+      "unique_today": "Unique today",
+      "week": "7 days",
+      "month": "30 days",
+      "unique_30d": "Unique 30 days",
+      "total": "Total visits",
+      "chart_daily": "Visits — last 30 days",
+      "chart_hourly": "Activity by hour (7 days)",
+      "top_pages": "Top 10 pages (30 days)",
+      "refresh": "Refresh"
+    },
+    "news": {
+      "add_title": "Add news",
+      "title_placeholder": "News title...",
+      "body_placeholder": "Content...",
+      "published_label": "Published",
+      "add_btn": "Add news",
+      "list_title": "News",
+      "loading": "Loading...",
+      "empty": "No news yet.",
+      "hide": "Hide",
+      "publish": "Publish",
+      "delete": "Delete",
+      "badge_published": "published",
+      "badge_draft": "draft"
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "User list based on simulation history.",
+      "refresh": "Refresh",
+      "search_placeholder": "Search...",
+      "loading": "Loading...",
+      "empty": "No users found.",
+      "modal_title": "User simulations",
+      "no_sims": "No simulations.",
+      "view_result": "View result ↗"
+    },
+    "logs": {
+      "title": "Logs",
+      "refresh": "Refresh",
+      "filter_all": "All",
+      "loading": "Loading...",
+      "empty": "No logs found."
+    },
+    "maintenance": {
+      "title": "Simulation Management",
+      "subtitle": "Delete old simulations from the database.",
+      "days_placeholder": "Days (e.g. 30)",
+      "delete_older": "Delete older than X days",
+      "delete_all": "Delete ALL"
+    },
+    "limits": {
+      "title": "Limit Management",
+      "subtitle": "Change system limits.",
+      "concurrent": "Max concurrent simulations:",
+      "rate": "Rate limit per minute:",
+      "timeout": "Simulation timeout (s):",
+      "save": "Save limits"
+    },
+    "health": {
+      "title": "Health Check",
+      "refresh": "Refresh",
+      "loading": "Loading..."
+    },
+    "tasks": {
+      "title": "Task Management",
+      "refresh": "Refresh",
+      "loading": "Loading...",
+      "empty": "No active tasks.",
+      "cancel": "Cancel"
+    },
+    "appearance": {
+      "title": "Site Appearance",
+      "subtitle": "Customize the look of the main page.",
+      "header_title": "Header title:",
+      "hero_title": "Landing hero title:",
+      "hero_custom_label": "Custom hero text (optional)",
+      "hero_custom_hint": "If filled, this replaces the entire default hero block.",
+      "emoji_label": "Site icon (emoji):",
+      "save": "Save appearance"
+    },
+    "refresh_label": "last updated:"
   }
 }

@@ -155,5 +155,121 @@
     "sim_failed": "Symulacja zakończona błędem",
     "result_not_ready": "Wynik nie jest jeszcze gotowy",
     "network": "Błąd sieci — sprawdź połączenie"
+  },
+  "admin": {
+    "title": "Panel Admina",
+    "logout": "Wyloguj",
+    "tabs": {
+      "dashboard": "Dashboard",
+      "traffic": "📈 Ruch",
+      "news": "Newsy",
+      "users": "Użytkownicy",
+      "logs": "Logi",
+      "maintenance": "Utrzymanie",
+      "limits": "Limity",
+      "health": "Health",
+      "tasks": "Zadania",
+      "appearance": "Wygląd"
+    },
+    "dashboard": {
+      "title": "Statystyki serwera",
+      "total_sims": "Wszystkich symulacji",
+      "total_users": "Użytkowników",
+      "today": "Dziś",
+      "last_7d": "Ostatnie 7 dni",
+      "last_30d": "Ostatnie 30 dni",
+      "active_jobs": "Aktywne zadania",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "uptime": "Uptime",
+      "chart_trend": "Symulacje — ostatnie 30 dni",
+      "chart_classes": "Rozkład klas",
+      "chart_fightstyle": "Fight Style",
+      "chart_top10": "Top 10 DPS"
+    },
+    "traffic": {
+      "title": "Ruch na stronie",
+      "today": "Dziś",
+      "unique_today": "Unikalni dziś",
+      "week": "7 dni",
+      "month": "30 dni",
+      "unique_30d": "Unikalni 30 dni",
+      "total": "Wszystkich wizyt",
+      "chart_daily": "Odwiedziny — ostatnie 30 dni",
+      "chart_hourly": "Aktywność wg godziny (7 dni)",
+      "top_pages": "Top 10 podstron (30 dni)",
+      "refresh": "Odśwież"
+    },
+    "news": {
+      "add_title": "Dodaj news",
+      "title_placeholder": "Tytuł newsa...",
+      "body_placeholder": "Treść...",
+      "published_label": "Opublikowany",
+      "add_btn": "Dodaj news",
+      "list_title": "Newsy",
+      "loading": "Ładowanie...",
+      "empty": "Brak newsów.",
+      "hide": "Ukryj",
+      "publish": "Publikuj",
+      "delete": "Usuń",
+      "badge_published": "opublikowany",
+      "badge_draft": "szkic"
+    },
+    "users": {
+      "title": "Użytkownicy",
+      "subtitle": "Lista użytkowników na podstawie historii symulacji.",
+      "refresh": "Odśwież",
+      "search_placeholder": "Szukaj...",
+      "loading": "Ładowanie...",
+      "empty": "Brak użytkowników.",
+      "modal_title": "Symulacje użytkownika",
+      "no_sims": "Brak symulacji.",
+      "view_result": "Zobacz wynik ↗"
+    },
+    "logs": {
+      "title": "Logi",
+      "refresh": "Odśwież",
+      "filter_all": "Wszystkie",
+      "loading": "Ładowanie...",
+      "empty": "Brak logów."
+    },
+    "maintenance": {
+      "title": "Zarządzanie symulacjami",
+      "subtitle": "Usuń stare symulacje z bazy danych.",
+      "days_placeholder": "Dni (np. 30)",
+      "delete_older": "Usuń starsze niż X dni",
+      "delete_all": "Usuń WSZYSTKIE"
+    },
+    "limits": {
+      "title": "Zarządzanie limitami",
+      "subtitle": "Zmiana limitów systemowych.",
+      "concurrent": "Max jednoczesnych symulacji:",
+      "rate": "Limit zapytań/min:",
+      "timeout": "Timeout symulacji (s):",
+      "save": "Zapisz limity"
+    },
+    "health": {
+      "title": "Health Check",
+      "refresh": "Odśwież",
+      "loading": "Ładowanie..."
+    },
+    "tasks": {
+      "title": "Zarządzanie zadaniami",
+      "refresh": "Odśwież",
+      "loading": "Ładowanie...",
+      "empty": "Brak aktywnych zadań.",
+      "cancel": "Anuluj"
+    },
+    "appearance": {
+      "title": "Wygląd strony",
+      "subtitle": "Dostosuj wygląd strony głównej.",
+      "header_title": "Tytuł w headerze:",
+      "hero_title": "Tytuł landing hero:",
+      "hero_custom_label": "Własny tekst hero (opcjonalnie)",
+      "hero_custom_hint": "Jeśli wpiszesz tekst poniżej, zastąpi on cały domyślny blok hero.",
+      "emoji_label": "Ikona strony (emoji):",
+      "save": "Zapisz wygląd"
+    },
+    "refresh_label": "ostatnia aktualizacja:"
   }
 }
