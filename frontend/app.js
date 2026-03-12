@@ -76,16 +76,16 @@ function app() {
     _trendChart:     null,
 
     // Settings page state
-    settingsLoading: true,
-    settingsError: null,
-    settingsSaved: false,
-    settingsSaveMsg: '',
-    settingsSaveOk: true,
+    settingsLoading:    true,
+    settingsError:      null,
+    settingsSaved:      false,
+    settingsSaveMsg:   '',
+    settingsSaveOk:    true,
     form: {
-      main_character_name: '',
+      main_character_name:  '',
       main_character_realm: '',
-      profile_private: false,
-      manualEntry: false,
+      profile_private:      false,
+      manualEntry:         false,
     },
 
     formatDps(v)                  { return Utils.formatDps(v); },
@@ -282,6 +282,20 @@ function app() {
         'Warlock': '#8788EE', 'Warrior': '#C69B3A',
       };
       return colors[className] || '#888';
+    },
+
+    onCharSelect() {
+      const ch = this.characters.find(c => c.name === this.form.main_character_name);
+      if (ch) {
+        this.form.main_character_realm = ch.realm;
+      }
+    },
+
+    onManualToggle() {
+      if (this.form.manualEntry) {
+        this.form.main_character_name = '';
+        this.form.main_character_realm = '';
+      }
     },
 
     onCharSelect() {
