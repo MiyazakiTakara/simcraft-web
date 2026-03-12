@@ -2,6 +2,14 @@ function settingsMixin() {
   console.log('settingsMixin called, returning object with form_main_character_name etc.');
   console.trace();
   const result = {
+    loading: true,
+    isLoggedIn: false,
+    error: null,
+    saving: false,
+    saveMsg: '',
+    saveMsgOk: true,
+    characters: [],
+    charPrivacies: {},
     loading:    true,
     isLoggedIn: false,
     error:      null,
