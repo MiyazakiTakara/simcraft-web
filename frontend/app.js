@@ -414,14 +414,14 @@ function app() {
         if (saved) this.sessionId = saved;
       }
 
+      // Home zawsze pokazuje publiczną historię (ostatnie symulacje wszystkich userów).
+      // Prywatna historia zalogowanego usera ładowana jest dopiero w zakładce Profil → Historia.
+      this.loadPublicHistory();
+      this.loadNews();
+
       if (this.sessionId) {
         this.loadCharacters();
-        this.loadHistory();
-        this.loadNews();
         this.checkFirstLogin();
-      } else {
-        this.loadPublicHistory();
-        this.loadNews();
       }
 
       // Persist active view via URL hash
