@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import os
 from fastapi import APIRouter, HTTPException
@@ -410,6 +412,45 @@ async def get_result_json(job_id: str):
     if not job or job.get("status") != "done":
         raise HTTPException(404, "Result not ready")
     return parse_results(job["json_path"])
+
+
+@router.get("/api/result/{job_id}/csv")
+async def get_result_csv(job_id: str):
+    job = _get_job(job_id)
+    if not job or job.get("status") != "done":
+        raise HTTPException(404, "Result not ready")
+
+    data = parse_results(job["json_path"])
+    if "error" in data:
+        raise HTTPException(500, data["error"])
+
+    spells = data.get("spells", [])
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(
+        buf,
+        fieldnames=["spell", "dps", "dps_pct", "total_dmg", "dmg_pct", "crit_pct", "avg_hit", "count"],
+        extrasaction="ignore",
+    )
+    writer.writeheader()
+    for s in spells:
+        writer.writerow({
+            "spell":     s.get("name", ""),
+            "dps":       s.get("dps", 0),
+            "dps_pct":   s.get("dps_pct", 0),
+            "total_dmg": s.get("total_dmg", 0),
+            "dmg_pct":   s.get("dmg_pct", 0),
+            "crit_pct":  s.get("crit_pct", 0),
+            "avg_hit":   s.get("avg_hit", 0),
+            "count":     s.get("count", 0),
+        })
+
+    csv_bytes = buf.getvalue().encode("utf-8")
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="result_{job_id}.csv"'},
+    )
 
 
 @router.get("/api/result/{job_id}/dps-chart.png")
