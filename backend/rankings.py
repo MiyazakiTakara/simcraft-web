@@ -12,11 +12,12 @@ WOW_CLASSES = [
 
 FIGHT_STYLES = ["Patchwerk", "HecticAddCleave", "LightMovement", "HeavyMovement"]
 
-# Wspólny JOIN żeby wykluczyć prywatnych userów
 _PRIVACY_JOIN = """
     LEFT JOIN users u ON u.bnet_id = h.user_id
 """
 _PRIVACY_FILTER = "(u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)"
+# Exclude simulations submitted via WoW addon without a session (source = 'addon')
+_SOURCE_FILTER  = "(h.source IS NULL OR h.source != 'addon')"
 
 
 @router.get("/api/rankings")
@@ -29,6 +30,7 @@ def get_rankings(
     filters = [
         "h.dps IS NOT NULL", "h.dps > 0", "h.character_name IS NOT NULL",
         _PRIVACY_FILTER,
+        _SOURCE_FILTER,
     ]
     params = {"fight_style": fight_style, "limit": limit}
 
@@ -108,6 +110,7 @@ def get_top3(fight_style: str = Query(default="Patchwerk")):
           AND h.character_name IS NOT NULL
           AND LOWER(h.fight_style) = LOWER(:fight_style)
           AND {_PRIVACY_FILTER}
+          AND {_SOURCE_FILTER}
         ORDER BY
             LOWER(h.character_name),
             LOWER(COALESCE(h.character_realm_slug, '')),
@@ -148,6 +151,7 @@ def get_rankings_meta():
         LEFT JOIN users u ON u.bnet_id = h.user_id
         WHERE h.character_class IS NOT NULL AND h.character_spec IS NOT NULL
           AND (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
+          AND (h.source IS NULL OR h.source != 'addon')
         ORDER BY h.character_class, h.character_spec
     """)
 

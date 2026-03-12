@@ -26,8 +26,7 @@ SIMC_PATH    = os.environ.get("SIMC_PATH", "/app/SimulationCraft/simc")
 JOB_TIMEOUT  = int(os.environ.get("JOB_TIMEOUT", "360"))
 SIMC_APIKEY_PATH = os.environ.get("SIMC_APIKEY_PATH", "/root/.simc_apikey")
 
-# Stale wpisy starsze niż JOBS_TTL sekund są usuwane przez watchdog
-JOBS_TTL = int(os.environ.get("JOBS_TTL", str(60 * 60 * 4)))  # domyślnie 4h
+JOBS_TTL = int(os.environ.get("JOBS_TTL", str(60 * 60 * 4)))
 
 MAX_ADDON_TEXT_LENGTH = 50000
 
@@ -69,7 +68,6 @@ def _count_running() -> int:
 
 
 def _release_slot(job_id: str):
-    """Zwalnia slot tylko raz — ustawia counted=False."""
     with _running_lock:
         job = jobs.get(job_id)
         if job and job.get("counted"):
@@ -108,7 +106,6 @@ def _build_simc_input(req: SimRequest, out_path: str) -> str:
 
 
 def _run_sim(job_id: str, simc_input: str, out_path: str):
-    """out_path przekazywany jako argument — unikamy czytania jobs[] poza _running_lock."""
     job_dir  = os.path.join(RESULTS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     inp_path = os.path.join(job_dir, "input.simc")
@@ -147,7 +144,6 @@ def _run_sim(job_id: str, simc_input: str, out_path: str):
 
 
 def _watchdog():
-    """Co 60s: timeout aktywnych jobów + czyszczenie starych wpisów z jobs{}."""
     while True:
         time.sleep(60)
         now = time.time()
@@ -156,7 +152,6 @@ def _watchdog():
         for job_id, job in list(jobs.items()):
             started = job.get("started_at", now)
 
-            # Timeout aktywnego joba
             if job.get("counted") and now - started > JOB_TIMEOUT + 60:
                 jobs[job_id]["status"] = "error"
                 jobs[job_id]["error"]  = "Job timeout (watchdog)"
@@ -164,7 +159,6 @@ def _watchdog():
                 _release_slot(job_id)
                 log.warning("job-timeout", job_id=job_id)
 
-            # Usunięcie zakończonych/błędnych wpisów starszych niż JOBS_TTL
             if not job.get("counted") and now - started > JOBS_TTL:
                 to_delete.append(job_id)
 
@@ -184,6 +178,9 @@ async def start_sim(request: Request, req: SimRequest):
     if not req.addon_text and not (req.name and req.realm_slug):
         raise HTTPException(400, "Podaj addon_text lub name+realm_slug")
 
+    # Determine source: addon_text without session = 'addon', all other cases = 'web'
+    source = "addon" if (req.addon_text and not req.session) else "web"
+
     with _running_lock:
         if _count_running() >= MAX_CONCURRENT:
             raise HTTPException(429, f"Serwer zajety ({MAX_CONCURRENT} symulacji rownoczesnie). Sprobuj za chwile.")
@@ -199,16 +196,17 @@ async def start_sim(request: Request, req: SimRequest):
             "error":      None,
             "started_at": time.time(),
             "counted":    True,
+            "source":     source,
         }
 
-    log.info("sim-started", job_id=job_id, addon_text=bool(req.addon_text), character=req.name, realm=req.realm_slug)
+    log.info("sim-started", job_id=job_id, source=source, addon_text=bool(req.addon_text), character=req.name, realm=req.realm_slug)
     create_job(job_id, out_path)
 
     simc_input = _build_simc_input(req, out_path)
     t = threading.Thread(target=_run_sim, args=(job_id, simc_input, out_path), daemon=True)
     t.start()
 
-    return {"job_id": job_id}
+    return {"job_id": job_id, "source": source}
 
 
 @router.get("/api/job/{job_id}")
