@@ -282,11 +282,9 @@ function app() {
       void container.offsetWidth;
       container.classList.add('view-enter');
 
-      if (name === 'ustawienia') {
-        // Widok ustawienia ma własne x-data="settingsMixin()" więc wymaga initTree
-        if (typeof Alpine !== 'undefined') {
-          Alpine.nextTick(() => Alpine.initTree(container));
-        }
+      // Inicjuj Alpine dla wszystkich widoków — niektóre (home, ustawienia) mają własne x-data
+      if (typeof Alpine !== 'undefined') {
+        Alpine.nextTick(() => Alpine.initTree(container));
       }
     },
 
