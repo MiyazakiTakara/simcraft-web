@@ -150,6 +150,17 @@ function settingsMixin() {
 
     async init() {
       console.log('[Settings] init called');
+      // Wait for window.__alpineApp to be defined
+      if (!window.__alpineApp) {
+        console.log('[Settings] window.__alpineApp not defined, waiting...');
+        await new Promise(resolve => {
+          const check = () => {
+            if (window.__alpineApp) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        });
+      }
       console.log('[Settings] __alpineApp:', window.__alpineApp?.sessionId);
       console.log('[Settings] localStorage session:', localStorage.getItem('simcraft_session'));
       console.log('[Settings] this:', this);
