@@ -8,6 +8,12 @@ function settingsMixin() {
     saveMsgOk:  true,
     characters: [],
     charPrivacies: {},
+    form: {
+      main_character_name: '',
+      main_character_realm: '',
+      profile_private: false,
+      manualEntry: false,
+    },
 
     classColor(className) {
       const colors = {
