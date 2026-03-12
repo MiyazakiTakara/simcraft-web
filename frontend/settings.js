@@ -331,6 +331,7 @@ console.log('window.settingsMixin defined:', typeof window.settingsMixin);
 // Register mixin globally with Alpine.data() for dynamically loaded views
 // Ensure Alpine is loaded before registering
 function registerSettingsMixin() {
+  console.log('registerSettingsMixin called, Alpine:', typeof Alpine);
   if (typeof Alpine !== 'undefined') {
     console.log('Registering settingsMixin with Alpine');
     Alpine.data('settingsMixin', settingsMixin);
