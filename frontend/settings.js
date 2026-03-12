@@ -125,11 +125,13 @@ function settingsMixin() {
     _waitForSession() {
       return new Promise((resolve) => {
         const session = this._getSession();
+        console.log('[Settings] _getSession returned:', session);
         if (session) { resolve(session); return; }
         // __alpineApp może jeszcze nie być gotowy — czekamy max 2s
         let tries = 0;
         const interval = setInterval(() => {
           const s = this._getSession();
+          console.log('[Settings] Retry _getSession:', s, 'tries:', tries);
           if (s || ++tries > 40) {
             clearInterval(interval);
             resolve(s || null);
@@ -139,18 +141,24 @@ function settingsMixin() {
     },
 
     async init() {
+      console.log('[Settings] init called');
+      console.log('[Settings] __alpineApp:', window.__alpineApp?.sessionId);
+      console.log('[Settings] localStorage session:', localStorage.getItem('simcraft_session'));
       this.loading    = true;
       this.error      = null;
       this.isLoggedIn = false;
 
       const session = await this._waitForSession();
+      console.log('[Settings] Got session:', session);
       if (!session) {
         this.loading = false;
         return;
       }
 
       try {
+        console.log('[Settings] Fetching settings...');
         const res = await fetch(`/auth/session/settings?session=${session}`);
+        console.log('[Settings] Response status:', res.status);
         if (res.status === 401) {
           this.loading = false;
           return;
@@ -163,6 +171,7 @@ function settingsMixin() {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           this.error   = this.$store.i18n.t('common.error_prefix') + (data.detail || res.status);
+          console.log('[Settings] Error:', this.error);
           this.loading = false;
           return;
         }
