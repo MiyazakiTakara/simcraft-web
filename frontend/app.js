@@ -308,7 +308,7 @@ function app() {
             Alpine.nextTick(() => {
               Alpine.initTree(container);
             });
-          }, 100);
+          }, 500);
         }
       }
     },
