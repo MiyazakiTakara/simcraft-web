@@ -326,10 +326,16 @@ console.log('window.settingsMixin defined:', typeof window.settingsMixin);
 // Ensure Alpine is loaded before registering
 function registerSettingsMixin() {
   if (typeof Alpine !== 'undefined') {
+    console.log('Registering settingsMixin with Alpine');
     Alpine.data('settingsMixin', settingsMixin);
   } else {
     // Retry after a short delay
+    console.log('Alpine not found, retrying...');
     setTimeout(registerSettingsMixin, 100);
   }
 }
-registerSettingsMixin();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', registerSettingsMixin);
+} else {
+  registerSettingsMixin();
+}
