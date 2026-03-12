@@ -48,7 +48,7 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
 - [ ] **Settings: character picker** — replace manual name/realm text inputs with character list (same as simulation tab); user clicks to select, no typing
 - [ ] **Settings: per-character privacy** — in addition to global account privacy toggle, allow hiding/showing individual characters from public profile
-- [ ] **Rankings: exclude addon simulations** — filter out results submitted via the WoW addon (`source=addon` flag); only web simulations should appear in rankings
+- [x] **Rankings: exclude addon simulations** — filter out results submitted via the WoW addon (`source=addon` flag); only web simulations should appear in rankings
 - [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
 - [ ] **Skeleton loaders: profil.html** — char cards grid and history section still missing skeletons
 
@@ -56,6 +56,9 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - [x] **Skeleton loaders: home.html + symulacje.html** — public history grid, top 3 podium, history sidebar ([#27](https://github.com/MiyazakiTakara/simcraft-web/issues/27))
 - [x] **Smart history loading** — `navigateTo()` switches between public/private history per view; `historyLoading` → `loadingHistory` ReferenceError fixed ([#33](https://github.com/MiyazakiTakara/simcraft-web/issues/33))
 - [x] **Fix `/rankings` 404** — added explicit FastAPI route; `StaticFiles(html=True)` does not auto-map `/foo` → `foo.html` ([#32](https://github.com/MiyazakiTakara/simcraft-web/issues/32))
+- [x] **Auto build version** — Dockerfile now auto-generates version tag from git hash to prevent browser cache issues
+- [x] **Fix `/result/{job_id}` 404** — added explicit route to serve result.html ([#34](https://github.com/MiyazakiTakara/simcraft-web/issues/34))
+- [x] **Fix result page data loading** — added missing `/api/result/{job_id}/meta` endpoint for character info
 
 ## Requirements
 
