@@ -154,8 +154,18 @@
       <a href="/rankings" style="font-size:.85rem;color:var(--accent);text-decoration:none">Zobacz pełne rankingi →</a>
     </div>
 
+    <!-- Skeleton: ładowanie podium -->
     <template x-if="top3Loading">
-      <div style="text-align:center;padding:1.5rem;color:var(--muted)">⏳</div>
+      <div class="home-podium">
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="home-podium-card skeleton-card" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem">
+            <div class="skeleton skeleton-avatar" style="width:2.5rem;height:2.5rem;border-radius:50%"></div>
+            <div class="skeleton skeleton-title" style="width:70%"></div>
+            <div class="skeleton skeleton-text" style="width:55%"></div>
+            <div class="skeleton skeleton-text" style="width:40%"></div>
+          </div>
+        </template>
+      </div>
     </template>
 
     <template x-if="!top3Loading && top3.length === 0">
@@ -203,29 +213,50 @@
 
     <template x-if="!pubResult || pubResult._source === 'addon'">
       <div>
-        <template x-if="history.length === 0">
-          <p style="color:var(--muted);font-size:.88rem" x-text="$store.i18n.t('history.public_empty')"></p>
-        </template>
-        <div class="landing-history-grid">
-          <template x-for="entry in pagedHistory" :key="entry.job_id">
-            <div class="pub-history-card" @click="window.location.href = '/result/' + entry.job_id">
-              <div class="pub-card-name">
-                <span x-text="entry.character_name || 'Addon Export'"></span>
-                <span class="role-badge" x-text="roleIcon(entry.role || 'dps') + ' ' + roleLabel(entry.role || 'dps')"></span>
+        <!-- Skeleton: ładowanie publicznej historii -->
+        <template x-if="historyLoading">
+          <div class="landing-history-grid">
+            <template x-for="i in [1,2,3,4,5,6]" :key="i">
+              <div class="pub-history-card skeleton-card">
+                <div style="display:flex;flex-direction:column;gap:.45rem">
+                  <div class="skeleton skeleton-title" style="width:60%"></div>
+                  <div class="skeleton skeleton-text" style="width:40%"></div>
+                  <div class="skeleton skeleton-text" style="width:50%"></div>
+                  <div class="skeleton skeleton-text" style="width:70%"></div>
+                </div>
               </div>
-              <div class="pub-card-class" x-show="entry.character_class" :style="{color: classColor(entry.character_class)}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + (entry.character_class || '')"></div>
-              <div class="pub-card-dps" x-text="formatDps(entry.dps)"></div>
-              <div class="pub-card-meta" x-text="entry.fight_style + ' · ' + formatTime(entry.created_at)"></div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Załadowana historia -->
+        <template x-if="!historyLoading">
+          <div>
+            <template x-if="history.length === 0">
+              <p style="color:var(--muted);font-size:.88rem" x-text="$store.i18n.t('history.public_empty')"></p>
+            </template>
+            <div class="landing-history-grid">
+              <template x-for="entry in pagedHistory" :key="entry.job_id">
+                <div class="pub-history-card" @click="window.location.href = '/result/' + entry.job_id">
+                  <div class="pub-card-name">
+                    <span x-text="entry.character_name || 'Addon Export'"></span>
+                    <span class="role-badge" x-text="roleIcon(entry.role || 'dps') + ' ' + roleLabel(entry.role || 'dps')"></span>
+                  </div>
+                  <div class="pub-card-class" x-show="entry.character_class" :style="{color: classColor(entry.character_class)}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + (entry.character_class || '')"></div>
+                  <div class="pub-card-dps" x-text="formatDps(entry.dps)"></div>
+                  <div class="pub-card-meta" x-text="entry.fight_style + ' · ' + formatTime(entry.created_at)"></div>
+                </div>
+              </template>
             </div>
-          </template>
-        </div>
-        <div class="pagination" x-show="historyPageCount > 1">
-          <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
-          <template x-for="p in historyPages()" :key="p">
-            <button :class="{active: historyPage === p}" @click="historyPage = p" x-text="p"></button>
-          </template>
-          <button @click="historyPage < historyPageCount && historyPage++" :disabled="historyPage === historyPageCount">&raquo;</button>
-        </div>
+            <div class="pagination" x-show="historyPageCount > 1">
+              <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
+              <template x-for="p in historyPages()" :key="p">
+                <button :class="{active: historyPage === p}" @click="historyPage = p" x-text="p"></button>
+              </template>
+              <button @click="historyPage < historyPageCount && historyPage++" :disabled="historyPage === historyPageCount">&raquo;</button>
+            </div>
+          </div>
+        </template>
       </div>
     </template>
 
