@@ -1,11 +1,6 @@
 function settingsMixin() {
-  console.log('settingsMixin called, returning object with form:', {
-    main_character_name: '',
-    main_character_realm: '',
-    profile_private: false,
-    manualEntry: false,
-  });
-  return {
+  console.log('settingsMixin called, returning object with form_main_character_name etc.');
+  const result = {
     loading:    true,
     isLoggedIn: false,
     error:      null,
@@ -294,6 +289,8 @@ function settingsMixin() {
       }
     },
   };
+  console.log('Returned object keys:', Object.keys(result));
+  return result;
 }
 
 // Make functions available globally for Alpine in dynamically loaded views
