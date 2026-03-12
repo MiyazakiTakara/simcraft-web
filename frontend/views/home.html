@@ -142,6 +142,58 @@
     </div>
   </div>
 
+  <!-- 🏆 Top 3 Podium (home preview) -->
+  <div class="landing-history-section" x-data="{ top3: [], top3Loading: true }" x-init="
+    fetch('/api/rankings/top3?fight_style=Patchwerk')
+      .then(r => r.json())
+      .then(d => { top3 = d.top3 || []; top3Loading = false; })
+      .catch(() => { top3Loading = false; })
+  ">
+    <div class="landing-history-header">
+      <h2>🏆 Top DPS</h2>
+      <a href="/rankings" style="font-size:.85rem;color:var(--accent);text-decoration:none">Zobacz pełne rankingi →</a>
+    </div>
+
+    <template x-if="top3Loading">
+      <div style="text-align:center;padding:1.5rem;color:var(--muted)">⏳</div>
+    </template>
+
+    <template x-if="!top3Loading && top3.length === 0">
+      <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:.88rem">Brak wyników — rozegraj pierwszą symulację!</div>
+    </template>
+
+    <template x-if="!top3Loading && top3.length > 0">
+      <div class="home-podium">
+        <!-- #2 srebro (jeśli istnieje) -->
+        <template x-if="top3.length >= 2">
+          <a :href="'/result/' + top3[1].job_id" class="home-podium-card home-podium-silver">
+            <div class="home-podium-medal">🥈</div>
+            <div class="home-podium-name" :style="{color: classColor(top3[1].character_class)}" x-text="top3[1].character_name"></div>
+            <div class="home-podium-spec" x-text="(top3[1].character_spec||'') + ' ' + top3[1].character_class"></div>
+            <div class="home-podium-dps" x-text="formatDps(top3[1].dps)"></div>
+          </a>
+        </template>
+        <!-- #1 złoto -->
+        <a :href="'/result/' + top3[0].job_id" class="home-podium-card home-podium-gold">
+          <div class="home-podium-crown">👑</div>
+          <div class="home-podium-medal">🥇</div>
+          <div class="home-podium-name" :style="{color: classColor(top3[0].character_class)}" x-text="top3[0].character_name"></div>
+          <div class="home-podium-spec" x-text="(top3[0].character_spec||'') + ' ' + top3[0].character_class"></div>
+          <div class="home-podium-dps" x-text="formatDps(top3[0].dps)"></div>
+        </a>
+        <!-- #3 brąz (jeśli istnieje) -->
+        <template x-if="top3.length >= 3">
+          <a :href="'/result/' + top3[2].job_id" class="home-podium-card home-podium-bronze">
+            <div class="home-podium-medal">🥉</div>
+            <div class="home-podium-name" :style="{color: classColor(top3[2].character_class)}" x-text="top3[2].character_name"></div>
+            <div class="home-podium-spec" x-text="(top3[2].character_spec||'') + ' ' + top3[2].character_class"></div>
+            <div class="home-podium-dps" x-text="formatDps(top3[2].dps)"></div>
+          </a>
+        </template>
+      </div>
+    </template>
+  </div>
+
   <!-- Publiczna historia -->
   <div class="landing-history-section">
     <div class="landing-history-header">

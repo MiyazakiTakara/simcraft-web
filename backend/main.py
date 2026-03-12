@@ -29,6 +29,7 @@ from results import router as results_router
 from history import router as history_router
 from admin import router as admin_router, load_appearance_config
 from reactions import router as reactions_router
+from rankings import router as rankings_router
 
 log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
@@ -69,7 +70,7 @@ class NoCacheStaticMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         path = request.url.path.split("?")[0]
-        if path.endswith((".js", ".css", ".html")) or path in ("/",) or path.startswith("/result/") or path.startswith("/api/"):
+        if path.endswith((".js", ".css", ".html")) or path in ("/",) or path.startswith("/result/") or path.startswith("/api/") or path == "/rankings":
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
@@ -85,6 +86,7 @@ app.include_router(results_router)
 app.include_router(history_router)
 app.include_router(admin_router)
 app.include_router(reactions_router)
+app.include_router(rankings_router)
 
 
 # ---------- Publiczny endpoint appearance (bez autoryzacji) ----------
@@ -105,6 +107,12 @@ async def get_appearance_public():
 
 
 BASE_URL = os.environ.get("BASE_URL", "https://sim.miyazakitakara.ovh")
+
+
+@app.get("/rankings", response_class=HTMLResponse)
+async def rankings_page():
+    with open("/app/frontend/rankings.html") as f:
+        return HTMLResponse(content=f.read())
 
 
 @app.get("/result/{job_id}", response_class=HTMLResponse)
