@@ -31,7 +31,7 @@
       <div class="settings-row">
         <label x-text="$store.i18n.t('settings.char_name')"></label>
         <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
-          <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
+          <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
             <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
             <template x-for="ch in characters" :key="ch.id">
               <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
@@ -39,16 +39,16 @@
           </select>
           <div style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:.5rem">
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer">
-              <input type="checkbox" x-model="form.manualEntry" @change="onManualToggle()" />
+              <input type="checkbox" x-model="form_manualEntry" @change="onManualToggle()" />
               <span x-text="$store.i18n.t('settings.manual_entry')"></span>
             </label>
           </div>
-          <template x-if="form.manualEntry">
+          <template x-if="form_manualEntry">
             <div style="display:flex;flex-direction:column;gap:.5rem">
-              <input type="text" x-model="form.main_character_name"
+              <input type="text" x-model="form_main_character_name"
                      :placeholder="$store.i18n.t('settings.char_name_placeholder')"
                      class="settings-input" />
-              <input type="text" x-model="form.main_character_realm"
+              <input type="text" x-model="form_main_character_realm"
                      :placeholder="$store.i18n.t('settings.char_realm_placeholder')"
                      class="settings-input" />
             </div>
@@ -67,26 +67,26 @@
         </div>
         <button
           class="toggle-btn"
-          :class="{ active: form.profile_private }"
-          @click="form.profile_private = !form.profile_private"
-          :aria-pressed="form.profile_private"
-          :title="form.profile_private ? $store.i18n.t('settings.private_on') : $store.i18n.t('settings.private_off')"
+          :class="{ active: form_profile_private }"
+          @click="form_profile_private = !form_profile_private"
+          :aria-pressed="form_profile_private"
+          :title="form_profile_private ? $store.i18n.t('settings.private_on') : $store.i18n.t('settings.private_off')"
         >
           <span class="toggle-knob"></span>
         </button>
       </div>
       <!-- Info banner gdy włączone -->
-      <div x-show="form.profile_private" class="settings-private-banner">
+      <div x-show="form_profile_private" class="settings-private-banner">
         <span>🔒</span>
         <span x-text="$store.i18n.t('settings.private_active_info')"></span>
       </div>
     </section>
 
     <!-- ── Sekcja: Prywatność postaci ── -->
-    <section class="settings-section" :style="form.profile_private ? 'opacity:0.5;pointer-events:none' : ''">
+    <section class="settings-section" :style="form_profile_private ? 'opacity:0.5;pointer-events:none' : ''">
       <h3 x-text="$store.i18n.t('settings.char_privacy')"></h3>
       <p class="settings-hint" x-text="$store.i18n.t('settings.char_privacy_hint')"></p>
-      <template x-if="form.profile_private">
+      <template x-if="form_profile_private">
         <div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem" x-text="$store.i18n.t('settings.char_privacy_disabled')"></div>
       </template>
       

@@ -14,12 +14,10 @@ function settingsMixin() {
     saveMsgOk:  true,
     characters: [],
     charPrivacies: {},
-    form: {
-      main_character_name: '',
-      main_character_realm: '',
-      profile_private: false,
-      manualEntry: false,
-    },
+    form_main_character_name: '',
+    form_main_character_realm: '',
+    form_profile_private: false,
+    form_manualEntry: false,
 
     classColor(className) {
       const colors = {
@@ -111,16 +109,16 @@ function settingsMixin() {
     },
 
     onCharSelect() {
-      const ch = this.characters.find(c => c.name === this.form.main_character_name);
+      const ch = this.characters.find(c => c.name === this.form_main_character_name);
       if (ch) {
-        this.form.main_character_realm = ch.realm;
+        this.form_main_character_realm = ch.realm;
       }
     },
 
     onManualToggle() {
-      if (this.form.manualEntry) {
-        this.form.main_character_name = '';
-        this.form.main_character_realm = '';
+      if (this.form_manualEntry) {
+        this.form_main_character_name = '';
+        this.form_main_character_realm = '';
       }
     },
 
@@ -183,14 +181,19 @@ function settingsMixin() {
           return;
         }
         const data = await res.json();
-        this.form.main_character_name  = data.main_character_name  || '';
-        this.form.main_character_realm = data.main_character_realm || '';
-        this.form.profile_private      = !!data.profile_private;
+        this.form_main_character_name  = data.main_character_name  || '';
+        this.form_main_character_realm = data.main_character_realm || '';
+        this.form_profile_private      = !!data.profile_private;
         this.isLoggedIn = true;
 
         // Also sync to window.__alpineApp for template access
         if (window.__alpineApp) {
-          window.__alpineApp.form = this.form;
+          window.__alpineApp.form = {
+            main_character_name: this.form_main_character_name,
+            main_character_realm: this.form_main_character_realm,
+            profile_private: this.form_profile_private,
+            manualEntry: this.form_manualEntry,
+          };
         }
 
         // Ładuj listę postaci
@@ -220,8 +223,8 @@ function settingsMixin() {
       this.saveMsg = '';
       const session = this._getSession();
 
-      const name  = this.form.main_character_name.trim();
-      const realm = this.form.main_character_realm.trim();
+      const name  = this.form_main_character_name.trim();
+      const realm = this.form_main_character_realm.trim();
       if (name && !realm) {
         this.saveMsg   = this.$store.i18n.t('settings.realm_required');
         this.saveMsgOk = false;
@@ -236,7 +239,7 @@ function settingsMixin() {
           body:    JSON.stringify({
             main_character_name:  name  || null,
             main_character_realm: realm || null,
-            profile_private:      this.form.profile_private,
+            profile_private:      this.form_profile_private,
           }),
         });
 
@@ -263,7 +266,12 @@ function settingsMixin() {
           window.__alpineApp.mainChar = data.main_character_name
             ? { name: data.main_character_name, realm: data.main_character_realm }
             : null;
-          window.__alpineApp.form = this.form;
+          window.__alpineApp.form = {
+            main_character_name: this.form_main_character_name,
+            main_character_realm: this.form_main_character_realm,
+            profile_private: this.form_profile_private,
+            manualEntry: this.form_manualEntry,
+          };
         }
         this.saveMsg   = this.$store.i18n.t('settings.saved');
         this.saveMsgOk = true;
