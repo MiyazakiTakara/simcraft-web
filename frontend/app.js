@@ -29,14 +29,14 @@ function app() {
     _guestPollInterval: null,
     simOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
     loadingChars: false,
-    charsLoading: false,   // alias używany przez skeleton w profil.html
+    charsLoading: false,
     loadingSim: false,
     errorChars: null,
     _pollInterval: null,
     history: [],
     news: [],
     loadingHistory: false,
-    historyLoading: false, // alias używany przez skeleton w profil.html i home.html
+    historyLoading: false,
     spellSort: "total_dmg",
     copiedJobId: null,
     chartModal: null,
@@ -63,21 +63,18 @@ function app() {
     },
     theme: localStorage.getItem("simcraft_theme") || "dark",
 
-    // Main char modal
     isFirstLogin:      false,
     showMainCharModal: false,
     mainChar:          null,
     savingMainChar:    false,
     mainCharSaved:     false,
 
-    // DPS Trend
     trendCharName:   "",
     trendFightStyle: "Patchwerk",
     trendPoints:     [],
     trendLoading:    false,
     _trendChart:     null,
 
-    // Utils — delegaty
     formatDps(v)                  { return Utils.formatDps(v); },
     formatDmg(v)                  { return Utils.formatDmg(v); },
     formatTime(ts)                { return Utils.formatTime(ts); },
@@ -91,7 +88,6 @@ function app() {
     getItemQualityColor(quality)  { return Utils.getItemQualityColor(quality); },
     copyToClipboard(text, jobId)  { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
 
-    // Gettery (deskryptory) — Alpine widzi je przez mergeMixins
     get filteredChars() {
       const q = (this.charFilter || '').toLowerCase();
       return (this.characters || []).filter(
@@ -123,7 +119,6 @@ function app() {
       return [...this.pubResult.spells].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
     },
 
-    // Role
     detectedRole()  { return 'dps'; },
     effectiveRole() {
       if (this.simRole && this.simRole !== 'auto') return this.simRole;
@@ -147,7 +142,6 @@ function app() {
       return 'DPS';
     },
 
-    // DPS Trend
     selectTrendChar(char) {
       this.trendCharName = char.name + '|' + (char.realm_slug || char.realm);
     },
@@ -171,7 +165,6 @@ function app() {
         const res = await fetch(url);
         if (!res.ok) throw new Error('trend fetch failed');
         const data = await res.json();
-        // Backend zwraca klucz "trend", nie "points"
         this.trendPoints = (data.trend || data.points || []).map(p => ({
           ...p,
           timestamp: p.created_at || p.timestamp,
@@ -267,14 +260,10 @@ function app() {
       });
     },
 
-    // View loader
     async loadView(name) {
       const container = document.getElementById('view-container');
       if (!container) return;
-
-      // Reset animacji
       container.classList.remove('view-enter');
-
       if (this._viewCache[name]) {
         container.innerHTML = this._viewCache[name];
       } else {
@@ -290,11 +279,8 @@ function app() {
           return;
         }
       }
-
-      // Uruchom animację wejścia
-      void container.offsetWidth; // reflow wymuszający restart animacji
+      void container.offsetWidth;
       container.classList.add('view-enter');
-
       this.$nextTick(() => Alpine.initTree(container));
     },
 
@@ -303,6 +289,20 @@ function app() {
       this.activeTab = name;
       window.location.hash = name === 'home' ? '' : name;
       this.loadView(name);
+
+      // Przełączaj historię zależnie od widoku:
+      // home — publiczna (ostatnie symulacje wszystkich)
+      // symulacje / profil — prywatna zalogowanego usera (fallback: publiczna)
+      this.historyPage = 1;
+      if (name === 'home') {
+        this.loadPublicHistory();
+      } else if (name === 'symulacje' || name === 'profil') {
+        if (this.sessionId) {
+          this.loadHistory();
+        } else {
+          this.loadPublicHistory();
+        }
+      }
     },
 
     handleHash() {
@@ -397,9 +397,7 @@ function app() {
     },
 
     init() {
-      // Udostępnij instancję app() globalnie dla header partial
       window.__alpineApp = this;
-
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
       this.loadAppearance();
 
@@ -414,9 +412,6 @@ function app() {
         if (saved) this.sessionId = saved;
       }
 
-      // Home zawsze pokazuje publiczną historię (ostatnie symulacje wszystkich userów).
-      // Prywatna historia zalogowanego usera ładowana jest dopiero w zakładce Profil → Historia.
-      this.loadPublicHistory();
       this.loadNews();
 
       if (this.sessionId) {
@@ -424,13 +419,12 @@ function app() {
         this.checkFirstLogin();
       }
 
-      // Persist active view via URL hash
+      // handleHash wywoła navigateTo, które samo zadecyduje czy ładować publiczną czy prywatną historię
       this.handleHash();
       window.addEventListener('hashchange', () => this.handleHash());
     },
   };
 
-  // Kopiuj gettery z miksinów zachowując deskryptory property
   mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
 
   return state;
