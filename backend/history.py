@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, HistoryEntryModel, JobModel
+from database import SessionLocal, HistoryEntryModel, JobModel, get_bnet_id_by_session
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ class HistoryEntry(BaseModel):
     character_realm_slug: Optional[str] = ""
     dps: Optional[float] = 0.0
     fight_style: Optional[str] = "Patchwerk"
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None  # session_id z frontendu; zamieniany na bnet_id w backendzie
 
 
 def _entry_to_dict(e: HistoryEntryModel) -> dict:
@@ -38,7 +38,7 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
 
 @router.get("/api/history")
 async def get_history(page: int = 1, limit: int = 50):
-    """Publiczna historia — ostatnie wpisy wszystkich użytkowników."""
+    """Publiczna historia — ostatnie wpisy wszystkich uzytkownikow."""
     offset = (page - 1) * limit
     with SessionLocal() as db:
         rows = (
@@ -60,12 +60,18 @@ async def get_history(page: int = 1, limit: int = 50):
 
 @router.get("/api/history/mine")
 async def get_my_history(session: str, page: int = 1, limit: int = 20):
-    """Historia zalogowanego użytkownika — filtrowana po session_id."""
+    """Historia zalogowanego uzytkownika — filtrowana po bnet_id."""
     if not session:
         raise HTTPException(400, "Brak session")
+    bnet_id = get_bnet_id_by_session(session)
+    if not bnet_id:
+        # fallback: stare wpisy zapisane pod session_id (przed migracją)
+        user_filter = session
+    else:
+        user_filter = bnet_id
     offset = (page - 1) * limit
     with SessionLocal() as db:
-        query = db.query(HistoryEntryModel).filter(HistoryEntryModel.user_id == session)
+        query = db.query(HistoryEntryModel).filter(HistoryEntryModel.user_id == user_filter)
         rows  = (
             query
             .order_by(HistoryEntryModel.created_at.desc())
@@ -95,6 +101,13 @@ async def get_result_meta(job_id: str):
 
 @router.post("/api/history")
 async def add_history(entry: HistoryEntry):
+    # Zamien session_id na bnet_id jesli mozliwe
+    resolved_user_id = entry.user_id
+    if entry.user_id:
+        bnet_id = get_bnet_id_by_session(entry.user_id)
+        if bnet_id:
+            resolved_user_id = bnet_id
+
     with SessionLocal() as db:
         job_exists = db.query(JobModel).filter(JobModel.job_id == entry.job_id).first()
         if not job_exists:
@@ -111,7 +124,7 @@ async def add_history(entry: HistoryEntry):
                 dps                  = entry.dps,
                 role                 = "dps",
                 fight_style          = entry.fight_style,
-                user_id              = entry.user_id,
+                user_id              = resolved_user_id,
             )
             db.add(row)
             db.commit()
@@ -130,11 +143,14 @@ async def get_character_trend(
     if not session:
         raise HTTPException(400, "Brak session")
 
+    bnet_id = get_bnet_id_by_session(session)
+    user_filter = bnet_id if bnet_id else session
+
     with SessionLocal() as db:
         rows = (
             db.query(HistoryEntryModel)
             .filter(
-                HistoryEntryModel.user_id == session,
+                HistoryEntryModel.user_id == user_filter,
                 HistoryEntryModel.character_name == character_name,
                 HistoryEntryModel.character_realm_slug == character_realm_slug,
                 HistoryEntryModel.fight_style == fight_style,

@@ -114,11 +114,9 @@ def init_db():
                     END IF;
                 END $$;
             """))
-            # Migracje dla funkcji spolecznosciowych
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_name VARCHAR(128)"))
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_realm VARCHAR(128)"))
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS is_first_login BOOLEAN DEFAULT TRUE"))
-            # Migracja: bnet_id w sesjach + tabela users
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS bnet_id VARCHAR(64)"))
             db.execute(text("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -134,7 +132,7 @@ def init_db():
 
 
 def get_or_create_user(bnet_id: str) -> dict:
-    """Zwraca istniejacego usera lub tworzy nowego. Zwraca dict z main char."""
+    """Zwraca istniejacego usera lub tworzy nowego."""
     with SessionLocal() as db:
         user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
         if not user:
@@ -147,6 +145,16 @@ def get_or_create_user(bnet_id: str) -> dict:
             "main_character_name":   user.main_character_name,
             "main_character_realm":  user.main_character_realm,
         }
+
+
+def get_bnet_id_by_session(session_id: str) -> str | None:
+    """Zwraca bnet_id powiazane z dana sesja, lub None jesli sesja nie istnieje/wygasla."""
+    import time
+    with SessionLocal() as db:
+        row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+        if not row or time.time() > row.expires_at:
+            return None
+        return row.bnet_id
 
 
 def create_job(job_id: str, json_path: str):
@@ -216,7 +224,7 @@ def set_main_character(session_id: str, name: str, realm: str):
 
 
 def clear_first_login(session_id: str):
-    """Oznacza sesje jako 'nie first login' bez ustawiania maina (uzytkownik zamknal modal)."""
+    """Oznacza sesje jako 'nie first login' bez ustawiania maina."""
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
         if row:
