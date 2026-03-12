@@ -37,9 +37,12 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **View Persistence** — active view (home/simulations/profile/settings) persisted via URL hash; browser back/forward works correctly
 - **Settings Page** — change main character, language preference, theme preference; profile privacy toggle
 - **Sliding Session** — session TTL extended by 30 days on every active use; no forced re-logins during normal usage
+- **Skeleton Loaders** — loading skeletons on home, symulacje, profil views instead of spinners
+- **Smart History Loading** — home always loads public history; `/symulacje` and `/profil` load private history for logged-in users, public for guests; history reloads on every view switch
 
 ## Roadmap
 
+### 🔜 Planned
 - [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
 - [ ] **Build sharing** — export simulation config as a public link to re-run
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
@@ -47,6 +50,12 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - [ ] **Settings: per-character privacy** — in addition to global account privacy toggle, allow hiding/showing individual characters from public profile
 - [ ] **Rankings: exclude addon simulations** — filter out results submitted via the WoW addon (`source=addon` flag); only web simulations should appear in rankings
 - [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
+- [ ] **Skeleton loaders: profil.html** — char cards grid and history section still missing skeletons
+
+### ✅ Done (2026-03-12)
+- [x] **Skeleton loaders: home.html + symulacje.html** — public history grid, top 3 podium, history sidebar ([#27](https://github.com/MiyazakiTakara/simcraft-web/issues/27))
+- [x] **Smart history loading** — `navigateTo()` switches between public/private history per view; `historyLoading` → `loadingHistory` ReferenceError fixed ([#33](https://github.com/MiyazakiTakara/simcraft-web/issues/33))
+- [x] **Fix `/rankings` 404** — added explicit FastAPI route; `StaticFiles(html=True)` does not auto-map `/foo` → `foo.html` ([#32](https://github.com/MiyazakiTakara/simcraft-web/issues/32))
 
 ## Requirements
 
@@ -252,6 +261,7 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 - Getters referencing `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
 - Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`
 - `rankings.html` is a **standalone page** (not a view), served by FastAPI at `GET /rankings`
+- **State property names matter** — views use the actual state field names (e.g. `loadingHistory`, not aliases); aliased names are not visible after `Alpine.initTree()`
 
 ## API Reference
 
