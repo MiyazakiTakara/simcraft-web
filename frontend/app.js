@@ -300,7 +300,13 @@ function app() {
       container.classList.add('view-enter');
       // Only call Alpine.initTree for views that define their own x-data
       if (name === 'ustawienia') {
-        this.$nextTick(() => Alpine.initTree(container));
+        console.log('Loading ustawienia view, window.settingsMixin:', typeof window.settingsMixin);
+        // Ensure Alpine is loaded and container is ready
+        if (typeof Alpine !== 'undefined') {
+          Alpine.nextTick(() => {
+            Alpine.initTree(container);
+          });
+        }
       }
     },
 

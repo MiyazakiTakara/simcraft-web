@@ -1,4 +1,10 @@
 function settingsMixin() {
+  console.log('settingsMixin called, returning object with form:', {
+    main_character_name: '',
+    main_character_realm: '',
+    profile_private: false,
+    manualEntry: false,
+  });
   return {
     loading:    true,
     isLoggedIn: false,
@@ -316,6 +322,13 @@ window.toggleCharPrivacyGlobal = async function(name, realm) {
 window.settingsMixin = settingsMixin;
 
 // Register mixin globally with Alpine.data() for dynamically loaded views
-if (typeof Alpine !== 'undefined') {
-  Alpine.data('settingsMixin', settingsMixin);
+// Ensure Alpine is loaded before registering
+function registerSettingsMixin() {
+  if (typeof Alpine !== 'undefined') {
+    Alpine.data('settingsMixin', settingsMixin);
+  } else {
+    // Retry after a short delay
+    setTimeout(registerSettingsMixin, 100);
+  }
 }
+registerSettingsMixin();
