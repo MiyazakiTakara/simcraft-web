@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime, UniqueConstraint, text
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -11,6 +12,8 @@ DATABASE_URL = os.environ.get(
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
+
+SESSION_SLIDING_TTL = 30 * 24 * 3600  # 30 dni
 
 
 class UserModel(Base):
@@ -150,7 +153,6 @@ def init_db():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """))
-            # nowa kolumna profile_private
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_private BOOLEAN NOT NULL DEFAULT FALSE"))
             db.commit()
         except Exception:
@@ -198,7 +200,6 @@ def save_user_settings(bnet_id: str, main_character_name: str | None,
         user.profile_private = profile_private
         db.commit()
         db.refresh(user)
-        # Synchronizuj aktywne sesje
         if main_character_name is not None:
             sessions = db.query(SessionModel).filter(SessionModel.bnet_id == bnet_id).all()
             for s in sessions:
@@ -213,7 +214,6 @@ def save_user_settings(bnet_id: str, main_character_name: str | None,
 
 
 def is_user_private(bnet_id: str) -> bool:
-    """Sprawdza czy user ma prywatny profil. Szybki lookup."""
     if not bnet_id:
         return False
     with SessionLocal() as db:
@@ -222,7 +222,6 @@ def is_user_private(bnet_id: str) -> bool:
 
 
 def get_bnet_id_by_session(session_id: str) -> str | None:
-    import time
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
         if not row or time.time() > row.expires_at:
@@ -267,11 +266,20 @@ def get_job(job_id: str) -> dict | None:
 
 
 def get_session_info(session_id: str) -> dict | None:
-    import time
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
-        if not row or time.time() > row.expires_at:
+        if not row:
             return None
+        now = time.time()
+        if now > row.expires_at:
+            db.query(SessionModel).filter(SessionModel.session_id == session_id).delete()
+            db.commit()
+            return None
+        # Sliding window — przedluz sesje o 30 dni przy kazdym aktywnym uzyciu
+        new_expires = now + SESSION_SLIDING_TTL
+        if new_expires > row.expires_at:
+            row.expires_at = new_expires
+            db.commit()
         return {
             "main_character_name":  row.main_character_name,
             "main_character_realm": row.main_character_realm,
