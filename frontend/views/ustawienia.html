@@ -121,7 +121,7 @@
                   if (app) app.charPrivacies = app.charPrivacies || {};
                   if (app) app.charPrivacies[key] = isPrivate;
                 })()"
-                x-text="(window.__alpineApp?.charPrivacies?.[ch.name + '|' + (ch.realm_slug || ch.realm)] ? '🔒 Publiczna' : '👁️ Prywatna')"
+                x-text="(window.__alpineApp?.charPrivacies?.[ch.name + '|' + (ch.realm_slug || ch.realm)] ? '🔒 Prywatna' : '👁️ Publiczna')"
               ></button>
             </div>
           </template>
