@@ -19,12 +19,14 @@ function settingsMixin() {
       return colors[className] || '#888';
     },
 
-    isCharPrivate(ch) {
+    getCharPrivacy(ch) {
       const key = ch.name + '|' + (ch.realm_slug || ch.realm);
-      return !!this.charPrivacies[key];
+      return this.charPrivacies[key] || false;
     },
 
     async toggleCharPrivacy(ch, event) {
+      event.preventDefault();
+      event.stopPropagation();
       const session = this._getSession();
       if (!session) {
         console.error('No session found');
@@ -223,4 +225,9 @@ function settingsMixin() {
       }
     },
   };
+}
+
+// Register the mixin with Alpine
+if (typeof Alpine !== 'undefined') {
+  Alpine.data('settingsMixin', settingsMixin);
 }

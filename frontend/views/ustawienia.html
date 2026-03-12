@@ -1,4 +1,4 @@
-<div class="settings-view" x-data="settingsMixin()" x-init="init()">
+<div class="settings-view" x-data="settingsMixin" x-init="init()">
 
   <!-- Ładowanie -->
   <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
@@ -104,7 +104,7 @@
                 <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
               </div>
               <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.85rem">
-                <input type="checkbox" :checked="isCharPrivate(ch)" @click="toggleCharPrivacy(ch, $event)" />
+                <input type="checkbox" :checked="getCharPrivacy(ch)" @click="toggleCharPrivacy(ch, $event)" />
                 <span x-text="$store.i18n.t('settings.char_private')"></span>
               </label>
             </div>
