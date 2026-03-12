@@ -40,4 +40,9 @@ app.include_router(rankings.router)
 app.include_router(reactions.router)
 app.include_router(characters.router)
 
+# Publiczny endpoint wyglądu — bez autoryzacji, tylko odczyt
+@app.get("/api/appearance")
+async def public_appearance():
+    return admin.load_appearance_config()
+
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")
