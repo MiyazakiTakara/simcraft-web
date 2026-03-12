@@ -109,84 +109,12 @@
   <!-- Kontener widoków -->
   <div id="view-container"></div>
 
-  <!-- SETTINGS VIEW (will be loaded from ustawienia.html) -->
-  <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;">
-    <!-- Ładowanie -->
-    <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
-      <span>Ładowanie...</span>
-    </div>
-    
-    <!-- Błąd -->
-    <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
-      <span x-text="settingsError"></span>
-    </div>
 
-    <!-- Treść ustawień -->
-    <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
-      <h2 style="margin-bottom:1.5rem">Ustawienia</h2>
-
-      <!-- Postać -->
-      <section class="settings-section">
-        <h3>Postać domyślna</h3>
-        <p class="settings-hint">Wybierz postać, która będzie pokazywana na Twoim profilu.</p>
-        <div class="settings-row">
-          <label>Nazwa postaci</label>
-          <div style="flex:1">
-            <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input">
-              <option value="">Wybierz postać</option>
-              <template x-for="ch in characters" :key="ch.id">
-                <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
-              </template>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <!-- Prywatność -->
-      <section class="settings-section">
-        <h3>Prywatność profilu</h3>
-        <div class="settings-toggle-row">
-          <div>
-            <div class="settings-toggle-label">Ukryj profil publiczny</div>
-            <div class="settings-hint">Gdy włączone, Twój profil nie będzie widoczny dla innych.</div>
-          </div>
-          <button class="toggle-btn" :class="{ active: form.profile_private }" @click="form.profile_private = !form.profile_private">
-            <span class="toggle-knob"></span>
-          </button>
-        </div>
-      </section>
-
-      <!-- Zapis -->
-      <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
-        <button class="btn-primary" @click="saveSettings()" x-text="'Zapisz'"></button>
-        <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
-      </div>
-    </div>
-  </div>
 
   <!-- Shared footer (partial) -->
   <div id="site-footer"></div>
 
-  <!-- CHAR DETAILS MODAL -->
-  <template x-if="charDetailsModal">
-    <div class="chart-modal-overlay" @click="closeCharDetails()" style="display:flex;align-items:center;justify-content:center">
-      <div @click.stop style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;padding:1.5rem;cursor:default">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <div style="display:flex;align-items:center;gap:1rem">
-            <img :src="charDetailsModal.avatar || '/static/default_avatar.png'" style="width:64px;height:64px;border-radius:8px"/>
-            <div>
-              <h2 style="margin:0" x-text="charDetailsModal.name"></h2>
-              <div style="color:var(--muted);font-size:.9rem" x-text="charDetailsModal.realm + ' · ' + $store.i18n.t('chars.level_short') + charDetailsModal.level + ' · ' + (charDetailsModal.spec ? charDetailsModal.spec + ' ' : '') + charDetailsModal.class"></div>
-            </div>
-          </div>
-          <button @click="closeCharDetails()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)">&times;</button>
-        </div>
-        <template x-if="loadingCharDetails">
-          <div style="text-align:center;padding:2rem;color:var(--muted)" x-text="$store.i18n.t('common.loading')"></div>
-        </template>
-        <template x-if="charDetailsError">
-          <div style="text-align:center;padding:2rem;color:#f66" x-text="$store.i18n.t('common.error_prefix') + charDetailsError"></div>
-        </template>
+
   <template x-if="charDetailsModal">
     <div class="chart-modal-overlay" @click="closeCharDetails()" style="display:flex;align-items:center;justify-content:center">
       <div @click.stop style="background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;padding:1.5rem;cursor:default">
@@ -255,8 +183,6 @@
       </div>
     </div>
   </template>
-
-</div>
 
 <div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
 

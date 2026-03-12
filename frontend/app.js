@@ -75,18 +75,7 @@ function app() {
     trendLoading:    false,
     _trendChart:     null,
 
-    // Settings page state
-    settingsLoading:    true,
-    settingsError:      null,
-    settingsSaved:      false,
-    settingsSaveMsg:   '',
-    settingsSaveOk:    true,
-    form: {
-      main_character_name:  '',
-      main_character_realm: '',
-      profile_private:      false,
-      manualEntry:         false,
-    },
+
 
     formatDps(v)                  { return Utils.formatDps(v); },
     formatDmg(v)                  { return Utils.formatDmg(v); },
@@ -284,108 +273,9 @@ function app() {
       return colors[className] || '#888';
     },
 
-    onCharSelect() {
-      const ch = this.characters.find(c => c.name === this.form.main_character_name);
-      if (ch) {
-        this.form.main_character_realm = ch.realm;
-      }
-    },
 
-    onManualToggle() {
-      if (this.form.manualEntry) {
-        this.form.main_character_name = '';
-        this.form.main_character_realm = '';
-      }
-    },
 
-    onCharSelect() {
-      const ch = this.characters.find(c => c.name === this.form.main_character_name);
-      if (ch) {
-        this.form.main_character_realm = ch.realm;
-      }
-    },
 
-    onManualToggle() {
-      if (this.form.manualEntry) {
-        this.form.main_character_name = '';
-        this.form.main_character_realm = '';
-      }
-    },
-
-    async loadSettings() {
-      if (!this.sessionId) {
-        this.settingsLoading = false;
-        return;
-      }
-      this.settingsLoading = true;
-      this.settingsError = null;
-
-      try {
-        const res = await fetch(`/auth/session/settings?session=${this.sessionId}`);
-        if (res.status === 401 || res.status === 404) {
-          this.settingsLoading = false;
-          return;
-        }
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          this.settingsError = data.detail || 'Error';
-          this.settingsLoading = false;
-          return;
-        }
-        const data = await res.json();
-        this.form.main_character_name  = data.main_character_name  || '';
-        this.form.main_character_realm = data.main_character_realm || '';
-        this.form.profile_private      = !!data.profile_private;
-      } catch (e) {
-        this.settingsError = 'Network error';
-      } finally {
-        this.settingsLoading = false;
-      }
-    },
-
-    async saveSettings() {
-      if (!this.sessionId) return;
-      this.settingsSaved = false;
-      this.settingsSaveMsg = '';
-
-      const name  = this.form.main_character_name.trim();
-      const realm = this.form.main_character_realm.trim();
-      if (name && !realm) {
-        this.settingsSaveMsg   = 'Realm is required';
-        this.settingsSaveOk = false;
-        return;
-      }
-
-      try {
-        const res = await fetch(`/auth/session/settings?session=${this.sessionId}`, {
-          method:  'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
-            main_character_name:  name  || null,
-            main_character_realm: realm || null,
-            profile_private:      this.form.profile_private,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          this.settingsSaveMsg   = data.detail || 'Error';
-          this.settingsSaveOk = false;
-          return;
-        }
-
-        const data = await res.json();
-        this.mainChar = data.main_character_name
-          ? { name: data.main_character_name, realm: data.main_character_realm }
-          : null;
-        this.settingsSaveMsg = 'Saved!';
-        this.settingsSaveOk = true;
-        setTimeout(() => { this.settingsSaveMsg = ''; }, 4000);
-      } catch (e) {
-        this.settingsSaveMsg   = 'Network error';
-        this.settingsSaveOk = false;
-      }
-    },
 
     async loadView(name) {
       const container = document.getElementById('view-container');
@@ -433,9 +323,7 @@ function app() {
           this.loadPublicHistory();
         }
       } else if (name === 'ustawienia') {
-        if (this.sessionId) {
-          this.loadSettings();
-        }
+        // Settings are loaded by settingsMixin().init()
       }
     },
 
