@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, SessionModel, get_session_info, set_main_character, clear_first_login
+from database import SessionLocal, SessionModel, get_session_info, set_main_character, clear_first_login, get_or_create_user
 
 router = APIRouter()
 
@@ -100,6 +100,7 @@ async def auth_callback(code: str, state: str = None):
         raise HTTPException(400, "State parameter expired")
 
     async with httpx.AsyncClient() as client:
+        # Wymiana kodu na token
         resp = await client.post(
             "https://oauth.battle.net/token",
             data={
@@ -112,6 +113,21 @@ async def auth_callback(code: str, state: str = None):
         )
         resp.raise_for_status()
         data = resp.json()
+        access_token = data["access_token"]
+
+        # Pobierz Battle.net account ID z /userinfo
+        userinfo_resp = await client.get(
+            "https://oauth.battle.net/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        userinfo_resp.raise_for_status()
+        userinfo = userinfo_resp.json()
+        bnet_id = str(userinfo.get("id", ""))
+
+    # Pobierz lub stworz usera; jesli istnieje — zaladuj jego main char
+    user = get_or_create_user(bnet_id) if bnet_id else None
+    is_first_login = not (user and user["main_character_name"])
 
     session_id = str(uuid.uuid4())
     expires_at = time.time() + data.get("expires_in", 86400)
@@ -119,10 +135,13 @@ async def auth_callback(code: str, state: str = None):
     with SessionLocal() as db:
         db.query(SessionModel).filter(SessionModel.expires_at < time.time()).delete()
         db.add(SessionModel(
-            session_id   = session_id,
-            access_token = data["access_token"],
-            expires_at   = expires_at,
-            is_first_login = True,
+            session_id           = session_id,
+            access_token         = access_token,
+            expires_at           = expires_at,
+            bnet_id              = bnet_id or None,
+            main_character_name  = user["main_character_name"]  if user else None,
+            main_character_realm = user["main_character_realm"] if user else None,
+            is_first_login       = is_first_login,
         ))
         db.commit()
 
