@@ -374,13 +374,17 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   gap: 1rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
+  /* Zapas na koronę wystającą ponad bloki */
+  padding-top: 1.4rem;
 }
 .podium-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 1.4rem 1.2rem 1rem;
+  /* Jednolity padding-top na wszystkich kartach — content zaczyna się w tym samym miejscu.
+     Korona (absolute top: -1.1rem) wychodzi poza blok w górę, nie przesuwa contentu. */
+  padding: 1.4rem 1.2rem 1.2rem;
   border-radius: 14px;
   border: 2px solid var(--border);
   text-decoration: none;
@@ -390,14 +394,17 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   max-width: 220px;
   flex: 1;
   position: relative;
+  overflow: visible;
 }
 .podium-card:hover { transform: translateY(-4px); }
 
-.podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; padding-bottom: 1.8rem; min-height: 260px; }
+/* Efekt podestu — gold jest wyżej przez większy min-height i padding-bottom */
+.podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; min-height: 260px; padding-bottom: 2rem; }
 .podium-silver { background: rgba(192,192,192,.07); border-color: var(--silver); order: 1; min-height: 220px; }
 .podium-bronze { background: rgba(205,127,50,.07);  border-color: var(--bronze); order: 3; min-height: 220px; }
 
-.podium-crown { font-size: 1.8rem; position: absolute; top: -1.1rem; }
+/* Korona: wychodzi ponad krawędź bloku */
+.podium-crown { font-size: 1.8rem; position: absolute; top: -1.3rem; left: 50%; transform: translateX(-50%); line-height: 1; }
 .podium-medal { font-size: 2rem; margin-bottom: .3rem; }
 .podium-rank  { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
 .podium-name  { font-size: 1.1rem; font-weight: 700; margin-bottom: .2rem; }
@@ -437,13 +444,15 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   justify-content: center;
   gap: .75rem;
   flex-wrap: wrap;
+  padding-top: 1.2rem;
 }
 .home-podium-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 1rem .9rem .8rem;
+  /* Jednolity padding-top — content wyrównany na wszystkich kartach */
+  padding: 1.2rem .9rem 1rem;
   border-radius: 12px;
   border: 2px solid var(--border);
   text-decoration: none;
@@ -453,14 +462,16 @@ textarea.addon-box { width: 100%; min-height: 120px; background: var(--bg); bord
   max-width: 180px;
   flex: 1;
   position: relative;
+  overflow: visible;
 }
 .home-podium-card:hover { transform: translateY(-3px); }
 
-.home-podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; min-height: 200px; padding-top: 1.4rem; }
+.home-podium-gold   { background: rgba(255,215,0,.08);   border-color: var(--gold);   order: 2; min-height: 200px; padding-bottom: 1.6rem; }
 .home-podium-silver { background: rgba(192,192,192,.07); border-color: var(--silver); order: 1; min-height: 170px; }
 .home-podium-bronze { background: rgba(205,127,50,.07);  border-color: var(--bronze); order: 3; min-height: 170px; }
 
-.home-podium-crown { font-size: 1.4rem; position: absolute; top: -.9rem; }
+/* Korona wycentrowana horyzontalnie, wychodzi ponad krawędź */
+.home-podium-crown { font-size: 1.4rem; position: absolute; top: -1rem; left: 50%; transform: translateX(-50%); line-height: 1; }
 .home-podium-medal { font-size: 1.6rem; margin-bottom: .25rem; }
 .home-podium-name  { font-size: .95rem; font-weight: 700; margin-bottom: .15rem; }
 .home-podium-spec  { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; }
