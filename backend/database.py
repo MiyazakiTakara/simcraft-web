@@ -56,8 +56,8 @@ class ReactionModel(Base):
 
     id         = Column(Integer, primary_key=True, autoincrement=True)
     job_id     = Column(String(64), nullable=False, index=True)
-    user_key   = Column(String(64), nullable=False)   # bnet_id
-    emoji      = Column(String(16), nullable=False)   # fire | strong | sad | skull | rofl
+    user_key   = Column(String(64), nullable=False)
+    emoji      = Column(String(16), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -99,6 +99,16 @@ class LogEntryModel(Base):
     message    = Column(Text, nullable=False)
     context    = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PageVisitModel(Base):
+    __tablename__ = "page_visits"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    path       = Column(String(512), nullable=False, index=True)
+    ip_hash    = Column(String(64), nullable=True)
+    session_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 def init_db():
