@@ -24,12 +24,16 @@ function settingsMixin() {
       return !!this.charPrivacies[key];
     },
 
-    async toggleCharPrivacy(ch) {
+    async toggleCharPrivacy(ch, event) {
       const session = this._getSession();
-      if (!session) return;
+      if (!session) {
+        console.error('No session found');
+        return;
+      }
       const realm = ch.realm_slug || ch.realm;
       const key = ch.name + '|' + realm;
       const isPrivate = !this.charPrivacies[key];
+      console.log('Toggle privacy:', ch.name, 'realm:', realm, 'isPrivate:', isPrivate);
       try {
         const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
           method: 'PATCH',
@@ -40,6 +44,7 @@ function settingsMixin() {
             is_private: isPrivate,
           }),
         });
+        console.log('Response:', res.status, await res.text());
         if (res.ok) {
           this.charPrivacies[key] = isPrivate;
         }
