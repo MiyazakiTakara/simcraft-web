@@ -327,7 +327,7 @@ window.toggleCharPrivacyGlobal = async function(name, realm) {
 // Make settingsMixin available globally
 window.settingsMixin = settingsMixin;
 console.log('window.settingsMixin defined:', typeof window.settingsMixin);
-console.log('window.settingsMixin keys:', Object.keys(window.settingsMixin));
+console.log('window.settingsMixin is function:', typeof window.settingsMixin === 'function');
 
 // Register mixin globally with Alpine.data() for dynamically loaded views
 // Ensure Alpine is loaded before registering
