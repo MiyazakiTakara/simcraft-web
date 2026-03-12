@@ -11,32 +11,27 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - **Logowanie przez Battle.net** — autoryzacja OAuth2, pobieranie postaci z armory
 - **Symulacje z Armory** — automatyczne pobieranie danych postaci z API Blizzarda
 - **Symulacje z Addon Export** — możliwość wklejenia tekstu z addona SimulationCraft bez logowania
-- **Historia symulacji** — zapis wszystkich symulacji, publiczna lista ostatnich wyników z paginacją
-- **Wykresy DPS** — wykresy kółowe Total DMG + DPS (Plotly/kaleido, renderowane server-side do PNG)
+- **Historia symulacji** — zapis wszystkich symulacji powiązany z kontem Battle.net (działa między przeglądarkami i sesjami); publiczna lista ostatnich wyników z paginacją
+- **Wykresy DPS** — wykresy kółkowe Total DMG + DPS (Plotly/kaleido, renderowane server-side do PNG)
 - **Social sharing** — każdy wynik ma unikalny URL z OG meta tagami (podgląd na Discordzie, Twitterze itp.)
 - **Panel admina** — zarządzanie newsami, limitami symulacji, health check, lista aktywnych zadań (Keycloak OAuth2)
 - **Rate limiting** — ochrona przed nadużywaniem API (slowapi, per-IP)
 - **Watchdog** — automatyczne czyszczenie starych jobów i obsługa timeoutów
 - **Wielojęzyczność** — pełne i18n PL/EN z przełącznikiem języka, auto-detekcją z przeglądarki i zapisem w `localStorage`
-- **Główna postać (main char)** — przy pierwszym logowaniu modal z wyborem głównej postaci; zapis do sesji; wyświetlanie w headerze
+- **Główna postać (main char)** — modal przy pierwszym logowaniu; zapis trwały do tabeli `users` powiązanej z `bnet_id`; wyświetlanie w headerze
+- **Dropdown menu użytkownika** — rozwijane menu pod imieniem głównej postaci: Postacie, Historia, Ustawienia, Wyloguj
+- **Persist widoku** — aktywny widok zapisywany w URL hash (`#symulacje`, `#profil`, `#ustawienia`); obsługa przycisku wstecz/dalej przeglądarki
 
 ## TODO
 
-### Nawigacja
-
-- [ ] **Persist widoku po refresh** — przy odświeżeniu strony użytkownik powinien trafić z powrotem do tego samego widoku (home/symulacje/profil). Aktualnie zawsze wraca na `home`. Proponowane rozwiązanie: zapis aktywnej zakładki w `localStorage` lub URL hash (`#symulacje`) i odczyt w `init()`.
-
 ### Historia symulacji
 
-- [ ] **Ukrycie wyników symulacji gości z publicznej historii** — symulacje wykonane bez logowania (addon export na stronie głównej) nie powinny pojawiać się w publicznej liście historii na stronie głównej ani nigdzie indziej. Wynik powinien być nadal dostępny bezpośrednio przez link `/result/{job_id}` (np. do udostępnienia znajomym). Wymagane zmiany:
-  - Backend: przy zapisie do historii dodać flagę `is_guest: bool` (lub `user_id IS NULL` jako wyznacznik); endpoint `GET /api/history` powinien filtrować wpisy gdzie `is_guest = true`
+- [ ] **Ukrycie wyników symulacji gości z publicznej historii** — symulacje wykonane bez logowania (addon export na stronie głównej) nie powinny pojawiać się w publicznej liście historii. Wynik powinien być nadal dostępny bezpośrednio przez link `/result/{job_id}`. Wymagane zmiany:
+  - Backend: przy zapisie do historii dodać flagę `is_guest: bool` (lub `user_id IS NULL` jako wyznacznnik); endpoint `GET /api/history` powinien filtrować wpisy gdzie `is_guest = true`
   - Frontend: `startGuestSim()` w `sim.js` może w ogóle nie wywoływać `API.saveToHistory()`, albo przekazywać flagę gościa — do ustalenia
 
 ### Funkcje społecznościowe
 
-> **Problem tożsamości użytkowników:** Użytkownicy logują się przez Battle.net OAuth i posiadają wiele postaci. Planowane podejście: przy pierwszym logowaniu użytkownik wybiera **główną postać** (main), która staje się jego profilem publicznym. Wszystkie symulacje są nadal przypisane do konta (session UUID), ale publicznie wyświetlany jest nick w formacie `Imię-Realm`.
-
-- [x] **Wybór głównej postaci** — modal przy pierwszym logowaniu lub w ustawieniach; zapis do nowej kolumny `main_character` w tabeli sesji
 - [ ] **Profile użytkowników** — strona `/u/{realm}/{name}` z historią symulacji, wybrana główna postać jako awatar profilu
 - [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style, generowana z publicznej historii
 - [ ] **Komentarze / reakcje** — emoji-reakcje lub krótki komentarz pod wynikiem symulacji (per `job_id`)
@@ -44,19 +39,19 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli i DPS obok siebie
 - [ ] **Śledzenie trendów** — wykres DPS w czasie dla konkretnej postaci (endpoint `/api/history/trend` już istnieje, brakuje UI)
 
-### Wielojęzyczność
+### Ustawienia
 
-- [x] **i18n frontend** — stringi UI wydzielone do `locales/pl.json` i `locales/en.json`; Alpine.js `$store.i18n` obsługuje reaktywne przełączanie języka
-- [x] **Automatyczne wykrywanie języka** — na podstawie `navigator.language` lub ustawienia zapisanego w `localStorage`
-- [x] **Angielski jako domyślny** — angielski jest domyślnym językiem; przełącznik PL/EN widoczny w headerze na każdej stronie
-- [x] **Lokalizacja nazw spelli** — nazwy spelli pozostają po angielsku (SimulationCraft + WoW używają EN; gracze są do tego przyzwyczajeni)
+- [ ] **Strona ustawień** — zmiana głównej postaci, preferencje języka, motyw (`views/ustawienia.html` aktualnie WIP placeholder)
 
 ### Techniczne
 
 - [x] **Race condition w `simulation.py`** — `out_path` przekazywany jako argument do `_run_sim()`, nie jest czytany z `jobs[]` poza lockiem
-- [x] **Gettery Alpine.js w mixa-ach** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` itp. muszą być definiowane przez `Object.defineProperties` (przez `mergeMixins`), nie przez `...spread` — spread niszczy deskryptory getterów
-- [x] **Pinowanie wersji w `requirements.txt`** — wszystkie 13 zależności używają dokładnego pinowania `==`; zweryfikowane i zamknięte przez PR #11
-- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli (ma sens po dodaniu porównywania buildów)
+- [x] **Gettery Alpine.js w mixa-ach** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` itp. muszą być definiowane przez `Object.defineProperties` (przez `mergeMixins`), nie przez `...spread`
+- [x] **Pinowanie wersji w `requirements.txt`** — wszystkie 13 zależności używają dokładnego pinowania `==`
+- [x] **Persist widoku po refresh** — aktywna zakładka zapisywana w URL hash; odczytywana w `init()` przez `handleHash()`
+- [x] **Główna postać zapisana do konta Battle.net** — tabela `users` z kluczem `bnet_id`; pobierane z `/userinfo` przy każdym logowaniu
+- [x] **Historia symulacji powiązana z bnet_id** — `history.user_id` przechowuje `bnet_id` zamiast `session_id`; historia widoczna po ponownym logowaniu
+- [ ] **Eksport wyników CSV** — endpoint `GET /api/result/{job_id}/csv` zwracający breakdown spelli
 
 ## Wymagania
 
@@ -125,19 +120,19 @@ uvicorn main:app --reload
 simcraft-web/
 ├── backend/
 │   ├── main.py            # FastAPI app, routing, OG meta, startup
-│   ├── auth.py            # Battle.net OAuth2
+│   ├── auth.py            # Battle.net OAuth2; pobiera bnet_id z /userinfo
 │   ├── characters.py      # API postaci Blizzarda (lista, media, ekwipunek, statystyki, talenty)
 │   ├── simulation.py      # Uruchamianie simc, kolejka jobów, watchdog
 │   ├── results.py         # Parsowanie wyników JSON, generowanie wykresów PNG
-│   ├── history.py         # Historia symulacji, trendy, metadane
-│   ├── database.py        # Modele SQLAlchemy, migracje inline
+│   ├── history.py         # Historia symulacji (powiązana z bnet_id), trendy, metadane
+│   ├── database.py        # Modele SQLAlchemy (users, sessions, history, jobs), migracje inline
 │   ├── admin.py           # Panel admina (Keycloak), newsy, logi, limity
 │   └── logging_config.py  # Strukturowane logowanie (structlog)
 ├── frontend/
 │   ├── index.html         # Główna strona
 │   ├── result.html        # Strona wyniku (OG meta, spell breakdown, chart)
 │   ├── admin.html         # Panel admina
-│   ├── app.js             # Logika Alpine.js (główna strona); zawiera router widoków (loadView/navigateTo)
+│   ├── app.js             # Logika Alpine.js; router widoków (loadView/navigateTo/handleHash)
 │   ├── sim.js             # Logika formularza symulacji (SimMixin)
 │   ├── chars.js           # Lista postaci, ekwipunek, talenty (CharsMixin)
 │   ├── history.js         # Widget historii (HistoryMixin)
@@ -149,7 +144,8 @@ simcraft-web/
 │   ├── views/
 │   │   ├── home.html        # Widok strony głównej (hero, addon form, historia publiczna, newsy)
 │   │   ├── symulacje.html   # Widok symulacji (lista postaci, formularz, wyniki, historia)
-│   │   └── profil.html      # Widok profilu użytkownika
+│   │   ├── profil.html      # Widok profilu użytkownika (zakładki: Postacie, Historia)
+│   │   └── ustawienia.html  # Widok ustawień (WIP)
 │   └── locales/
 │       ├── pl.json          # Tłumaczenia PL
 │       └── en.json          # Tłumaczenia EN
@@ -160,12 +156,13 @@ simcraft-web/
 
 ## Architektura frontendu
 
-Frontend używa **Alpine.js** z wzorcem mixinów. Ważne zasady:
+Frontend używa **Alpine.js** z wzorcem miksynów. Ważne zasady:
 
 - `app()` jest jedynym Alpine `x-data` na stronie głównej
 - Widoki (`views/*.html`) są ładowane dynamicznie przez `loadView(name)` do `#view-container` i inicjowane przez `Alpine.initTree()` — **nie mają własnego `x-data`**, działają w scope rodzica
-- Mixiny (`SimMixin`, `CharsMixin`, `HistoryMixin`) są mergowane przez `mergeMixins()` która używa `Object.defineProperties` — dzięki temu gettery (np. `sortedSpells`, `filteredChars`) są poprawnie kopiowane z zachowaniem deskryptorów
-- Gettery które odwołują się do `this.*` muszą być zdefiniowane bezpośrednio w obiekcie `state` w `app()`, nie w mixa-ach — przy spread `...` deskryptory getterów są tracone
+- Miksyny (`SimMixin`, `CharsMixin`, `HistoryMixin`) są mergowane przez `mergeMixins()` która używa `Object.defineProperties` — dzięki temu gettery są poprawnie kopiowane z zachowaniem deskryptorów
+- Gettery które odwołują się do `this.*` muszą być zdefiniowane bezpośrednio w obiekcie `state` w `app()`, nie w mixa-ach
+- Poprawne trasy hash: `#symulacje`, `#profil`, `#ustawienia`
 
 ## API
 
@@ -177,8 +174,8 @@ Frontend używa **Alpine.js** z wzorcem mixinów. Ważne zasady:
 - `GET /api/result/{job_id}/meta` — metadane symulacji (postać, klasa, fight style)
 
 ### Historia
-- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`); nie zawiera symulacji gości
-- `GET /api/history/mine` — historia zalogowanego użytkownika
+- `GET /api/history` — publiczna historia (paginacja: `?page=1&limit=50`)
+- `GET /api/history/mine` — historia zalogowanego użytkownika (filtrowana po `bnet_id`)
 - `GET /api/history/trend` — historia DPS w czasie dla konkretnej postaci
 
 ### Postacie
@@ -190,11 +187,11 @@ Frontend używa **Alpine.js** z wzorcem mixinów. Ważne zasady:
 
 ### Auth
 - `GET /auth/login` — redirect do Battle.net OAuth
-- `GET /auth/callback` — callback OAuth
+- `GET /auth/callback` — callback OAuth (pobiera `bnet_id` z `/userinfo`)
 - `GET /auth/logout` — wylogowanie
 - `GET /auth/session/info` — info o sesji (główna postać, is_first_login)
 - `PATCH /auth/session/main-character` — ustawienie głównej postaci
-- `POST /auth/session/skip-first-login` — pomiń modal wyboru głównej postaci
+- `POST /auth/session/skip-first-login` — pomij modal wyboru głównej postaci
 
 ### Admin
 - `GET /admin` — panel admina (wymaga sesji Keycloak)
