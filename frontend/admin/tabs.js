@@ -1,5 +1,3 @@
-// ---- Auto-refresh ----
-// interwaly w ms; null = brak auto-refresh
 const TAB_REFRESH = {
   dashboard: 30_000,
   traffic:   60_000,
@@ -37,16 +35,13 @@ function startAutoRefresh(tab) {
   if (interval) _refreshTimer = setInterval(fn, interval);
 }
 
-// timestamp ostatniego odswiezenia
 function markRefreshed(tab) {
   const el = document.getElementById(`refresh-label-${tab}`);
   if (el) {
     const now = new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    el.textContent = `ostatnia aktualizacja: ${now}`;
+    el.textContent = `${adminT('admin.refresh_label')} ${now}`;
   }
 }
-
-// ---- Tab switching ----
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -59,15 +54,12 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// ---- Init ----
-
 document.addEventListener('DOMContentLoaded', () => {
   _activeTab = 'dashboard';
   startAutoRefresh('dashboard');
   loadAppearance();
 });
 
-// zatrzymaj timer gdy karta przegłądarki nieaktywna
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopAutoRefresh();

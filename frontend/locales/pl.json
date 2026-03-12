@@ -22,10 +22,7 @@
     "simulations": "Symulacje",
     "profile": "Profil"
   },
-  "lang": {
-    "pl": "PL",
-    "en": "EN"
-  },
+  "lang": { "pl": "PL", "en": "EN" },
   "common": {
     "loading": "Ładowanie...",
     "error": "Błąd",
@@ -82,72 +79,41 @@
     "sim_complete": "Symulacja zakończona!"
   },
   "result": {
-    "dps": "DPS",
-    "total_dmg": "Total DMG",
-    "fight_length": "Czas walki",
-    "spell_breakdown": "Breakdown spelli",
-    "spell_name": "Spell",
-    "spell_dps": "DPS",
-    "spell_total_dmg": "Total DMG",
-    "spell_dps_pct": "% DPS",
-    "spell_dmg_pct": "% DMG",
-    "spell_executes": "Hits",
-    "spell_avg_hit": "Avg hit",
-    "spell_crit": "Crit",
-    "spell_miss": "Miss/Dodge",
-    "stats": "Statystyki",
-    "share_result": "Kopiuj link",
-    "view_chart": "📊 Pokaż wykres",
-    "download_chart": "⬇️ Pobierz wykres",
-    "open_armory": "🔗 Armory",
-    "raw_json": "Raw JSON",
-    "seconds_short": "s",
-    "back_home": "Wróć na stronę główną",
-    "simulate_cta": "Symuluj swoją postać",
+    "dps": "DPS", "total_dmg": "Total DMG", "fight_length": "Czas walki",
+    "spell_breakdown": "Breakdown spelli", "spell_name": "Spell", "spell_dps": "DPS",
+    "spell_total_dmg": "Total DMG", "spell_dps_pct": "% DPS", "spell_dmg_pct": "% DMG",
+    "spell_executes": "Hits", "spell_avg_hit": "Avg hit", "spell_crit": "Crit",
+    "spell_miss": "Miss/Dodge", "stats": "Statystyki", "share_result": "Kopiuj link",
+    "view_chart": "📊 Pokaż wykres", "download_chart": "⬇️ Pobierz wykres",
+    "open_armory": "🔗 Armory", "raw_json": "Raw JSON", "seconds_short": "s",
+    "back_home": "Wróć na stronę główną", "simulate_cta": "Symuluj swoją postać",
     "not_found_error": "Nie znaleziono symulacji. Link mógł wygasńąć lub jest nieprawidłowy."
   },
   "chars": {
-    "title": "Twoje postacie",
-    "filter_placeholder": "Szukaj postaci...",
+    "title": "Twoje postacie", "filter_placeholder": "Szukaj postaci...",
     "no_chars": "Brak postaci do wyświetlenia.",
     "no_chars_auto": "Twoje postacie WoW pojawią się automatycznie po zalogowaniu.",
     "no_chars_account": "Brak postaci WoW na tym koncie.",
     "no_chars_hint": "Postacie muszą mieć co najmniej level 10, lub skorzystaj z trybu Addon Export.",
-    "loading": "Ładowanie postaci...",
-    "error": "Błąd ładowania postaci",
-    "level_short": "lv",
-    "simulate": "🏃 Uruchom symulację",
-    "gear_title": "🎒 Gear",
-    "talents_title": "✨ Talenty",
-    "dps_trend_title": "📈 DPS w czasie"
+    "loading": "Ładowanie postaci...", "error": "Błąd ładowania postaci",
+    "level_short": "lv", "simulate": "🏃 Uruchom symulację",
+    "gear_title": "🎒 Gear", "talents_title": "✨ Talenty", "dps_trend_title": "📈 DPS w czasie"
   },
   "history": {
-    "title": "Historia symulacji",
-    "public_title": "Ostatnie symulacje",
-    "empty": "Brak symulacji",
-    "public_empty": "Brak publicznych symulacji.",
-    "loading": "Ładowanie historii...",
-    "fight_style": "Styl walki",
-    "view_result": "Zobacz wynik",
-    "results_count": "wyników",
-    "back_to_list": "Powrót do listy",
-    "page": "Strona {{page}} z {{total}}",
-    "prev": "← Poprzednia",
-    "next": "Następna →"
+    "title": "Historia symulacji", "public_title": "Ostatnie symulacje",
+    "empty": "Brak symulacji", "public_empty": "Brak publicznych symulacji.",
+    "loading": "Ładowanie historii...", "fight_style": "Styl walki",
+    "view_result": "Zobacz wynik", "results_count": "wyników",
+    "back_to_list": "Powrót do listy", "page": "Strona {{page}} z {{total}}",
+    "prev": "← Poprzednia", "next": "Następna →"
   },
   "news": {
-    "title": "📰 Aktualności",
-    "empty": "Brak aktualności",
-    "entries": "wpisów",
-    "read_more": "Czytaj więcej",
-    "collapse": "Zwiń"
+    "title": "📰 Aktualności", "empty": "Brak aktualności",
+    "entries": "wpisów", "read_more": "Czytaj więcej", "collapse": "Zwiń"
   },
   "profile": {
-    "title": "Profil",
-    "tab_chars": "Postacie",
-    "tab_history": "Historia",
-    "tab_settings": "Ustawienia",
-    "simulations_count": "symulacji"
+    "title": "Profil", "tab_chars": "Postacie", "tab_history": "Historia",
+    "tab_settings": "Ustawienia", "simulations_count": "symulacji"
   },
   "errors": {
     "view_load_failed": "Błąd ładowania widoku: {{name}}",
@@ -159,117 +125,96 @@
   "admin": {
     "title": "Panel Admina",
     "logout": "Wyloguj",
+    "refresh_label": "ostatnia aktualizacja:",
     "tabs": {
-      "dashboard": "Dashboard",
-      "traffic": "📈 Ruch",
-      "news": "Newsy",
-      "users": "Użytkownicy",
-      "logs": "Logi",
-      "maintenance": "Utrzymanie",
-      "limits": "Limity",
-      "health": "Health",
-      "tasks": "Zadania",
-      "appearance": "Wygląd"
+      "dashboard": "Dashboard", "traffic": "📈 Ruch", "news": "Newsy",
+      "users": "Użytkownicy", "logs": "Logi", "maintenance": "Utrzymanie",
+      "limits": "Limity", "health": "Health", "tasks": "Zadania", "appearance": "Wygląd"
     },
     "dashboard": {
       "title": "Statystyki serwera",
-      "total_sims": "Wszystkich symulacji",
-      "total_users": "Użytkowników",
-      "today": "Dziś",
-      "last_7d": "Ostatnie 7 dni",
-      "last_30d": "Ostatnie 30 dni",
-      "active_jobs": "Aktywne zadania",
-      "cpu": "CPU",
-      "ram": "RAM",
-      "uptime": "Uptime",
-      "chart_trend": "Symulacje — ostatnie 30 dni",
-      "chart_classes": "Rozkład klas",
-      "chart_fightstyle": "Fight Style",
-      "chart_top10": "Top 10 DPS"
+      "total_sims": "Wszystkich symulacji", "total_users": "Użytkowników",
+      "today": "Dziś", "last_7d": "Ostatnie 7 dni", "last_30d": "Ostatnie 30 dni",
+      "active_jobs": "Aktywne zadania", "cpu": "CPU", "ram": "RAM", "uptime": "Uptime",
+      "chart_trend": "Symulacje — ostatnie 30 dni", "chart_classes": "Rozkład klas",
+      "chart_fightstyle": "Fight Style", "chart_top10": "Top 10 DPS"
     },
     "traffic": {
-      "title": "Ruch na stronie",
-      "today": "Dziś",
-      "unique_today": "Unikalni dziś",
-      "week": "7 dni",
-      "month": "30 dni",
-      "unique_30d": "Unikalni 30 dni",
-      "total": "Wszystkich wizyt",
-      "chart_daily": "Odwiedziny — ostatnie 30 dni",
+      "title": "Ruch na stronie", "today": "Dziś", "unique_today": "Unikalni dziś",
+      "week": "7 dni", "month": "30 dni", "unique_30d": "Unikalni 30 dni",
+      "total": "Wszystkich wizyt", "chart_daily": "Odwiedziny — ostatnie 30 dni",
       "chart_hourly": "Aktywność wg godziny (7 dni)",
-      "top_pages": "Top 10 podstron (30 dni)",
-      "refresh": "Odśwież"
+      "top_pages": "Top 10 podstron (30 dni)", "refresh": "Odśwież"
     },
     "news": {
-      "add_title": "Dodaj news",
-      "title_placeholder": "Tytuł newsa...",
-      "body_placeholder": "Treść...",
-      "published_label": "Opublikowany",
-      "add_btn": "Dodaj news",
-      "list_title": "Newsy",
-      "loading": "Ładowanie...",
-      "empty": "Brak newsów.",
-      "hide": "Ukryj",
-      "publish": "Publikuj",
-      "delete": "Usuń",
-      "badge_published": "opublikowany",
-      "badge_draft": "szkic"
+      "add_title": "Dodaj news", "title_placeholder": "Tytuł newsa...",
+      "body_placeholder": "Treść...", "published_label": "Opublikowany",
+      "add_btn": "Dodaj news", "list_title": "Newsy", "loading": "Ładowanie...",
+      "empty": "Brak newsów.", "hide": "Ukryj", "publish": "Publikuj",
+      "delete": "Usuń", "badge_published": "opublikowany", "badge_draft": "szkic"
     },
     "users": {
-      "title": "Użytkownicy",
-      "subtitle": "Lista użytkowników na podstawie historii symulacji.",
-      "refresh": "Odśwież",
-      "search_placeholder": "Szukaj...",
-      "loading": "Ładowanie...",
-      "empty": "Brak użytkowników.",
-      "modal_title": "Symulacje użytkownika",
-      "no_sims": "Brak symulacji.",
-      "view_result": "Zobacz wynik ↗"
+      "title": "Użytkownicy", "subtitle": "Lista użytkowników na podstawie historii symulacji.",
+      "refresh": "Odśwież", "search_placeholder": "Szukaj...", "loading": "Ładowanie...",
+      "empty": "Brak użytkowników.", "modal_title": "Symulacje użytkownika",
+      "no_sims": "Brak symulacji.", "no_sims_yet": "brak",
+      "last_sim": "ostatnia", "view_result": "Zobacz wynik ↗"
     },
     "logs": {
-      "title": "Logi",
-      "refresh": "Odśwież",
-      "filter_all": "Wszystkie",
-      "loading": "Ładowanie...",
-      "empty": "Brak logów."
+      "title": "Logi", "refresh": "Odśwież", "filter_all": "Wszystkie",
+      "loading": "Ładowanie...", "empty": "Brak logów."
     },
     "maintenance": {
-      "title": "Zarządzanie symulacjami",
-      "subtitle": "Usuń stare symulacje z bazy danych.",
-      "days_placeholder": "Dni (np. 30)",
-      "delete_older": "Usuń starsze niż X dni",
+      "title": "Zarządzanie symulacjami", "subtitle": "Usuń stare symulacje z bazy danych.",
+      "days_placeholder": "Dni (np. 30)", "delete_older": "Usuń starsze niż X dni",
       "delete_all": "Usuń WSZYSTKIE"
     },
     "limits": {
-      "title": "Zarządzanie limitami",
-      "subtitle": "Zmiana limitów systemowych.",
-      "concurrent": "Max jednoczesnych symulacji:",
-      "rate": "Limit zapytań/min:",
-      "timeout": "Timeout symulacji (s):",
-      "save": "Zapisz limity"
+      "title": "Zarządzanie limitami", "subtitle": "Zmiana limitów systemowych.",
+      "concurrent": "Max jednoczesnych symulacji:", "rate": "Limit zapytań/min:",
+      "timeout": "Timeout symulacji (s):", "save": "Zapisz limity"
     },
     "health": {
-      "title": "Health Check",
-      "refresh": "Odśwież",
-      "loading": "Ładowanie..."
+      "title": "Health Check", "refresh": "Odśwież", "loading": "Ładowanie...",
+      "up_to_date": "✓ aktualna", "outdated": "✗ nieaktualna",
+      "not_checked": "? nie sprawdzono", "local": "lokalna", "latest": "najnowsza"
     },
     "tasks": {
-      "title": "Zarządzanie zadaniami",
-      "refresh": "Odśwież",
-      "loading": "Ładowanie...",
-      "empty": "Brak aktywnych zadań.",
-      "cancel": "Anuluj"
+      "title": "Zarządzanie zadaniami", "refresh": "Odśwież",
+      "loading": "Ładowanie...", "empty": "Brak aktywnych zadań.", "cancel": "Anuluj"
     },
     "appearance": {
-      "title": "Wygląd strony",
-      "subtitle": "Dostosuj wygląd strony głównej.",
-      "header_title": "Tytuł w headerze:",
-      "hero_title": "Tytuł landing hero:",
+      "title": "Wygląd strony", "subtitle": "Dostosuj wygląd strony głównej.",
+      "header_title": "Tytuł w headerze:", "hero_title": "Tytuł landing hero:",
       "hero_custom_label": "Własny tekst hero (opcjonalnie)",
       "hero_custom_hint": "Jeśli wpiszesz tekst poniżej, zastąpi on cały domyślny blok hero.",
-      "emoji_label": "Ikona strony (emoji):",
-      "save": "Zapisz wygląd"
+      "emoji_label": "Ikona strony (emoji):", "save": "Zapisz wygląd"
     },
-    "refresh_label": "ostatnia aktualizacja:"
+    "chart": {
+      "no_data": "Brak danych", "simulations": "symulacji",
+      "views": "wyświetleń", "unique": "unikalnych", "visits": "wizyt",
+      "page": "Podstrona", "character": "Postać", "class_spec": "Klasa / Spec",
+      "avg_dps": "śr. DPS"
+    },
+    "toast": {
+      "error_generic": "Wystąpił błąd.",
+      "traffic_error": "Błąd ładowania ruchu",
+      "news_fill": "Uzupełnij tytuł i treść!",
+      "news_added": "News dodany!",
+      "deleted": "Usunięto.",
+      "deleted_count": "Usunięto {{n}} symulacji.",
+      "task_cancelled": "Zadanie anulowane",
+      "limits_error": "Błąd ładowania limitów",
+      "limits_saved": "Limity zapisane.",
+      "days_required": "Podaj liczbę dni!",
+      "appearance_saved": "Wygląd zapisany"
+    },
+    "confirm": {
+      "delete": "Na pewno usunąć?",
+      "cancel_task": "Na pewno anulować zadanie",
+      "delete_older": "Na pewno usunąć wszystkie symulacje starsze niż",
+      "delete_all_1": "Na pewno usunąć WSZYSTKIE symulacje? To nieodwracalne!",
+      "delete_all_2": "Jesteś PEWNY? Wszystkie dane zostaną utracone!"
+    }
   }
 }

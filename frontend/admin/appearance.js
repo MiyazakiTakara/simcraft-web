@@ -41,16 +41,16 @@ async function saveAppearance() {
     const result = await res.json();
     const el     = document.getElementById('appearance-result');
     if (res.ok) {
-      el.textContent = 'Zapisano!';
+      el.textContent = adminT('admin.toast.appearance_saved');
       el.style.color = '#4c4';
-      toast('Wygląd zapisany', '#4c4');
+      toast(adminT('admin.toast.appearance_saved'), '#4c4');
     } else {
-      el.textContent = 'Błąd: ' + (result.detail || 'Nieznany błąd');
+      el.textContent = adminT('common.error_prefix') + (result.detail || adminT('admin.toast.error_generic'));
       el.style.color = '#e55';
     }
   } catch (e) {
     const el = document.getElementById('appearance-result');
-    el.textContent = 'Błąd połączenia';
+    el.textContent = adminT('errors.network');
     el.style.color = '#e55';
   }
 }

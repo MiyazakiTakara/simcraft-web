@@ -9,19 +9,20 @@ async function loadUsers() {
 
 function renderUsers(users) {
   const list = document.getElementById('user-list');
-  if (!users.length) { list.innerHTML = '<p class="empty">Brak użytkowników.</p>'; return; }
+  if (!users.length) { list.innerHTML = `<p class="empty">${adminT('admin.users.empty')}</p>`; return; }
   list.innerHTML = users.map(u => `
     <div class="news-card" onclick="openUserModal('${escHtml(u.user_id)}')" style="cursor:pointer">
       <div class="info">
-        <h3>${escHtml(u.user_id || 'Nieznany')}</h3>
+        <h3>${escHtml(u.user_id || adminT('common.unknown'))}</h3>
         <p>${escHtml(u.character_name || '—')} ${
           u.character_class
             ? `<span style="color:#f4a01c">${escHtml((u.character_spec ? u.character_spec + ' ' : '') + u.character_class)}</span>`
             : ''
         }</p>
         <div class="meta">
-          ${u.sim_count} symulacji · śr. DPS: ${u.avg_dps ? Number(u.avg_dps).toLocaleString() : '—'} ·
-          ${u.last_sim ? 'ostatnia: ' + fmt(u.last_sim) : 'brak'}
+          ${u.sim_count} ${adminT('profile.simulations_count')} ·
+          ${adminT('admin.chart.avg_dps')}: ${u.avg_dps ? Number(u.avg_dps).toLocaleString() : '—'} ·
+          ${u.last_sim ? adminT('admin.users.last_sim') + ': ' + fmt(u.last_sim) : adminT('admin.users.no_sims_yet')}
         </div>
       </div>
     </div>
@@ -42,12 +43,12 @@ async function openUserModal(userId) {
   const modal = document.getElementById('user-modal');
   const list  = document.getElementById('user-sim-list');
   modal.classList.remove('hidden');
-  list.innerHTML = '<p class="empty">Ładowanie...</p>';
+  list.innerHTML = `<p class="empty">${adminT('common.loading')}</p>`;
 
   const res = await fetch('/admin/api/users/' + encodeURIComponent(userId) + '/simulations');
-  if (!res.ok) { list.innerHTML = '<p class="empty">Błąd ładowania.</p>'; return; }
+  if (!res.ok) { list.innerHTML = `<p class="empty">${adminT('admin.toast.error_generic')}</p>`; return; }
   const sims = await res.json();
-  if (!sims.length) { list.innerHTML = '<p class="empty">Brak symulacji.</p>'; return; }
+  if (!sims.length) { list.innerHTML = `<p class="empty">${adminT('admin.users.no_sims')}</p>`; return; }
 
   list.innerHTML = sims.map(s => `
     <div class="sim-item">
@@ -60,7 +61,7 @@ async function openUserModal(userId) {
       </div>
       <div style="text-align:right">
         <div style="font-weight:700;color:#f4a01c;font-size:1.1rem">${Number(s.dps).toLocaleString()} DPS</div>
-        <a class="sim-link" href="/result/${s.job_id}" target="_blank">Zobacz wynik ↗</a>
+        <a class="sim-link" href="/result/${s.job_id}" target="_blank">${adminT('admin.users.view_result')}</a>
       </div>
     </div>
   `).join('');

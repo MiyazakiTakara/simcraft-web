@@ -5,7 +5,7 @@ async function loadLogs() {
   if (res.status === 302 || res.redirected) { window.location = '/admin/login'; return; }
   const logs = await res.json();
   const list = document.getElementById('log-list');
-  if (!logs.length) { list.innerHTML = '<p class="empty">Brak logów.</p>'; return; }
+  if (!logs.length) { list.innerHTML = `<p class="empty">${adminT('admin.logs.empty')}</p>`; return; }
   list.innerHTML = logs.map(l => `
     <div class="log-entry">
       <span class="time">${l.created_at ? l.created_at.replace('T',' ').slice(0,19) : ''}</span>
