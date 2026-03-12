@@ -1,19 +1,7 @@
 import hashlib
-from datetime import datetime
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from sqlalchemy import Column, Integer, String, DateTime
-from database import Base, SessionLocal
-
-
-class PageVisitModel(Base):
-    __tablename__ = "page_visits"
-
-    id         = Column(Integer, primary_key=True, autoincrement=True)
-    path       = Column(String(512), nullable=False, index=True)
-    ip_hash    = Column(String(64), nullable=True)
-    session_id = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+from database import SessionLocal, PageVisitModel
 
 
 # ścieżki które pomijamy (statyczne zasoby, API, admin)
