@@ -169,10 +169,11 @@ function app() {
 
     handleHash() {
       const hash = window.location.hash.slice(1);
-      if (hash === "symulacje" || hash === "profil") {
+      const validViews = ['symulacje', 'profil', 'ustawienia'];
+      if (validViews.includes(hash)) {
         this.navigateTo(hash);
       } else {
-        this.navigateTo("home");
+        this.navigateTo('home');
       }
     },
 
