@@ -4,10 +4,25 @@ const HistoryMixin = {
     this.loadingHistory = true;
     this.historyLoading = true;
     try {
-      const data = await API.getHistory(this.sessionId, this.historyPage, this.historyPerPage);
-      this.history = data.results || [];
-    } catch (e) { console.error("Failed to load history", e); }
-    finally {
+      if (this.sessionId) {
+        let data;
+        try {
+          data = await API.getHistory(this.sessionId, 1, 100);
+        } catch (e) {
+          // Sesja wygasła lub nieprawidłowa — fallback na publiczną historię
+          console.warn('loadHistory: sesja odrzucona, fallback na public', e);
+          data = await API.getPublicHistory(1, 100);
+        }
+        this.history = data.results || [];
+      } else {
+        const data = await API.getPublicHistory(1, 100);
+        this.history = data.results || [];
+      }
+      this.historyPage = 1;
+    } catch (e) {
+      console.error('Failed to load history', e);
+      this.history = [];
+    } finally {
       this.loadingHistory = false;
       this.historyLoading = false;
     }
@@ -17,10 +32,13 @@ const HistoryMixin = {
     this.loadingHistory = true;
     this.historyLoading = true;
     try {
-      const data = await API.getPublicHistory(this.historyPage, this.historyPerPage);
+      const data = await API.getPublicHistory(1, 100);
       this.history = data.results || [];
-    } catch (e) { console.error("Failed to load public history", e); }
-    finally {
+      this.historyPage = 1;
+    } catch (e) {
+      console.error('Failed to load public history', e);
+      this.history = [];
+    } finally {
       this.loadingHistory = false;
       this.historyLoading = false;
     }
