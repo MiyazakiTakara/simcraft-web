@@ -39,7 +39,12 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-RUN mkdir -p /app/results
+RUN mkdir -p /app/results && \
+    echo "Generating build version..." && \
+    BUILD_VERSION=$(git rev-parse --short HEAD 2>/dev/null || echo "dev") && \
+    echo "Build version: $BUILD_VERSION" && \
+    find /app/frontend -name "*.html" -exec sed -i "s/?v=[0-9]*/?v=$BUILD_VERSION/g" {} \; && \
+    echo "Version tags updated"
 
 WORKDIR /app/backend
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
