@@ -16,8 +16,8 @@ _PRIVACY_JOIN = """
     LEFT JOIN users u ON u.bnet_id = h.user_id
 """
 _PRIVACY_FILTER = "(u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)"
-# Exclude private character entries
-_PRIVACY_FILTER += " AND h.is_private = FALSE"
+# Exclude private character entries (COALESCE handles old entries without is_private set)
+_PRIVACY_FILTER += " AND COALESCE(h.is_private, FALSE) = FALSE"
 # Exclude simulations submitted via WoW addon without a session (source = 'addon')
 _SOURCE_FILTER  = "(h.source IS NULL OR h.source != 'addon')"
 

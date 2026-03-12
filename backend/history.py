@@ -77,7 +77,7 @@ def get_public_history(
         FROM history h
         LEFT JOIN users u ON u.bnet_id = h.user_id
         WHERE (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
-        AND h.is_private = FALSE
+        AND COALESCE(h.is_private, FALSE) = FALSE
     """)
     rows_sql = text("""
         SELECT h.job_id, h.character_name, h.character_class, h.character_spec,
@@ -85,7 +85,7 @@ def get_public_history(
         FROM history h
         LEFT JOIN users u ON u.bnet_id = h.user_id
         WHERE (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
-        AND h.is_private = FALSE
+        AND COALESCE(h.is_private, FALSE) = FALSE
         ORDER BY h.created_at DESC
         LIMIT :limit OFFSET :offset
     """)
