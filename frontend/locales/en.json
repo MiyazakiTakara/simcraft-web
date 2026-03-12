@@ -99,6 +99,7 @@
     "manual_entry": "Enter manually",
     "char_privacy": "🔒 Character Privacy",
     "char_privacy_hint": "Select which characters should be hidden from rankings and public history.",
+    "char_privacy_disabled": "Private profile mode is enabled - all simulations are hidden.",
     "char_private": "Private",
     "no_chars_for_privacy": "No characters available to set privacy.",
     "section_privacy": "🔒 Privacy",

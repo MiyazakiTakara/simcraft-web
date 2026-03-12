@@ -99,6 +99,7 @@
     "manual_entry": "Wpisz ręcznie",
     "char_privacy": "🔒 Prywatność postaci",
     "char_privacy_hint": "Wybierz które postacie mają być ukryte w rankingach i historii publicznej.",
+    "char_privacy_disabled": "Włączony jest tryb prywatny dla całego profilu - wszystkie symulacje są ukryte.",
     "char_private": "Prywatna",
     "no_chars_for_privacy": "Brak postaci do ustawienia prywatności.",
     "section_privacy": "🔒 Prywatność",

@@ -83,9 +83,12 @@
     </section>
 
     <!-- ── Sekcja: Prywatność postaci ── -->
-    <section class="settings-section">
+    <section class="settings-section" :style="form.profile_private ? 'opacity:0.5;pointer-events:none' : ''">
       <h3 x-text="$store.i18n.t('settings.char_privacy')"></h3>
       <p class="settings-hint" x-text="$store.i18n.t('settings.char_privacy_hint')"></p>
+      <template x-if="form.profile_private">
+        <div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem" x-text="$store.i18n.t('settings.char_privacy_disabled')"></div>
+      </template>
       
       <template x-if="characters.length === 0">
         <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('settings.no_chars_for_privacy')"></div>
