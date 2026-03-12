@@ -227,9 +227,18 @@ function settingsMixin() {
   };
 }
 
-// Register the mixin with Alpine
-console.log('Registering settingsMixin, Alpine defined:', typeof Alpine !== 'undefined');
-if (typeof Alpine !== 'undefined') {
-  Alpine.data('settingsMixin', settingsMixin);
-  console.log('settingsMixin registered');
+// Register the mixin with Alpine when it's ready
+function registerSettingsMixin() {
+  console.log('Registering settingsMixin, Alpine defined:', typeof Alpine !== 'undefined');
+  if (typeof Alpine !== 'undefined') {
+    Alpine.data('settingsMixin', settingsMixin);
+    console.log('settingsMixin registered');
+  }
+}
+
+// Try to register immediately, or wait for Alpine
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', registerSettingsMixin);
+} else {
+  registerSettingsMixin();
 }
