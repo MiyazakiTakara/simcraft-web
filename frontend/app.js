@@ -151,7 +151,6 @@ function app() {
     },
 
     initTrendTab() {
-      // Autoselect pierwszej postaci jeśli żadna nie wybrana
       if (!this.trendCharName && this.characters.length > 0) {
         const c = this.characters[0];
         this.trendCharName = c.name + '|' + (c.realm_slug || c.realm);
@@ -383,6 +382,9 @@ function app() {
     },
 
     init() {
+      // Udostępnij instancję app() globalnie dla header partial
+      window.__alpineApp = this;
+
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
       this.loadAppearance();
 

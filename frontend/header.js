@@ -1,12 +1,41 @@
 function header() {
   return {
-    appearance: { emoji: '⚔️', header_title: 'SimCraft Web', hero_title: 'WoW DPS Simulator' },
+    appearance: { emoji: '⚔️', header_title: 'SimCraft Web' },
     sessionId: localStorage.getItem('simcraft_session'),
     mainChar: null,
     theme: localStorage.getItem('simcraft_theme') || 'dark',
 
     async init() {
-      // Wczytaj appearance
+      const isIndex = window.location.pathname === '/';
+
+      // Na index.html — dane pobiera app(), czekamy aż będzie gotowy
+      if (isIndex) {
+        const waitForApp = (resolve) => {
+          if (window.__alpineApp) {
+            resolve(window.__alpineApp);
+          } else {
+            setTimeout(() => waitForApp(resolve), 50);
+          }
+        };
+        const appInstance = await new Promise(waitForApp);
+
+        // Sync reaktywny: obserwuj zmiany w app()
+        this.$watch('_tick', () => {});
+        const sync = () => {
+          this.appearance = appInstance.appearance;
+          this.sessionId  = appInstance.sessionId;
+          this.mainChar   = appInstance.mainChar
+            ? appInstance.mainChar
+            : (appInstance.mainCharSaved ? { name: appInstance.mainChar?.name } : null);
+          this.theme      = appInstance.theme;
+        };
+        sync();
+        // Polling co 300ms żeby łapać zmiany (mainChar, sesja, theme)
+        setInterval(sync, 300);
+        return;
+      }
+
+      // Na pozostałych stronach (result, rankings) — samodzielnie
       try {
         const r = await fetch('/api/appearance');
         if (r.ok) {
@@ -15,17 +44,15 @@ function header() {
         }
       } catch(e) {}
 
-      // Wczytaj info o sesji (main char)
       if (this.sessionId) {
         try {
-          const r = await fetch('/auth/session/info', {
-            headers: { 'X-Session-ID': this.sessionId }
-          });
+          const r = await fetch(`/auth/session/info?session=${encodeURIComponent(this.sessionId)}`);
           if (r.ok) {
             const data = await r.json();
-            this.mainChar = data.main_character || null;
+            const name  = data.main_character_name  || null;
+            const realm = data.main_character_realm || null;
+            this.mainChar = name ? { name, realm } : null;
           } else {
-            // Sesja wygasła
             this.sessionId = null;
             localStorage.removeItem('simcraft_session');
           }
@@ -34,13 +61,8 @@ function header() {
     },
 
     goHome() {
-      if (window.location.pathname === '/') {
-        // Na index.html — użyj Alpine router jeśli dostępny
-        if (window.__alpineApp?.navigateTo) {
-          window.__alpineApp.navigateTo('home');
-        } else {
-          window.location.href = '/';
-        }
+      if (window.__alpineApp?.navigateTo) {
+        window.__alpineApp.navigateTo('home');
       } else {
         window.location.href = '/';
       }
@@ -55,30 +77,34 @@ function header() {
     },
 
     goTo(hash) {
-      if (window.location.pathname === '/') {
-        // Parsuj hash na widok i tab
-        const h = hash.replace('/#', '');
-        const [view, tab] = h.split('-');
-        if (window.__alpineApp?.navigateTo) {
-          window.__alpineApp.navigateTo(view);
-          if (tab && window.__alpineApp) window.__alpineApp.profileTab = tab;
-        } else {
-          window.location.hash = view;
-        }
+      const h = hash.replace('/#', '');
+      const [view, tab] = h.split('-');
+      if (window.__alpineApp?.navigateTo) {
+        window.__alpineApp.navigateTo(view);
+        if (tab && window.__alpineApp) window.__alpineApp.profileTab = tab;
       } else {
         window.location.href = hash;
       }
     },
 
     async logout() {
-      localStorage.removeItem('simcraft_session');
-      window.location.href = '/auth/logout';
+      if (window.__alpineApp?.logout) {
+        window.__alpineApp.logout();
+      } else {
+        localStorage.removeItem('simcraft_session');
+        window.location.href = '/auth/logout';
+      }
     },
 
     toggleTheme() {
-      this.theme = this.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('simcraft_theme', this.theme);
-      document.documentElement.setAttribute('data-theme', this.theme);
+      if (window.__alpineApp?.toggleTheme) {
+        window.__alpineApp.toggleTheme();
+        this.theme = window.__alpineApp.theme;
+      } else {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('simcraft_theme', this.theme);
+        document.documentElement.setAttribute('data-theme', this.theme);
+      }
     },
   };
 }
