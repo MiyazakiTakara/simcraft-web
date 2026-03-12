@@ -109,76 +109,57 @@
   <!-- Kontener widoków -->
   <div id="view-container"></div>
 
-  <!-- SETTINGS VIEW (inline to use same Alpine scope) -->
-  <div x-show="currentView === 'ustawienia'" x-cloak>
-    <div class="settings-view">
+  <!-- SETTINGS VIEW (inline) -->
+  <div class="settings-view" x-show="currentView === 'ustawienia'">
+    <!-- Ładowanie -->
+    <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
+      <span x-text="$store.i18n.t('common.loading')"></span>
+    </div>
+    
+    <!-- Błąd -->
+    <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
+      <span x-text="settingsError"></span>
+    </div>
 
-      <!-- Ładowanie -->
-      <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
-        <span x-text="$store.i18n.t('common.loading')"></span>
-      </div>
+    <!-- Treść ustawień -->
+    <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
+      <h2 style="margin-bottom:1.5rem">Ustawienia</h2>
 
-      <!-- Błąd -->
-      <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
-        <span x-text="settingsError"></span>
-      </div>
-
-      <!-- Treść ustawień (gdy zalogowany) -->
-      <div x-show="!settingsLoading && sessionId" style="max-width:680px;margin:2rem auto">
-        <h2 style="margin-bottom:1.5rem" x-text="$store.i18n.t('settings.title')"></h2>
-
-        <!-- Postać -->
-        <section class="settings-section">
-          <h3 x-text="$store.i18n.t('settings.section_char')"></h3>
-          <p class="settings-hint" x-text="$store.i18n.t('settings.section_char_hint')"></p>
-          <div class="settings-row">
-            <label x-text="$store.i18n.t('settings.char_name')"></label>
-            <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
-              <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
-                <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
-                <template x-for="ch in characters" :key="ch.id">
-                  <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
-                </template>
-              </select>
-              <div style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:.5rem">
-                <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer">
-                  <input type="checkbox" x-model="form.manualEntry" @change="onManualToggle()" />
-                  <span x-text="$store.i18n.t('settings.manual_entry')"></span>
-                </label>
-              </div>
-              <template x-if="form.manualEntry">
-                <div style="display:flex;flex-direction:column;gap:.5rem">
-                  <input type="text" x-model="form.main_character_name" :placeholder="$store.i18n.t('settings.char_name_placeholder')" class="settings-input" />
-                  <input type="text" x-model="form.main_character_realm" :placeholder="$store.i18n.t('settings.char_realm_placeholder')" class="settings-input" />
-                </div>
+      <!-- Postać -->
+      <section class="settings-section">
+        <h3>Postać domyślna</h3>
+        <p class="settings-hint">Wybierz postać, która będzie pokazywana na Twoim profilu.</p>
+        <div class="settings-row">
+          <label>Nazwa postaci</label>
+          <div style="flex:1">
+            <select x-model="form.main_character_name" @change="onCharSelect()" class="settings-input">
+              <option value="">Wybierz postać</option>
+              <template x-for="ch in characters" :key="ch.id">
+                <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
               </template>
-            </div>
+            </select>
           </div>
-        </section>
-
-        <!-- Prywatność -->
-        <section class="settings-section">
-          <h3 x-text="$store.i18n.t('settings.section_privacy')"></h3>
-          <div class="settings-toggle-row">
-            <div>
-              <div class="settings-toggle-label" x-text="$store.i18n.t('settings.private_profile')"></div>
-              <div class="settings-hint" x-text="$store.i18n.t('settings.private_profile_hint')"></div>
-            </div>
-            <button class="toggle-btn" :class="{ active: form.profile_private }" @click="form.profile_private = !form.profile_private">
-              <span class="toggle-knob"></span>
-            </button>
-          </div>
-          <div x-show="form.profile_private" class="settings-private-banner">
-            <span>🔒</span>
-            <span x-text="$store.i18n.t('settings.private_active_info')"></span>
-          </div>
-        </section>
-
-        <!-- Zapis -->
-        <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
-          <button class="btn-primary" @click="saveSettings()" x-text="$store.i18n.t('settings.save')"></button>
-          <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
         </div>
+      </section>
+
+      <!-- Prywatność -->
+      <section class="settings-section">
+        <h3>Prywatność profilu</h3>
+        <div class="settings-toggle-row">
+          <div>
+            <div class="settings-toggle-label">Ukryj profil publiczny</div>
+            <div class="settings-hint">Gdy włączone, Twój profil nie będzie widoczny dla innych.</div>
+          </div>
+          <button class="toggle-btn" :class="{ active: form.profile_private }" @click="form.profile_private = !form.profile_private">
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Zapis -->
+      <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
+        <button class="btn-primary" @click="saveSettings()" x-text="Zapisz"></button>
+        <span x-show="settingsSaveMsg" x-text="settingsSaveMsg" :class="settingsSaveOk ? 'settings-ok' : 'settings-err'"></span>
       </div>
     </div>
   </div>

@@ -76,16 +76,16 @@ function app() {
     _trendChart:     null,
 
     // Settings page state
-    settingsLoading:    true,
-    settingsError:      null,
-    settingsSaved:      false,
-    settingsSaveMsg:   '',
-    settingsSaveOk:    true,
+    settingsLoading: true,
+    settingsError: null,
+    settingsSaved: false,
+    settingsSaveMsg: '',
+    settingsSaveOk: true,
     form: {
-      main_character_name:  '',
+      main_character_name: '',
       main_character_realm: '',
-      profile_private:      false,
-      manualEntry:         false,
+      profile_private: false,
+      manualEntry: false,
     },
 
     formatDps(v)                  { return Utils.formatDps(v); },
