@@ -306,6 +306,8 @@ function app() {
           Alpine.nextTick(() => {
             Alpine.initTree(container);
           });
+        } else {
+          console.error('Alpine is not defined when trying to initTree for ustawienia');
         }
       }
     },
@@ -460,6 +462,7 @@ function app() {
 
   // Merge settingsMixin if available
   console.log('Checking window.settingsMixin in app.js:', typeof window.settingsMixin);
+  console.log('Checking Alpine in app.js:', typeof Alpine);
   if (typeof window.settingsMixin !== 'undefined') {
     console.log('Merging window.settingsMixin into app state');
     mergeMixins(state, window.settingsMixin());
