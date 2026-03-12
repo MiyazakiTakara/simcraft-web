@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy import func
 
-from database import SessionLocal, AdminSessionModel, NewsModel, LogEntryModel, get_logs, HistoryEntryModel, JobModel
+from database import SessionLocal, AdminSessionModel, NewsModel, LogEntryModel, get_logs, HistoryEntryModel, JobModel, PageVisitModel
 
 router = APIRouter(prefix="/admin")
 
@@ -222,7 +222,6 @@ async def get_dashboard(request: Request):
             HistoryEntryModel.created_at >= last_30d
         ).scalar() or 0
 
-        # Trend per dzień — ostatnie 30 dni
         monthly_trend_rows = db.query(
             func.date_trunc('day', HistoryEntryModel.created_at).label('day'),
             func.count(HistoryEntryModel.id).label('count'),
@@ -230,7 +229,6 @@ async def get_dashboard(request: Request):
             HistoryEntryModel.created_at >= last_30d
         ).group_by('day').order_by('day').all()
 
-        # Rozkład klas
         class_rows = db.query(
             HistoryEntryModel.character_class,
             func.count(HistoryEntryModel.id).label('count'),
@@ -238,7 +236,6 @@ async def get_dashboard(request: Request):
             func.count(HistoryEntryModel.id).desc()
         ).all()
 
-        # Rozkład fight style
         fs_rows = db.query(
             HistoryEntryModel.fight_style,
             func.count(HistoryEntryModel.id).label('count'),
@@ -246,7 +243,6 @@ async def get_dashboard(request: Request):
             func.count(HistoryEntryModel.id).desc()
         ).all()
 
-        # Top 10 DPS
         top10_rows = db.query(HistoryEntryModel).order_by(
             HistoryEntryModel.dps.desc()
         ).limit(10).all()
@@ -668,3 +664,81 @@ async def update_appearance(request: Request, data: AppearanceUpdate):
     if save_appearance_config(config):
         return {"ok": True, "message": "Appearance settings saved successfully"}
     raise HTTPException(500, "Failed to save appearance settings")
+
+
+# ---------- Traffic ----------
+
+@router.get("/api/traffic/stats")
+async def get_traffic_stats(request: Request):
+    _require_admin(request)
+    now      = datetime.utcnow()
+    last_24h = now - timedelta(hours=24)
+    last_7d  = now - timedelta(days=7)
+    last_30d = now - timedelta(days=30)
+
+    with SessionLocal() as db:
+        total_visits   = db.query(func.count(PageVisitModel.id)).scalar() or 0
+        today_visits   = db.query(func.count(PageVisitModel.id)).filter(PageVisitModel.created_at >= last_24h).scalar() or 0
+        week_visits    = db.query(func.count(PageVisitModel.id)).filter(PageVisitModel.created_at >= last_7d).scalar() or 0
+        month_visits   = db.query(func.count(PageVisitModel.id)).filter(PageVisitModel.created_at >= last_30d).scalar() or 0
+
+        # unikalne IP (na podstawie ip_hash) w ostatnich 30 dniach
+        unique_30d = db.query(func.count(func.distinct(PageVisitModel.ip_hash))).filter(
+            PageVisitModel.created_at >= last_30d,
+            PageVisitModel.ip_hash.isnot(None)
+        ).scalar() or 0
+
+        unique_today = db.query(func.count(func.distinct(PageVisitModel.ip_hash))).filter(
+            PageVisitModel.created_at >= last_24h,
+            PageVisitModel.ip_hash.isnot(None)
+        ).scalar() or 0
+
+        # trend dzienny — ostatnie 30 dni
+        daily_rows = db.query(
+            func.date_trunc('day', PageVisitModel.created_at).label('day'),
+            func.count(PageVisitModel.id).label('total'),
+            func.count(func.distinct(PageVisitModel.ip_hash)).label('unique'),
+        ).filter(
+            PageVisitModel.created_at >= last_30d
+        ).group_by('day').order_by('day').all()
+
+        # top 10 stron
+        top_pages_rows = db.query(
+            PageVisitModel.path,
+            func.count(PageVisitModel.id).label('count'),
+        ).filter(
+            PageVisitModel.created_at >= last_30d
+        ).group_by(PageVisitModel.path).order_by(
+            func.count(PageVisitModel.id).desc()
+        ).limit(10).all()
+
+        # rozkład godzinowy (ostatnie 7 dni)
+        hourly_rows = db.query(
+            func.extract('hour', PageVisitModel.created_at).label('hour'),
+            func.count(PageVisitModel.id).label('count'),
+        ).filter(
+            PageVisitModel.created_at >= last_7d
+        ).group_by('hour').order_by('hour').all()
+
+    return {
+        "summary": {
+            "total_visits":   total_visits,
+            "today_visits":   today_visits,
+            "week_visits":    week_visits,
+            "month_visits":   month_visits,
+            "unique_today":   unique_today,
+            "unique_30d":     unique_30d,
+        },
+        "daily_trend": [
+            {"day": str(row.day)[:10], "total": row.total, "unique": row.unique}
+            for row in daily_rows
+        ],
+        "top_pages": [
+            {"path": row.path, "count": row.count}
+            for row in top_pages_rows
+        ],
+        "hourly": [
+            {"hour": int(row.hour), "count": row.count}
+            for row in hourly_rows
+        ],
+    }

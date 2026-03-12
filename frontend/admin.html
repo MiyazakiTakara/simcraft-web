@@ -18,6 +18,7 @@
 
   <div class="container">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="traffic">📈 Ruch</button>
     <button class="tab" data-tab="news">Newsy</button>
     <button class="tab" data-tab="users">Użytkownicy</button>
     <button class="tab" data-tab="logs">Logi</button>
@@ -62,6 +63,40 @@
         <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Top 10 DPS</h3>
         <div id="chart-top10" style="font-size:0.82rem"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ========== TRAFFIC TAB ========== -->
+  <div class="tab-content" id="tab-traffic">
+    <h2>Ruch na stronie</h2>
+
+    <div class="stats-grid" id="traffic-stats-grid">
+      <div class="stat-card" data-tooltip="Wyświetlenia stron dziś (ostatnie 24h)"><div class="stat-value" id="tr-today">—</div><div class="stat-label">Dziś</div></div>
+      <div class="stat-card" data-tooltip="Unikalni odwiedzający dziś (po IP)"><div class="stat-value" id="tr-unique-today">—</div><div class="stat-label">Unikalni dziś</div></div>
+      <div class="stat-card" data-tooltip="Wyświetlenia w ostatnich 7 dniach"><div class="stat-value" id="tr-week">—</div><div class="stat-label">7 dni</div></div>
+      <div class="stat-card" data-tooltip="Wyświetlenia w ostatnich 30 dniach"><div class="stat-value" id="tr-month">—</div><div class="stat-label">30 dni</div></div>
+      <div class="stat-card" data-tooltip="Unikalni odwiedzający w ostatnich 30 dniach"><div class="stat-value" id="tr-unique-30d">—</div><div class="stat-label">Unikalni 30 dni</div></div>
+      <div class="stat-card" data-tooltip="Łączna liczba odwiedzin od początku"><div class="stat-value" id="tr-total">—</div><div class="stat-label">Wszystkich wizyt</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem">
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Odwiedziny — ostatnie 30 dni</h3>
+        <div id="chart-traffic-daily" style="height:240px"></div>
+      </div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem">
+        <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Aktywność wg godziny (7 dni)</h3>
+        <div id="chart-traffic-hourly" style="height:240px"></div>
+      </div>
+    </div>
+
+    <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:1rem;margin-top:1.5rem">
+      <h3 style="margin:0 0 0.75rem;color:#aaa;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.05em">Top 10 podstron (30 dni)</h3>
+      <div id="traffic-top-pages"></div>
+    </div>
+
+    <div style="margin-top:1rem;text-align:right">
+      <button class="primary" onclick="loadTraffic()">Odśwież</button>
     </div>
   </div>
 
