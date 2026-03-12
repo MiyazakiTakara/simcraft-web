@@ -95,6 +95,8 @@
     "char_realm": "Realm",
     "char_realm_placeholder": "np. twisting-nether",
     "realm_required": "Podaj również realm postaci.",
+    "select_char": "Wybierz postać z listy...",
+    "manual_entry": "Wpisz ręcznie",
     "section_privacy": "🔒 Prywatność",
     "private_profile": "Prywatny profil",
     "private_profile_hint": "Twoje symulacje nie będą widoczne w rankingach, historii publicznej ani na profilu /u/{postac}.",

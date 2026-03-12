@@ -95,6 +95,8 @@
     "char_realm": "Realm",
     "char_realm_placeholder": "e.g. twisting-nether",
     "realm_required": "Please also provide the character's realm.",
+    "select_char": "Select character from list...",
+    "manual_entry": "Enter manually",
     "section_privacy": "🔒 Privacy",
     "private_profile": "Private profile",
     "private_profile_hint": "Your simulations won't appear in rankings, public history, or on the /u/{character} profile page.",

@@ -6,10 +6,26 @@ function settingsMixin() {
     saving:     false,
     saveMsg:    '',
     saveMsgOk:  true,
+    characters: [],
     form: {
       main_character_name:  '',
       main_character_realm: '',
       profile_private:      false,
+      manualEntry:          false,
+    },
+
+    onCharSelect() {
+      const ch = this.characters.find(c => c.name === this.form.main_character_name);
+      if (ch) {
+        this.form.main_character_realm = ch.realm;
+      }
+    },
+
+    onManualToggle() {
+      if (this.form.manualEntry) {
+        this.form.main_character_name = '';
+        this.form.main_character_realm = '';
+      }
     },
 
     _getSession() {
@@ -65,6 +81,17 @@ function settingsMixin() {
         this.form.main_character_realm = data.main_character_realm || '';
         this.form.profile_private      = !!data.profile_private;
         this.isLoggedIn = true;
+
+        // Ładuj listę postaci
+        try {
+          const charsRes = await fetch(`/api/characters?session=${session}`);
+          if (charsRes.ok) {
+            const chars = await charsRes.json();
+            this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+          }
+        } catch (e) {
+          console.warn('Failed to load characters for picker', e);
+        }
       } catch (e) {
         this.error = this.$store.i18n.t('errors.network');
       } finally {
