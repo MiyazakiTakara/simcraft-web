@@ -40,6 +40,7 @@
   <script src="/sim.js?v=2"></script>
   <script src="/chars.js?v=4"></script>
   <script src="/history.js?v=2"></script>
+  <script src="/settings.js?v=1"></script>
   <script src="/header.js?v=1"></script>
   <script src="/app.js?v=32"></script>
   <script src="/partials.js?v=1"></script>
@@ -82,7 +83,7 @@
               <img :src="ch.avatar || '/static/default_avatar.png'" style="width:44px;height:44px;border-radius:6px;flex-shrink:0"/>
               <div>
                 <div style="font-weight:600" x-text="ch.name"></div>
-                <div style="font-size:.8rem;color:var(--muted)" x-text="ch.realm + ' · ' + (ch.spec ? ch.spec + ' ' : '') + ch.class + ' · ' + $store.i18n.t('chars.level_short') + ch.level"></div>
+                <div style="font-size:.8rem;color:var(--muted)" x-text="ch.realm + ' · ' + $store.i18n.t('chars.level_short') + ch.level + ' · ' + (ch.spec ? ch.spec + ' ' : '') + ch.class"></div>
               </div>
               <template x-if="mainChar && mainChar.name === ch.name">
                 <span style="margin-left:auto;color:var(--accent);font-size:1.1rem">✔</span>
