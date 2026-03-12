@@ -52,6 +52,7 @@ class HistoryEntryModel(Base):
     user_id              = Column(String(64), nullable=True, index=True)
     is_guest             = Column(Boolean, default=False, nullable=False)
     source               = Column(String(16), default="web", nullable=False)
+    is_private           = Column(Boolean, default=False, nullable=False, index=True)
     created_at           = Column(DateTime, default=datetime.utcnow)
 
 
@@ -123,6 +124,8 @@ def init_db():
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE"))
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS source VARCHAR(16) NOT NULL DEFAULT 'web'"))
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT FALSE"))
+            db.execute(text("CREATE INDEX IF NOT EXISTS ix_history_is_private ON history(is_private)"))
             db.execute(text("""
                 DO $$ BEGIN
                     IF (SELECT data_type FROM information_schema.columns

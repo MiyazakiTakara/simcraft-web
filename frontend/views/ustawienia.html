@@ -82,6 +82,34 @@
       </div>
     </section>
 
+    <!-- ── Sekcja: Prywatność postaci ── -->
+    <section class="settings-section">
+      <h3 x-text="$store.i18n.t('settings.char_privacy')"></h3>
+      <p class="settings-hint" x-text="$store.i18n.t('settings.char_privacy_hint')"></p>
+      
+      <template x-if="characters.length === 0">
+        <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('settings.no_chars_for_privacy')"></div>
+      </template>
+      
+      <template x-if="characters.length > 0">
+        <div style="display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto">
+          <template x-for="ch in characters" :key="ch.id">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--bg);border-radius:6px">
+              <div>
+                <span x-text="ch.name" style="font-weight:600"></span>
+                <span style="color:var(--muted);font-size:.8rem" x-text="' - ' + ch.realm"></span>
+                <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
+              </div>
+              <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.85rem">
+                <input type="checkbox" :checked="isCharPrivate(ch)" @change="toggleCharPrivacy(ch)" />
+                <span x-text="$store.i18n.t('settings.char_private')"></span>
+              </label>
+            </div>
+          </template>
+        </div>
+      </template>
+    </section>
+
     <!-- ── Sekcja: Interfejs ── -->
     <section class="settings-section">
       <h3 x-text="$store.i18n.t('settings.section_ui')"></h3>

@@ -23,6 +23,7 @@ class HistorySaveRequest(BaseModel):
     fight_style:          Optional[str] = "Patchwerk"
     user_id:              Optional[str] = None
     source:               Optional[str] = "web"
+    is_private:           Optional[bool] = False
 
 
 @router.post("/api/history", status_code=201)
@@ -55,6 +56,7 @@ def save_history(body: HistorySaveRequest):
             user_id              = resolved_user_id,
             is_guest             = is_guest,
             source               = source,
+            is_private           = body.is_private or False,
         )
         db.add(entry)
         db.commit()
@@ -75,6 +77,7 @@ def get_public_history(
         FROM history h
         LEFT JOIN users u ON u.bnet_id = h.user_id
         WHERE (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
+        AND h.is_private = FALSE
     """)
     rows_sql = text("""
         SELECT h.job_id, h.character_name, h.character_class, h.character_spec,
@@ -82,6 +85,7 @@ def get_public_history(
         FROM history h
         LEFT JOIN users u ON u.bnet_id = h.user_id
         WHERE (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
+        AND h.is_private = FALSE
         ORDER BY h.created_at DESC
         LIMIT :limit OFFSET :offset
     """)

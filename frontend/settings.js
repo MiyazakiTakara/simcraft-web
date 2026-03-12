@@ -7,11 +7,59 @@ function settingsMixin() {
     saveMsg:    '',
     saveMsgOk:  true,
     characters: [],
-    form: {
-      main_character_name:  '',
-      main_character_realm: '',
-      profile_private:      false,
-      manualEntry:          false,
+    charPrivacies: {},
+
+    classColor(className) {
+      const colors = {
+        'Death Knight': '#C41E3A', 'Demon Hunter': '#A330C9', 'Druid': '#FF7C0A',
+        'Evoker': '#33937F', 'Hunter': '#AAD372', 'Mage': '#3FC7EB', 'Monk': '#00FF98',
+        'Paladin': '#F48CBA', 'Priest': '#CCCCCC', 'Rogue': '#FFF468', 'Shaman': '#0070DD',
+        'Warlock': '#8788EE', 'Warrior': '#C69B3A',
+      };
+      return colors[className] || '#888';
+    },
+
+    isCharPrivate(ch) {
+      const key = ch.name + '|' + (ch.realm_slug || ch.realm);
+      return !!this.charPrivacies[key];
+    },
+
+    async toggleCharPrivacy(ch) {
+      const session = this._getSession();
+      if (!session) return;
+      const realm = ch.realm_slug || ch.realm;
+      const key = ch.name + '|' + realm;
+      const isPrivate = !this.charPrivacies[key];
+      try {
+        const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            character_name: ch.name,
+            character_realm: realm,
+            is_private: isPrivate,
+          }),
+        });
+        if (res.ok) {
+          this.charPrivacies[key] = isPrivate;
+        }
+      } catch (e) {
+        console.error('Failed to toggle char privacy', e);
+      }
+    },
+
+    async loadCharPrivacies() {
+      const session = this._getSession();
+      if (!session || this.characters.length === 0) return;
+      try {
+        const res = await fetch(`/auth/session/character-privacy?session=${session}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.charPrivacies = data.privacies || {};
+        }
+      } catch (e) {
+        console.warn('Failed to load char privacies', e);
+      }
     },
 
     onCharSelect() {
@@ -88,6 +136,7 @@ function settingsMixin() {
           if (charsRes.ok) {
             const chars = await charsRes.json();
             this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+            await this.loadCharPrivacies();
           }
         } catch (e) {
           console.warn('Failed to load characters for picker', e);

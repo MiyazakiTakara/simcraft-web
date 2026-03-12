@@ -216,3 +216,68 @@ async def skip_first_login(session: str):
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
     clear_first_login(session)
     return {"ok": True}
+
+
+@router.get("/auth/session/character-privacy")
+async def get_character_privacy(session: str):
+    """Pobiera mapowanie postaci do ich statusu prywatności."""
+    from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
+    
+    bnet_id = get_bnet_id_by_session(session)
+    if not bnet_id:
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    
+    with SessionLocal() as db:
+        rows = db.query(
+            HistoryEntryModel.character_name,
+            HistoryEntryModel.character_realm_slug,
+        ).filter(
+            HistoryEntryModel.user_id == bnet_id,
+        ).distinct().all()
+    
+    privacies = {}
+    for char_name, realm in rows:
+        key = char_name + '|' + realm
+        privacies[key] = False
+    
+    # Pobierz faktyczne statusy
+    with SessionLocal() as db:
+        private_rows = db.query(
+            HistoryEntryModel.character_name,
+            HistoryEntryModel.character_realm_slug,
+        ).filter(
+            HistoryEntryModel.user_id == bnet_id,
+            HistoryEntryModel.is_private == True,
+        ).distinct().all()
+    
+    for char_name, realm in private_rows:
+        key = char_name + '|' + realm
+        privacies[key] = True
+    
+    return {"privacies": privacies}
+
+
+class CharPrivacyRequest(BaseModel):
+    character_name: str
+    character_realm: str
+    is_private: bool
+
+
+@router.patch("/auth/session/character-privacy")
+async def update_character_privacy(session: str, body: CharPrivacyRequest):
+    """Ustawia prywatność dla konkretnej postaci - ukrywa/ odkrywa wszystkie jej symulacje."""
+    from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
+    
+    bnet_id = get_bnet_id_by_session(session)
+    if not bnet_id:
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    
+    with SessionLocal() as db:
+        db.query(HistoryEntryModel).filter(
+            HistoryEntryModel.user_id == bnet_id,
+            HistoryEntryModel.character_name == body.character_name,
+            HistoryEntryModel.character_realm_slug == body.character_realm,
+        ).update({"is_private": body.is_private})
+        db.commit()
+    
+    return {"ok": True}
