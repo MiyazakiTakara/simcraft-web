@@ -13,6 +13,15 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
 
+class UserModel(Base):
+    __tablename__ = "users"
+
+    bnet_id                = Column(String(64), primary_key=True)
+    main_character_name    = Column(String(128), nullable=True)
+    main_character_realm   = Column(String(128), nullable=True)
+    created_at             = Column(DateTime, default=datetime.utcnow)
+
+
 class JobModel(Base):
     __tablename__ = "jobs"
 
@@ -46,6 +55,7 @@ class SessionModel(Base):
     session_id             = Column(String(64), primary_key=True)
     access_token           = Column(Text, nullable=False)
     expires_at             = Column(Float, nullable=False)
+    bnet_id                = Column(String(64), nullable=True, index=True)
     main_character_name    = Column(String(128), nullable=True)
     main_character_realm   = Column(String(128), nullable=True)
     is_first_login         = Column(Boolean, default=True)
@@ -108,9 +118,35 @@ def init_db():
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_name VARCHAR(128)"))
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS main_character_realm VARCHAR(128)"))
             db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS is_first_login BOOLEAN DEFAULT TRUE"))
+            # Migracja: bnet_id w sesjach + tabela users
+            db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS bnet_id VARCHAR(64)"))
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS users (
+                    bnet_id VARCHAR(64) PRIMARY KEY,
+                    main_character_name VARCHAR(128),
+                    main_character_realm VARCHAR(128),
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
             db.commit()
         except Exception:
             db.rollback()
+
+
+def get_or_create_user(bnet_id: str) -> dict:
+    """Zwraca istniejacego usera lub tworzy nowego. Zwraca dict z main char."""
+    with SessionLocal() as db:
+        user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
+        if not user:
+            user = UserModel(bnet_id=bnet_id)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return {
+            "bnet_id":               user.bnet_id,
+            "main_character_name":   user.main_character_name,
+            "main_character_realm":  user.main_character_realm,
+        }
 
 
 def create_job(job_id: str, json_path: str):
@@ -164,13 +200,18 @@ def get_session_info(session_id: str) -> dict | None:
 
 
 def set_main_character(session_id: str, name: str, realm: str):
-    """Ustawia glowna postac i oznacza ze to nie jest juz first login."""
+    """Ustawia glowna postac w sesji i w tabeli users (jesli sesja ma bnet_id)."""
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
         if row:
             row.main_character_name  = name
             row.main_character_realm = realm
             row.is_first_login       = False
+            if row.bnet_id:
+                user = db.query(UserModel).filter(UserModel.bnet_id == row.bnet_id).first()
+                if user:
+                    user.main_character_name  = name
+                    user.main_character_realm = realm
             db.commit()
 
 
