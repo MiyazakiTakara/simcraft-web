@@ -5,10 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <!-- OG_META_PLACEHOLDER -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-  <link rel="stylesheet" href="/style.css?v=4"/>
+
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/style.css?v=9"/>
   <script src="/i18n.js?v=1"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="/api.js?v=2"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=1"></script>
   <style>
     .result-page { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
     .result-not-found { text-align:center; padding:4rem 1rem; color:var(--muted); }
@@ -90,22 +100,8 @@
     <img :src="chartModal" alt="DPS Chart"/>
   </div>
 
-  <!-- Header -->
-  <header class="header">
-    <a href="/" class="header-logo" style="text-decoration:none" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</a>
-    <div style="display:flex;align-items:center;gap:.6rem">
-      <div style="display:flex;gap:.2rem">
-        <template x-for="lang in ['pl','en']" :key="lang">
-          <button
-            @click="$store.i18n.setLang(lang)"
-            :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.8rem', padding: '.2rem .35rem'}"
-            x-text="lang.toUpperCase()"
-          ></button>
-        </template>
-      </div>
-      <a href="/" class="btn btn-ghost" style="font-size:.85rem" x-text="'← ' + $store.i18n.t('nav.home')"></a>
-    </div>
-  </header>
+  <!-- Shared header -->
+  <div id="site-header"></div>
 
   <div class="result-page">
 
@@ -223,11 +219,11 @@
                       <span style="display:flex;gap:.6rem;align-items:center">
                         <span x-show="spellSort==='total_dmg'">
                           <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
                         </span>
                         <span x-show="spellSort==='dps'">
                           <strong x-text="formatDps(sp.dps)"></strong> DPS
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
                         </span>
                         <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                       </span>
@@ -259,7 +255,7 @@
 
   </div>
 
-  <!-- Footer -->
+  <!-- Footer akcji (linki CSV, share) -->
   <div class="result-footer">
     <a :href="'/api/result/' + jobId + '/json'" target="_blank" x-text="$store.i18n.t('result.raw_json')"></a>
     <span style="color:var(--border)">·</span>
@@ -279,9 +275,13 @@
       x-text="copied ? '✓ ' + $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('result.share_result')"
     ></button>
     <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none"
-      x-text="appearance.emoji + ' ' + $store.i18n.t('result.simulate_cta')"
+      x-text="'⚔️ ' + $store.i18n.t('result.simulate_cta')"
     ></a>
   </div>
+
+  <!-- Shared footer -->
+  <div id="site-footer"></div>
+
 </div>
 
 <script>
@@ -325,11 +325,6 @@ function resultPage() {
     },
 
     async init() {
-      const appearancePromise = fetch('/api/appearance')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) this.appearance = data; })
-        .catch(() => {});
-
       this.jobId = window.location.pathname.split('/').filter(Boolean).pop();
       if (!this.jobId) {
         this.error = Alpine.store('i18n').t('errors.sim_failed');
@@ -341,7 +336,6 @@ function resultPage() {
         const [result, meta] = await Promise.all([
           API.getResultJson(this.jobId),
           API.getResultMeta(this.jobId),
-          appearancePromise,
         ]);
         this.result = result;
         this.meta   = meta;
@@ -351,7 +345,6 @@ function resultPage() {
         this.loading = false;
       }
 
-      // Załaduj reakcje po załadowaniu wyniku
       await this.loadReactions();
     },
 
