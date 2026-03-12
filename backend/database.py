@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime, text
+from sqlalchemy import create_engine, Column, String, Float, Integer, Text, Boolean, DateTime, UniqueConstraint, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ.get(
@@ -48,6 +48,17 @@ class HistoryEntryModel(Base):
     user_id              = Column(String(64), nullable=True, index=True)
     is_guest             = Column(Boolean, default=False, nullable=False)
     created_at           = Column(DateTime, default=datetime.utcnow)
+
+
+class ReactionModel(Base):
+    __tablename__ = "reactions"
+    __table_args__ = (UniqueConstraint("job_id", "user_key", name="uq_reaction_per_user"),)
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    job_id     = Column(String(64), nullable=False, index=True)
+    user_key   = Column(String(64), nullable=False)   # bnet_id
+    emoji      = Column(String(16), nullable=False)   # fire | strong | sad | skull | rofl
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class SessionModel(Base):
@@ -134,7 +145,6 @@ def init_db():
 
 
 def get_or_create_user(bnet_id: str) -> dict:
-    """Zwraca istniejacego usera lub tworzy nowego."""
     with SessionLocal() as db:
         user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
         if not user:
@@ -150,7 +160,6 @@ def get_or_create_user(bnet_id: str) -> dict:
 
 
 def get_bnet_id_by_session(session_id: str) -> str | None:
-    """Zwraca bnet_id powiazane z dana sesja, lub None jesli sesja nie istnieje/wygasla."""
     import time
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
@@ -196,7 +205,6 @@ def get_job(job_id: str) -> dict | None:
 
 
 def get_session_info(session_id: str) -> dict | None:
-    """Zwraca pelne info o sesji uzytkownika (main char, first login)."""
     import time
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
@@ -210,7 +218,6 @@ def get_session_info(session_id: str) -> dict | None:
 
 
 def set_main_character(session_id: str, name: str, realm: str):
-    """Ustawia glowna postac w sesji i w tabeli users (jesli sesja ma bnet_id)."""
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
         if row:
@@ -226,7 +233,6 @@ def set_main_character(session_id: str, name: str, realm: str):
 
 
 def clear_first_login(session_id: str):
-    """Oznacza sesje jako 'nie first login' bez ustawiania maina."""
     with SessionLocal() as db:
         row = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
         if row:
