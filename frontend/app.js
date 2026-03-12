@@ -314,6 +314,9 @@ function app() {
     },
 
     navigateTo(name) {
+      if (this.currentView === name) {
+        return; // Already navigating to this view
+      }
       this.currentView = name;
       this.activeTab = name;
       window.location.hash = name === 'home' ? '' : name;
