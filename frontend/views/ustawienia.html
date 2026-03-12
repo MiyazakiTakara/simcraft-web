@@ -1,4 +1,4 @@
-<div class="settings-view" x-init="init()">
+<div class="settings-view" x-init="initSettings()">
 
   <!-- Ładowanie -->
   <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
@@ -89,11 +89,11 @@
       <template x-if="form_profile_private">
         <div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem" x-text="$store.i18n.t('settings.char_privacy_disabled')"></div>
       </template>
-      
+
       <template x-if="characters.length === 0">
         <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('settings.no_chars_for_privacy')"></div>
       </template>
-      
+
       <template x-if="characters.length > 0">
         <div style="display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto">
           <template x-for="ch in characters" :key="ch.id">
@@ -103,7 +103,7 @@
                 <span style="color:var(--muted);font-size:.8rem" x-text="' - ' + ch.realm"></span>
                 <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
               </div>
-              <button 
+              <button
                 style="font-size:.75rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer"
                 @click="(async () => {
                   const app = window.__alpineApp;
