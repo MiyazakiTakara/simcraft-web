@@ -26,9 +26,10 @@ const SimMixin = {
       alert("Wybierz postac lub wklej addon export!"); this.loadingSim = false; return;
     }
     try {
-      const { job_id } = await API.startSim(payload);
+      const { job_id, source } = await API.startSim(payload);
       this.job = {
         id:        job_id,
+        source:    source || 'web',
         status:    "running",
         charName:  this.selectedChar?.name || null,
         realmSlug: this.selectedChar?.realm_slug || null,
@@ -64,6 +65,7 @@ const SimMixin = {
           role:                 this.effectiveRole(),
           fight_style:          this.simOptions.fight_style,
           user_id:              this.sessionId || null,
+          source:               this.job.source || 'web',
         });
         this.loadHistory();
         this.loadingSim = false;
@@ -85,20 +87,21 @@ const SimMixin = {
     this.pubResult = null;
     this.pubJob = null;
     try {
-      const { job_id } = await API.startSim({
+      const { job_id, source } = await API.startSim({
         addon_text:   this.guestAddonText.trim(),
         fight_style:  this.guestSimOptions.fight_style,
         iterations:   this.guestSimOptions.iterations,
         target_error: this.guestSimOptions.target_error,
       });
-      const guestJobId = job_id;
+      const guestJobId  = job_id;
+      const guestSource = source || 'addon';
       this._guestPollInterval = setInterval(async () => {
         try {
           const status = await API.getJobStatus(guestJobId);
           if (status.status === "done") {
             clearInterval(this._guestPollInterval);
             const result = await API.getResultJson(guestJobId);
-            result._source = 'addon';
+            result._source = guestSource;
             this.pubResult = result;
             this.pubJob = { id: guestJobId, charName: null, realmSlug: null, charClass: null, charSpec: null, role: 'dps' };
             await API.saveToHistory({
@@ -113,6 +116,7 @@ const SimMixin = {
               role:                 'dps',
               fight_style:          this.guestSimOptions.fight_style,
               user_id:              null,
+              source:               guestSource,
             });
             this.loadPublicHistory();
             this.guestLoadingSim = false;

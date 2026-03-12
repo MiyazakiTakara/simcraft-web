@@ -1,8 +1,59 @@
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+from typing import Optional
 from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
 from sqlalchemy import text, func
 
 router = APIRouter()
+
+
+class HistorySaveRequest(BaseModel):
+    job_id:               str
+    character_name:       Optional[str] = "Unknown"
+    character_class:      Optional[str] = ""
+    character_spec:       Optional[str] = ""
+    character_realm_slug: Optional[str] = ""
+    dps:                  Optional[float] = 0.0
+    hps:                  Optional[float] = 0.0
+    dtps:                 Optional[float] = 0.0
+    role:                 Optional[str] = "dps"
+    fight_style:          Optional[str] = "Patchwerk"
+    user_id:              Optional[str] = None
+    source:               Optional[str] = "web"
+
+
+@router.post("/api/history", status_code=201)
+def save_history(body: HistorySaveRequest):
+    """Zapisuje wynik symulacji do historii."""
+    # Sanitize source — tylko dozwolone wartości
+    source = body.source if body.source in ("web", "addon") else "web"
+
+    with SessionLocal() as db:
+        # Unikaj duplikatów — jeden job_id = jeden wpis
+        existing = db.query(HistoryEntryModel).filter(
+            HistoryEntryModel.job_id == body.job_id
+        ).first()
+        if existing:
+            return {"ok": True, "duplicate": True}
+
+        is_guest = not bool(body.user_id)
+        entry = HistoryEntryModel(
+            job_id               = body.job_id,
+            character_name       = (body.character_name or "Unknown").strip() or "Unknown",
+            character_class      = body.character_class or "",
+            character_spec       = body.character_spec  or "",
+            character_realm_slug = body.character_realm_slug or "",
+            dps                  = body.dps or 0.0,
+            role                 = body.role or "dps",
+            fight_style          = body.fight_style or "Patchwerk",
+            user_id              = body.user_id or None,
+            is_guest             = is_guest,
+            source               = source,
+        )
+        db.add(entry)
+        db.commit()
+
+    return {"ok": True, "duplicate": False}
 
 
 @router.get("/api/history")
@@ -109,8 +160,8 @@ def get_dps_trend(
     with SessionLocal() as db:
         rows = db.query(HistoryEntryModel).filter(
             HistoryEntryModel.user_id == bnet_id,
-            func.lower(HistoryEntryModel.character_name)       == character_name.lower(),
-            func.lower(HistoryEntryModel.fight_style)          == fight_style.lower(),
+            func.lower(HistoryEntryModel.character_name)  == character_name.lower(),
+            func.lower(HistoryEntryModel.fight_style)     == fight_style.lower(),
         ).order_by(HistoryEntryModel.created_at.asc()).limit(50).all()
 
     return {
