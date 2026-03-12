@@ -265,6 +265,10 @@ function app() {
     async loadView(name) {
       const container = document.getElementById('view-container');
       if (!container) return;
+
+      // Reset animacji
+      container.classList.remove('view-enter');
+
       if (this._viewCache[name]) {
         container.innerHTML = this._viewCache[name];
       } else {
@@ -280,6 +284,11 @@ function app() {
           return;
         }
       }
+
+      // Uruchom animację wejścia
+      void container.offsetWidth; // reflow wymuszający restart animacji
+      container.classList.add('view-enter');
+
       this.$nextTick(() => Alpine.initTree(container));
     },
 

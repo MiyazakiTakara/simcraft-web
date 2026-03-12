@@ -1,7 +1,22 @@
 <div class="grid">
   <div class="panel">
     <h2 x-text="$store.i18n.t('chars.title')"></h2>
-    <template x-if="loadingChars"><div style="text-align:center;padding:2rem"><span class="spinner"></span></div></template>
+
+    <!-- Skeleton: ładowanie postaci -->
+    <template x-if="loadingChars">
+      <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
+        <template x-for="i in [1,2,3,4,5]" :key="i">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-text" style="width:60%"></div>
+              <div class="skeleton skeleton-text" style="width:40%"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
     <template x-if="errorChars"><p style="color:#f66;font-size:.85rem" x-text="errorChars"></p></template>
     <template x-if="!loadingChars && !errorChars && characters.length === 0">
       <div style="text-align:center;padding:1.5rem 1rem;color:var(--muted)">
