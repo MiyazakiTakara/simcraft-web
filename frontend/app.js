@@ -552,3 +552,8 @@ function app() {
 
   return state;
 }
+
+// Initialize global settings mixin for compatibility
+window.settingsMixin = function() {
+  return app();
+};
