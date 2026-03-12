@@ -228,6 +228,8 @@ function settingsMixin() {
 }
 
 // Register the mixin with Alpine
+console.log('Registering settingsMixin, Alpine defined:', typeof Alpine !== 'undefined');
 if (typeof Alpine !== 'undefined') {
   Alpine.data('settingsMixin', settingsMixin);
+  console.log('settingsMixin registered');
 }
