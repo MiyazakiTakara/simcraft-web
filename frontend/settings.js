@@ -12,12 +12,16 @@ function settingsMixin() {
       profile_private:      false,
     },
 
+    _getSession() {
+      return window.__alpineApp?.sessionId || localStorage.getItem('simcraft_session');
+    },
+
     async init() {
       this.loading    = true;
       this.error      = null;
       this.isLoggedIn = false;
 
-      const session = window._session;
+      const session = this._getSession();
       if (!session) {
         this.loading = false;
         return;
@@ -55,9 +59,8 @@ function settingsMixin() {
     async save() {
       this.saving  = true;
       this.saveMsg = '';
-      const session = window._session;
+      const session = this._getSession();
 
-      // Walidacja
       const name  = this.form.main_character_name.trim();
       const realm = this.form.main_character_realm.trim();
       if (name && !realm) {
@@ -97,15 +100,18 @@ function settingsMixin() {
         }
 
         const data = await res.json();
-        // Aktualizuj lokalny stan Alpine (main char w headerze)
         if (this.$store && this.$store.session) {
           this.$store.session.main_character_name  = data.main_character_name  || '';
           this.$store.session.main_character_realm = data.main_character_realm || '';
         }
+        // Aktualizuj również główną instancję app()
+        if (window.__alpineApp) {
+          window.__alpineApp.mainChar = data.main_character_name
+            ? { name: data.main_character_name, realm: data.main_character_realm }
+            : null;
+        }
         this.saveMsg   = this.$store.i18n.t('settings.saved');
         this.saveMsgOk = true;
-
-        // Wyczyść komunikat po 4s
         setTimeout(() => { this.saveMsg = ''; }, 4000);
 
       } catch (e) {
@@ -117,8 +123,9 @@ function settingsMixin() {
     },
 
     setTheme(theme) {
-      if (this.$store && this.$store.theme !== undefined) {
-        this.$store.theme = theme;
+      if (window.__alpineApp?.toggleTheme && theme !== window.__alpineApp.theme) {
+        window.__alpineApp.toggleTheme();
+      } else {
         localStorage.setItem('simcraft_theme', theme);
         document.documentElement.setAttribute('data-theme', theme);
       }
