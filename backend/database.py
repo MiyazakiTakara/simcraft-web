@@ -46,6 +46,7 @@ class HistoryEntryModel(Base):
     role                 = Column(String(16), default="dps")
     fight_style          = Column(String(64), default="Patchwerk")
     user_id              = Column(String(64), nullable=True, index=True)
+    is_guest             = Column(Boolean, default=False, nullable=False)
     created_at           = Column(DateTime, default=datetime.utcnow)
 
 
@@ -94,6 +95,7 @@ def init_db():
     with SessionLocal() as db:
         try:
             db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'dps'"))
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE"))
             db.execute(text("""
                 DO $$ BEGIN
                     IF (SELECT data_type FROM information_schema.columns

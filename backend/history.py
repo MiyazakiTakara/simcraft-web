@@ -32,23 +32,25 @@ def _entry_to_dict(e: HistoryEntryModel) -> dict:
         "dps":                  e.dps,
         "fight_style":          e.fight_style,
         "user_id":              e.user_id,
+        "is_guest":             e.is_guest,
         "created_at":           e.created_at.isoformat() if e.created_at else None,
     }
 
 
 @router.get("/api/history")
 async def get_history(page: int = 1, limit: int = 50):
-    """Publiczna historia — ostatnie wpisy wszystkich uzytkownikow."""
+    """Publiczna historia — tylko zalogowani uzytkownicy (is_guest=False)."""
     offset = (page - 1) * limit
     with SessionLocal() as db:
+        base_query = db.query(HistoryEntryModel).filter(HistoryEntryModel.is_guest == False)
         rows = (
-            db.query(HistoryEntryModel)
+            base_query
             .order_by(HistoryEntryModel.created_at.desc())
             .offset(offset)
             .limit(limit)
             .all()
         )
-        total = db.query(HistoryEntryModel).count()
+        total = base_query.count()
     return {
         "items":       [_entry_to_dict(r) for r in rows],
         "page":        page,
@@ -91,7 +93,7 @@ async def get_my_history(session: str, page: int = 1, limit: int = 20):
 
 @router.get("/api/result/{job_id}/meta")
 async def get_result_meta(job_id: str):
-    """Zwraca metadane symulacji."""
+    """Zwraca metadane symulacji — dziala rowniez dla goscii (direct link)."""
     with SessionLocal() as db:
         entry = db.query(HistoryEntryModel).filter(HistoryEntryModel.job_id == job_id).first()
     if not entry:
@@ -107,6 +109,9 @@ async def add_history(entry: HistoryEntry):
         bnet_id = get_bnet_id_by_session(entry.user_id)
         if bnet_id:
             resolved_user_id = bnet_id
+
+    # Goscie: brak user_id lub nie udalo sie rozwiazac sesji na bnet_id
+    is_guest = not resolved_user_id
 
     with SessionLocal() as db:
         job_exists = db.query(JobModel).filter(JobModel.job_id == entry.job_id).first()
@@ -125,6 +130,7 @@ async def add_history(entry: HistoryEntry):
                 role                 = "dps",
                 fight_style          = entry.fight_style,
                 user_id              = resolved_user_id,
+                is_guest             = is_guest,
             )
             db.add(row)
             db.commit()
