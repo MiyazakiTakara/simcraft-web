@@ -144,6 +144,7 @@ function settingsMixin() {
       console.log('[Settings] init called');
       console.log('[Settings] __alpineApp:', window.__alpineApp?.sessionId);
       console.log('[Settings] localStorage session:', localStorage.getItem('simcraft_session'));
+      console.log('[Settings] this:', this);
       console.log('[Settings] form_main_character_name:', this.form_main_character_name);
       this.loading    = true;
       this.error      = null;
