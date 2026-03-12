@@ -27,6 +27,7 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 - **Wykresy DPS** — wykresy kołkowe Total DMG + DPS (Plotly/kaleido, renderowane server-side do PNG)
 - **Eksport CSV** — pobieranie breakdown spelli jako CSV z każdej strony wyniku
 - **Social sharing** — każdy wynik ma unikalny URL z OG meta tagami (podgląd na Discordzie, Twitterze itp.)
+- **Rankingi** — strona `/rankings` z podium TOP DPS (🥇🥈🥉) + tabela miejsc 4–10; filtry po fight style, klasie, specu; jedna postać raz; mini-podium top 3 na stronie głównej
 - **Panel admina** — zarządzanie newsami, wyglądem, limitami symulacji, health check (Keycloak OAuth2)
 - **Rate limiting** — ochrona przed naduzywaniem API (slowapi, per-IP)
 - **Watchdog** — automatyczne czyszczenie starych jobów i obsługa timeoutów
@@ -38,7 +39,6 @@ Webowy symulator DPS dla World of Warcraft oparty na SimulationCraft.
 ## Roadmapa
 
 - [ ] **Profile użytkowników** — strona `/u/{realm}/{name}` z historią symulacji i awatarem głównej postaci
-- [ ] **Rankingi** — tabela TOP DPS per klasa/spec/fight style
 - [ ] **Udostępnianie buildów** — eksport konfiguracji symulacji jako publiczny link do ponownego uruchomienia
 - [ ] **Porównywanie symulacji** — widok `/compare?a={job_id}&b={job_id}` z diff-em spelli
 - [ ] **Strona ustawień** — zmiana głównej postaci, preferencje języka i motywu
@@ -179,6 +179,7 @@ Przeglądarka
   │  results.py       │───► Plotly/kaleido (wykresy PNG)
   │  history.py       │┐
   │  reactions.py     ││
+  │  rankings.py      ││
   │  admin.py         ││─► PostgreSQL (SQLAlchemy)
   │  database.py      │┘          tabele: users, sessions,
   └─────────────────┘          history, jobs, reactions,
@@ -197,12 +198,14 @@ simcraft-web/
 │   ├── results.py         # Parsowanie wyników JSON, generowanie wykresów PNG
 │   ├── history.py         # Historia symulacji (powiązana z bnet_id), trendy, metadane
 │   ├── reactions.py       # Reakcje emoji (GET/POST), logika toggle/swap
+│   ├── rankings.py        # Rankings API (top 10, top 3 podium, meta)
 │   ├── database.py        # Modele SQLAlchemy + migracje inline
 │   ├── admin.py           # Panel admina (Keycloak), newsy, logi, limity, wygląd
 │   └── logging_config.py  # Strukturowane logowanie (structlog)
 ├── frontend/
 │   ├── index.html         # Główna powłoka SPA
 │   ├── result.html        # Strona wyniku (OG meta, spell breakdown, wykres, reakcje)
+│   ├── rankings.html      # Strona rankingów (podium + tabela, filtry)
 │   ├── admin.html         # Panel admina
 │   ├── app.js             # Alpine.js root; router widoków
 │   ├── sim.js             # Logika formularza symulacji (SimMixin)
@@ -212,9 +215,9 @@ simcraft-web/
 │   ├── utils.js           # Helpers
 │   ├── admin.js           # Logika panelu admina
 │   ├── i18n.js            # System tłumaczeń (Alpine store, auto-detect, localStorage)
-│   ├── style.css          # Style globalne (dark theme)
+│   ├── style.css          # Style globalne (dark theme + rankingi/podium)
 │   ├── views/
-│   │   ├── home.html        # Widok strony głównej
+│   │   ├── home.html        # Widok strony głównej (podium top 3, historia publiczna, newsy)
 │   │   ├── symulacje.html   # Widok symulacji
 │   │   ├── profil.html      # Widok profilu (postaci, historia, trend DPS)
 │   │   └── ustawienia.html  # Widok ustawień (WIP)
@@ -234,6 +237,7 @@ Frontend używa **Alpine.js** z wzorcem miksynów. Ważne zasady:
 - Widoki (`views/*.html`) są ładowane dynamicznie przez `loadView(name)` do `#view-container` i inicjowane przez `Alpine.initTree()` — **nie mają własnego `x-data`**
 - Miksyny są mergowane przez `mergeMixins()` z `Object.defineProperties` — zachowuje deskryptory getterów
 - Poprawne trasy hash: `#symulacje`, `#profil`, `#ustawienia`
+- `rankings.html` to **osobna strona** (nie widok), serwowana przez FastAPI pod `GET /rankings`
 
 ## API
 
@@ -253,6 +257,13 @@ Frontend używa **Alpine.js** z wzorcem miksynów. Ważne zasady:
 | `GET` | `/api/history` | Publiczna historia (paginacja: `?page=1&limit=50`) |
 | `GET` | `/api/history/mine` | Historia zalogowanego użytkownika |
 | `GET` | `/api/history/trend` | Historia DPS w czasie dla konkretnej postaci |
+
+### Rankingi
+| Metoda | Endpoint | Opis |
+|--------|----------|------|
+| `GET` | `/api/rankings` | Top 10 per fight style/klasa/spec; jedna postać raz (`?fight_style=&character_class=&character_spec=&limit=10`) |
+| `GET` | `/api/rankings/top3` | Top 3 dla podium na stronie głównej (`?fight_style=Patchwerk`) |
+| `GET` | `/api/rankings/meta` | Dostępne klasy, spece, fight styles dla dropdownów |
 
 ### Reakcje
 | Metoda | Endpoint | Opis |

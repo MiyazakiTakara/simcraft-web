@@ -27,6 +27,7 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **DPS Charts** — Total DMG + DPS pie charts (Plotly/kaleido, rendered server-side to PNG)
 - **CSV Export** — download spell breakdown as CSV from any result page
 - **Social Sharing** — every result has a unique URL with OG meta tags (Discord, Twitter previews)
+- **Rankings** — `/rankings` page with TOP DPS podium (🥇🥈🥉) + table for places 4–10; filterable by fight style, class, spec; one entry per unique character; top 3 mini-podium on home page
 - **Admin Panel** — manage news, appearance, simulation limits, health check, active job list (Keycloak OAuth2)
 - **Rate Limiting** — API abuse protection (slowapi, per-IP)
 - **Watchdog** — automatic cleanup of old jobs and timeout handling
@@ -38,7 +39,6 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 ## Roadmap
 
 - [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
-- [ ] **Rankings** — TOP DPS table per class/spec/fight style, generated from public history
 - [ ] **Build sharing** — export simulation config as a public link to re-run
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
 - [ ] **Settings page** — change main character, language preference, theme preference
@@ -185,6 +185,7 @@ Browser
   │  results.py       │───► Plotly/kaleido (PNG charts)
   │  history.py       │┐
   │  reactions.py     ││
+  │  rankings.py      ││
   │  admin.py         ││─► PostgreSQL (SQLAlchemy)
   │  database.py      │┘          tables: users, sessions,
   └─────────────────┘          history, jobs, reactions,
@@ -203,12 +204,14 @@ simcraft-web/
 │   ├── results.py         # JSON result parsing, PNG chart generation (Plotly/kaleido)
 │   ├── history.py         # Simulation history (tied to bnet_id), trends, metadata
 │   ├── reactions.py       # Emoji reactions (GET/POST), toggle/swap logic
+│   ├── rankings.py        # Rankings API (top 10, top 3 podium, meta)
 │   ├── database.py        # SQLAlchemy models + inline migrations
 │   ├── admin.py           # Admin panel (Keycloak), news, logs, limits, appearance
 │   └── logging_config.py  # Structured logging (structlog)
 ├── frontend/
 │   ├── index.html         # Main SPA shell
 │   ├── result.html        # Result page (OG meta, spell breakdown, chart, reactions)
+│   ├── rankings.html      # Rankings page (podium + table, filters)
 │   ├── admin.html         # Admin panel
 │   ├── app.js             # Alpine.js root; view router (loadView/navigateTo/handleHash)
 │   ├── sim.js             # Simulation form logic (SimMixin)
@@ -218,9 +221,9 @@ simcraft-web/
 │   ├── utils.js           # Helpers (number formatting, class colors, etc.)
 │   ├── admin.js           # Admin panel logic
 │   ├── i18n.js            # Translation system (Alpine store, auto-detect, localStorage)
-│   ├── style.css          # Global styles (dark theme)
+│   ├── style.css          # Global styles (dark theme + rankings/podium)
 │   ├── views/
-│   │   ├── home.html        # Home view (hero, addon form, public history, news)
+│   │   ├── home.html        # Home view (hero, addon form, top 3 podium, public history, news)
 │   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
 │   │   ├── profil.html      # Profile view (characters, history, DPS trend chart)
 │   │   └── ustawienia.html  # Settings view (WIP)
@@ -241,6 +244,7 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 - Mixins (`SimMixin`, `CharsMixin`, `HistoryMixin`) are merged by `mergeMixins()` which uses `Object.defineProperties` — this ensures getters (e.g. `sortedSpells`, `filteredChars`) are correctly copied with their descriptors preserved
 - Getters referencing `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
 - Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`
+- `rankings.html` is a **standalone page** (not a view), served by FastAPI at `GET /rankings`
 
 ## API Reference
 
@@ -258,13 +262,20 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/history` | Public history (pagination: `?page=1&limit=50`) |
-| `GET` | `/api/history/mine` | Logged-in user’s history (filtered by `bnet_id`) |
+| `GET` | `/api/history/mine` | Logged-in user's history (filtered by `bnet_id`) |
 | `GET` | `/api/history/trend` | DPS over time for a specific character (`?name=...&fight_style=...`) |
+
+### Rankings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/rankings` | Top 10 per fight style/class/spec; one entry per unique character (`?fight_style=&character_class=&character_spec=&limit=10`) |
+| `GET` | `/api/rankings/top3` | Top 3 for home page podium (`?fight_style=Patchwerk`) |
+| `GET` | `/api/rankings/meta` | Available classes, specs, fight styles for filter dropdowns |
 
 ### Reactions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/reactions/{job_id}` | Get reaction counts + current user’s reaction (`?session=...`) |
+| `GET` | `/api/reactions/{job_id}` | Get reaction counts + current user's reaction (`?session=...`) |
 | `POST` | `/api/reactions/{job_id}` | Set/change/remove reaction (toggle = same emoji removes it) |
 
 ### Characters
