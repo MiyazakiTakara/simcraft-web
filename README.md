@@ -2,9 +2,19 @@
 
 > 🇵🇱 [Polska wersja README](./README.pl.md)
 
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Alpine.js](https://img.shields.io/badge/Alpine.js-3.x-8BC0D0?logo=alpine.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+
 A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 
 > The application is **DPS-only** — healer and tank simulations are not supported.
+
+## Screenshots
+
+<!-- Add screenshots here -->
 
 ## Features
 
@@ -12,9 +22,12 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **Armory Simulations** — automatic character data retrieval from Blizzard API
 - **Addon Export Simulations** — paste SimulationCraft addon text without logging in
 - **Simulation History** — all simulations saved, tied to Battle.net account (persists across browsers and re-logins); public list of recent results with pagination
+- **DPS Trend Chart** — DPS over time chart per character and fight style in the profile view
+- **Emoji Reactions** — 🔥💪😢💀🤣 reactions on simulation results; toggle/swap like YouTube thumbs; logged-in users only
 - **DPS Charts** — Total DMG + DPS pie charts (Plotly/kaleido, rendered server-side to PNG)
+- **CSV Export** — download spell breakdown as CSV from any result page
 - **Social Sharing** — every result has a unique URL with OG meta tags (Discord, Twitter previews)
-- **Admin Panel** — manage news, simulation limits, health check, active job list (Keycloak OAuth2)
+- **Admin Panel** — manage news, appearance, simulation limits, health check, active job list (Keycloak OAuth2)
 - **Rate Limiting** — API abuse protection (slowapi, per-IP)
 - **Watchdog** — automatic cleanup of old jobs and timeout handling
 - **Internationalization** — full i18n PL/EN with language switcher, browser auto-detection and `localStorage` persistence
@@ -22,55 +35,34 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **User Dropdown Menu** — header dropdown under the main character name with: Characters, History, Settings, Logout
 - **View Persistence** — active view (home/simulations/profile/settings) persisted via URL hash; browser back/forward works correctly
 
-## TODO
+## Roadmap
 
-### Simulation History
-
-- [ ] **Hide guest simulation results from public history** — simulations run without logging in (addon export on the home page) should not appear in the public history list anywhere. The result should still be accessible via a direct link `/result/{job_id}`. Required changes:
-  - Backend: add an `is_guest: bool` flag when saving to history (or use `user_id IS NULL` as the indicator); `GET /api/history` endpoint should filter out entries where `is_guest = true`
-  - Frontend: `startGuestSim()` in `sim.js` should either not call `API.saveToHistory()` at all, or pass the guest flag — TBD
-
-### Social Features
-
-- [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history, selected main character as profile avatar
+- [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
 - [ ] **Rankings** — TOP DPS table per class/spec/fight style, generated from public history
-- [ ] **Comments / reactions** — emoji reactions or short comment under a simulation result (per `job_id`)
-- [ ] **Build sharing** — export simulation config (addon text + parameters) as a public link to re-run
-- [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` view with spell diff and side-by-side DPS
-- [ ] **Trend tracking** — DPS over time chart for a specific character (endpoint `/api/history/trend` already exists, UI missing)
-
-### Settings
-
-- [ ] **Settings page** — change main character, language preference, theme preference (`views/ustawienia.html` currently WIP placeholder)
-
-### Technical
-
-- [x] **Race condition in `simulation.py`** — `out_path` passed as argument to `_run_sim()`, not read from `jobs[]` outside the lock
-- [x] **Alpine.js getters in mixins** — `sortedSpells`, `filteredChars`, `pagedHistory`, `pagedNews` etc. must be defined via `Object.defineProperties` (through `mergeMixins`), not `...spread` — spread destroys getter descriptors
-- [x] **Pin versions in `requirements.txt`** — all 13 dependencies use exact `==` version pinning
-- [x] **Persist view on refresh** — active tab saved in URL hash (`#symulacje`, `#profil`, `#ustawienia`); read in `init()` via `handleHash()`
-- [x] **Main character persisted to Battle.net account** — `users` table keyed by `bnet_id`; fetched from `/userinfo` on each login
-- [x] **Simulation history tied to bnet_id** — `history.user_id` stores `bnet_id` instead of `session_id`; history visible after re-login
-- [ ] **CSV result export** — `GET /api/result/{job_id}/csv` endpoint returning spell breakdown
+- [ ] **Build sharing** — export simulation config as a public link to re-run
+- [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
+- [ ] **Settings page** — change main character, language preference, theme preference
 
 ## Requirements
 
 - Python 3.10+
-- PostgreSQL
+- PostgreSQL 15+
 - Docker & Docker Compose (recommended)
-- Battle.net developer account (OAuth2)
+- Battle.net developer account (OAuth2 app)
 - Keycloak (for admin panel)
 
 ## Local Setup
 
-### Docker Compose
+### Docker Compose (recommended)
 
 ```bash
 cp .env.example .env
-# edit .env and fill in environment variables
+# Edit .env and fill in all required environment variables
 
 docker compose up --build
 ```
+
+The app will be available at `http://localhost:8000`.
 
 ### Manual
 
@@ -87,7 +79,6 @@ pip install -r requirements.txt
 export BLIZZARD_CLIENT_ID=...
 export BLIZZARD_CLIENT_SECRET=...
 export DATABASE_URL=postgresql://simcraft:simcraft@localhost:5432/simcraft
-# ... other environment variables (see .env.example)
 
 cd backend
 uvicorn main:app --reload
@@ -95,24 +86,110 @@ uvicorn main:app --reload
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BLIZZARD_CLIENT_ID` | Battle.net OAuth app ID | — |
-| `BLIZZARD_CLIENT_SECRET` | Battle.net OAuth app secret | — |
-| `REDIRECT_URI` | OAuth callback URL after Battle.net auth | — |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://simcraft:simcraft@db:5432/simcraft` |
-| `KEYCLOAK_URL` | Keycloak URL (for admin panel) | — |
-| `KEYCLOAK_REALM` | Keycloak realm | — |
-| `KEYCLOAK_CLIENT_ID` | Keycloak client ID | — |
-| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | — |
-| `ADMIN_REDIRECT_URI` | OAuth callback URL after admin login | — |
-| `BASE_URL` | Base application URL (used in OG meta tags) | `https://sim.miyazakitakara.ovh` |
-| `RESULTS_DIR` | Directory for simulation results | `/app/results` |
-| `SIMC_PATH` | Path to simc binary | `/app/SimulationCraft/simc` |
-| `MAX_CONCURRENT_SIMS` | Max number of concurrent simulations | `3` |
-| `JOB_TIMEOUT` | Simulation timeout in seconds | `360` |
-| `JOBS_TTL` | Lifetime of completed jobs in memory (seconds) | `14400` (4h) |
-| `LOG_LEVEL` | Log level | `INFO` |
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `BLIZZARD_CLIENT_ID` | ✅ | Battle.net OAuth app ID | — |
+| `BLIZZARD_CLIENT_SECRET` | ✅ | Battle.net OAuth app secret | — |
+| `REDIRECT_URI` | ✅ | OAuth callback URL after Battle.net auth | — |
+| `DATABASE_URL` | ✅ | PostgreSQL connection string | `postgresql://simcraft:simcraft@db:5432/simcraft` |
+| `BASE_URL` | ✅ | Base application URL (used in OG meta tags and share links) | `https://sim.miyazakitakara.ovh` |
+| `KEYCLOAK_URL` | ⚠️ admin | Keycloak URL (for admin panel) | — |
+| `KEYCLOAK_REALM` | ⚠️ admin | Keycloak realm | — |
+| `KEYCLOAK_CLIENT_ID` | ⚠️ admin | Keycloak client ID | — |
+| `KEYCLOAK_CLIENT_SECRET` | ⚠️ admin | Keycloak client secret | — |
+| `ADMIN_REDIRECT_URI` | ⚠️ admin | OAuth callback URL after admin login | — |
+| `RESULTS_DIR` | | Directory for simulation results | `/app/results` |
+| `SIMC_PATH` | | Path to simc binary | `/app/SimulationCraft/simc` |
+| `MAX_CONCURRENT_SIMS` | | Max number of concurrent simulations | `3` |
+| `JOB_TIMEOUT` | | Simulation timeout in seconds | `360` |
+| `JOBS_TTL` | | Lifetime of completed jobs in memory (seconds) | `14400` (4h) |
+| `ALLOWED_ORIGINS` | | CORS allowed origins (comma-separated) | `*` |
+| `LOG_LEVEL` | | Log level (`DEBUG`/`INFO`/`WARNING`/`ERROR`) | `INFO` |
+
+## Admin Panel
+
+The admin panel is available at `/admin` and requires a Keycloak session.
+
+### What you can configure
+
+| Section | What you can do |
+|---------|----------------|
+| **Appearance** | App emoji, header title, hero text — changes reflected instantly without restart |
+| **News** | Add, edit, publish/unpublish news entries shown on the home page |
+| **Limits** | `MAX_CONCURRENT_SIMS`, `JOB_TIMEOUT`, `JOBS_TTL` — adjustable at runtime |
+| **Tasks** | View active/running simulation jobs, cancel a stuck job |
+| **Health** | Check status of PostgreSQL, SimulationCraft binary, results directory |
+| **Logs** | Browse structured application logs by level (INFO/WARNING/ERROR) |
+
+### Appearance config
+
+Appearance is stored in `appearance.json` in the results directory and served via `GET /api/appearance` (public, no auth required). The frontend fetches it on every page load.
+
+Example `appearance.json`:
+```json
+{
+  "emoji": "⚔️",
+  "header_title": "SimCraft Web",
+  "hero_title": "WoW DPS Simulator"
+}
+```
+
+## Internationalization (i18n)
+
+The app supports multiple languages via `frontend/locales/*.json` files and the Alpine.js `$store.i18n` store.
+
+### Adding a new language
+
+1. Copy `frontend/locales/en.json` to e.g. `frontend/locales/de.json`
+2. Translate all values (keys must stay the same)
+3. In `frontend/i18n.js`, add `'de'` to the `SUPPORTED_LANGS` array
+4. Add a language switcher button in `index.html` and `result.html`
+
+### Using translations in HTML
+
+```html
+<!-- Simple key -->
+<span x-text="$store.i18n.t('header.profile')"></span>
+
+<!-- Key with interpolation -->
+<span x-text="$store.i18n.t('header.characters_count', { count: 5 })"></span>
+```
+
+### Translation file structure
+
+```
+locales/
+  pl.json   — Polish (default)
+  en.json   — English
+```
+
+Top-level keys: `meta`, `header`, `nav`, `lang`, `common`, `home`, `sim`, `result`, `chars`, `history`, `news`, `profile`, `errors`.
+
+## Architecture
+
+```
+Browser
+  │
+  ├── Alpine.js (frontend) ─────────────────────────────┐
+  │   Views: home / symulacje / profil / ustawienia   │
+  │   Mixins: SimMixin, CharsMixin, HistoryMixin       │
+  └─────────────────────────────────────────────────┘
+          │ HTTP (REST)
+  ┌───────┴───────┐
+  │  FastAPI backend  │
+  │  (Python 3.10+)   │
+  │                   │
+  │  auth.py          │───► Battle.net OAuth2
+  │  characters.py    │───► Blizzard API (armory)
+  │  simulation.py    │───► simc binary (subprocess)
+  │  results.py       │───► Plotly/kaleido (PNG charts)
+  │  history.py       │┐
+  │  reactions.py     ││
+  │  admin.py         ││─► PostgreSQL (SQLAlchemy)
+  │  database.py      │┘          tables: users, sessions,
+  └─────────────────┘          history, jobs, reactions,
+                                   news, admin_logs
+```
 
 ## Project Structure
 
@@ -123,16 +200,17 @@ simcraft-web/
 │   ├── auth.py            # Battle.net OAuth2; fetches bnet_id from /userinfo
 │   ├── characters.py      # Blizzard character API (list, media, equipment, stats, talents)
 │   ├── simulation.py      # simc runner, job queue, watchdog
-│   ├── results.py         # JSON result parsing, PNG chart generation
+│   ├── results.py         # JSON result parsing, PNG chart generation (Plotly/kaleido)
 │   ├── history.py         # Simulation history (tied to bnet_id), trends, metadata
-│   ├── database.py        # SQLAlchemy models (users, sessions, history, jobs), inline migrations
-│   ├── admin.py           # Admin panel (Keycloak), news, logs, limits
+│   ├── reactions.py       # Emoji reactions (GET/POST), toggle/swap logic
+│   ├── database.py        # SQLAlchemy models + inline migrations
+│   ├── admin.py           # Admin panel (Keycloak), news, logs, limits, appearance
 │   └── logging_config.py  # Structured logging (structlog)
 ├── frontend/
-│   ├── index.html         # Main page
-│   ├── result.html        # Result page (OG meta, spell breakdown, chart)
+│   ├── index.html         # Main SPA shell
+│   ├── result.html        # Result page (OG meta, spell breakdown, chart, reactions)
 │   ├── admin.html         # Admin panel
-│   ├── app.js             # Alpine.js logic (main page); view router (loadView/navigateTo/handleHash)
+│   ├── app.js             # Alpine.js root; view router (loadView/navigateTo/handleHash)
 │   ├── sim.js             # Simulation form logic (SimMixin)
 │   ├── chars.js           # Character list, equipment, talents (CharsMixin)
 │   ├── history.js         # History widget (HistoryMixin)
@@ -140,11 +218,11 @@ simcraft-web/
 │   ├── utils.js           # Helpers (number formatting, class colors, etc.)
 │   ├── admin.js           # Admin panel logic
 │   ├── i18n.js            # Translation system (Alpine store, auto-detect, localStorage)
-│   ├── style.css          # Styles (dark theme)
+│   ├── style.css          # Global styles (dark theme)
 │   ├── views/
 │   │   ├── home.html        # Home view (hero, addon form, public history, news)
 │   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
-│   │   ├── profil.html      # User profile view (characters, history tabs)
+│   │   ├── profil.html      # Profile view (characters, history, DPS trend chart)
 │   │   └── ustawienia.html  # Settings view (WIP)
 │   └── locales/
 │       ├── pl.json          # Polish translations
@@ -161,45 +239,79 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 - `app()` is the only Alpine `x-data` on the main page
 - Views (`views/*.html`) are loaded dynamically by `loadView(name)` into `#view-container` and initialized via `Alpine.initTree()` — **they have no own `x-data`**, they operate within the parent scope
 - Mixins (`SimMixin`, `CharsMixin`, `HistoryMixin`) are merged by `mergeMixins()` which uses `Object.defineProperties` — this ensures getters (e.g. `sortedSpells`, `filteredChars`) are correctly copied with their descriptors preserved
-- Getters that reference `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
+- Getters referencing `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
 - Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`
 
-## API
+## API Reference
 
 ### Simulation
-- `POST /api/simulate` — run a simulation
-- `GET /api/job/{job_id}` — job status (`running` / `done` / `error`)
-- `GET /api/result/{job_id}/json` — results in JSON format
-- `GET /api/result/{job_id}/dps-chart.png` — DPS chart as PNG
-- `GET /api/result/{job_id}/meta` — simulation metadata (character, class, fight style)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/simulate` | Run a simulation |
+| `GET` | `/api/job/{job_id}` | Job status (`running` / `done` / `error`) |
+| `GET` | `/api/result/{job_id}/json` | Results in JSON format |
+| `GET` | `/api/result/{job_id}/dps-chart.png` | DPS chart as PNG |
+| `GET` | `/api/result/{job_id}/meta` | Simulation metadata (character, class, fight style) |
+| `GET` | `/api/result/{job_id}/csv` | Spell breakdown as CSV |
 
 ### History
-- `GET /api/history` — public history (pagination: `?page=1&limit=50`)
-- `GET /api/history/mine` — logged-in user's history (filtered by `bnet_id`)
-- `GET /api/history/trend` — DPS over time for a specific character
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/history` | Public history (pagination: `?page=1&limit=50`) |
+| `GET` | `/api/history/mine` | Logged-in user’s history (filtered by `bnet_id`) |
+| `GET` | `/api/history/trend` | DPS over time for a specific character (`?name=...&fight_style=...`) |
+
+### Reactions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/reactions/{job_id}` | Get reaction counts + current user’s reaction (`?session=...`) |
+| `POST` | `/api/reactions/{job_id}` | Set/change/remove reaction (toggle = same emoji removes it) |
 
 ### Characters
-- `GET /api/characters` — account character list (requires session)
-- `GET /api/character-media` — character avatar
-- `GET /api/character/equipment` — character equipment
-- `GET /api/character/statistics` — character statistics
-- `GET /api/character/talents` — character talents
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/characters` | Account character list (requires session) |
+| `GET` | `/api/character-media` | Character avatar |
+| `GET` | `/api/character/equipment` | Character equipment |
+| `GET` | `/api/character/statistics` | Character statistics |
+| `GET` | `/api/character/talents` | Character talents |
 
 ### Auth
-- `GET /auth/login` — redirect to Battle.net OAuth
-- `GET /auth/callback` — OAuth callback (fetches `bnet_id` from `/userinfo`)
-- `GET /auth/logout` — logout
-- `GET /auth/session/info` — session info (main character, is_first_login)
-- `PATCH /auth/session/main-character` — set main character
-- `POST /auth/session/skip-first-login` — skip main character selection modal
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/auth/login` | Redirect to Battle.net OAuth |
+| `GET` | `/auth/callback` | OAuth callback (fetches `bnet_id` from `/userinfo`) |
+| `GET` | `/auth/logout` | Logout |
+| `GET` | `/auth/session/info` | Session info (main character, is_first_login) |
+| `PATCH` | `/auth/session/main-character` | Set main character |
+| `POST` | `/auth/session/skip-first-login` | Skip main character selection modal |
 
 ### Admin
-- `GET /admin` — admin panel (requires Keycloak session)
-- `GET /admin/api/limits` — get system limits
-- `PATCH /admin/api/limits` — update system limits
-- `GET /admin/api/health` — service health check
-- `GET /admin/api/tasks` — list active jobs
-- `DELETE /admin/api/tasks/{job_id}` — cancel a job
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin` | Admin panel (requires Keycloak session) |
+| `GET` | `/admin/api/limits` | Get system limits |
+| `PATCH` | `/admin/api/limits` | Update system limits |
+| `GET` | `/admin/api/health` | Service health check |
+| `GET` | `/admin/api/tasks` | List active jobs |
+| `DELETE` | `/admin/api/tasks/{job_id}` | Cancel a job |
+| `GET` | `/api/appearance` | Get appearance config (public) |
+| `PATCH` | `/admin/api/appearance` | Update appearance config |
+
+## Database Schema
+
+| Table | Description |
+|-------|-------------|
+| `users` | Battle.net accounts; stores `bnet_id`, main character |
+| `sessions` | Active OAuth sessions; stores `bnet_id`, access token, expiry |
+| `history` | All simulation results; tied to `bnet_id` or guest |
+| `jobs` | Simulation job queue; status tracking |
+| `reactions` | Emoji reactions per `job_id`; `UNIQUE(job_id, user_key)` |
+| `news` | News entries managed from admin panel |
+| `admin_logs` | Structured application logs |
+| `admin_sessions` | Keycloak admin sessions |
+
+> Migrations are applied automatically via `init_db()` on startup using `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` — no migration tool needed.
 
 ## License
 
