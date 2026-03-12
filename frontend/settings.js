@@ -166,6 +166,11 @@ function settingsMixin() {
         this.form.profile_private      = !!data.profile_private;
         this.isLoggedIn = true;
 
+        // Also sync to window.__alpineApp for template access
+        if (window.__alpineApp) {
+          window.__alpineApp.form = this.form;
+        }
+
         // Ładuj listę postaci
         try {
           const charsRes = await fetch(`/api/characters?session=${session}`);
@@ -236,6 +241,7 @@ function settingsMixin() {
           window.__alpineApp.mainChar = data.main_character_name
             ? { name: data.main_character_name, realm: data.main_character_realm }
             : null;
+          window.__alpineApp.form = this.form;
         }
         this.saveMsg   = this.$store.i18n.t('settings.saved');
         this.saveMsgOk = true;
