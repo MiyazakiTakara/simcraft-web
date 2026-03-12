@@ -8,7 +8,12 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from database import SessionLocal, SessionModel, get_session_info, set_main_character, clear_first_login, get_or_create_user
+from database import (
+    SessionLocal, SessionModel,
+    get_session_info, set_main_character, clear_first_login,
+    get_or_create_user, get_user_settings, save_user_settings,
+    get_bnet_id_by_session,
+)
 
 router = APIRouter()
 
@@ -17,11 +22,9 @@ CLIENT_SECRET = os.environ["BLIZZARD_CLIENT_SECRET"]
 REDIRECT_URI  = os.environ.get("REDIRECT_URI", "http://localhost:8000/auth/callback")
 
 _token_cache: dict = {"token": None, "expires_at": 0}
-
 _oauth_states: dict = {}
-
-_OAUTH_STATE_TTL    = 600
-_OAUTH_STATE_MAX    = 500
+_OAUTH_STATE_TTL = 600
+_OAUTH_STATE_MAX = 500
 
 
 def _cleanup_oauth_states():
@@ -49,19 +52,16 @@ async def get_blizzard_token() -> str:
     if _token_cache["token"] and now < _token_cache["expires_at"] - 60:
         return _token_cache["token"]
     async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.post(
-                "https://oauth.battle.net/token",
-                data={"grant_type": "client_credentials"},
-                auth=(CLIENT_ID, CLIENT_SECRET),
-                timeout=10,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            _token_cache["token"] = data["access_token"]
-            _token_cache["expires_at"] = now + data["expires_in"]
-        except Exception as e:
-            raise
+        resp = await client.post(
+            "https://oauth.battle.net/token",
+            data={"grant_type": "client_credentials"},
+            auth=(CLIENT_ID, CLIENT_SECRET),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        _token_cache["token"] = data["access_token"]
+        _token_cache["expires_at"] = now + data["expires_in"]
     return _token_cache["token"]
 
 
@@ -94,20 +94,14 @@ async def auth_login():
 async def auth_callback(code: str, state: str = None):
     if not state or state not in _oauth_states:
         raise HTTPException(400, "Invalid state parameter")
-
     state_time = _oauth_states.pop(state)
     if time.time() - state_time > _OAUTH_STATE_TTL:
         raise HTTPException(400, "State parameter expired")
 
     async with httpx.AsyncClient() as client:
-        # Wymiana kodu na token
         resp = await client.post(
             "https://oauth.battle.net/token",
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": REDIRECT_URI,
-            },
+            data={"grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT_URI},
             auth=(CLIENT_ID, CLIENT_SECRET),
             timeout=10,
         )
@@ -115,7 +109,6 @@ async def auth_callback(code: str, state: str = None):
         data = resp.json()
         access_token = data["access_token"]
 
-        # Pobierz Battle.net account ID z /userinfo
         userinfo_resp = await client.get(
             "https://oauth.battle.net/userinfo",
             headers={"Authorization": f"Bearer {access_token}"},
@@ -125,7 +118,6 @@ async def auth_callback(code: str, state: str = None):
         userinfo = userinfo_resp.json()
         bnet_id = str(userinfo.get("id", ""))
 
-    # Pobierz lub stworz usera; jesli istnieje — zaladuj jego main char
     user = get_or_create_user(bnet_id) if bnet_id else None
     is_first_login = not (user and user["main_character_name"])
 
@@ -159,11 +151,46 @@ async def auth_logout(session: str = None):
 
 @router.get("/auth/session/info")
 async def session_info(session: str):
-    """Zwraca info o sesji: main char i czy to first login."""
     info = get_session_info(session)
     if not info:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
     return info
+
+
+@router.get("/auth/session/settings")
+async def get_settings(session: str):
+    """Zwraca ustawienia zalogowanego użytkownika."""
+    info = get_session_info(session)
+    if not info or not info.get("bnet_id"):
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    settings = get_user_settings(info["bnet_id"])
+    if not settings:
+        raise HTTPException(404, "Użytkownik nie znaleziony.")
+    return settings
+
+
+class SettingsRequest(BaseModel):
+    main_character_name:  Optional[str] = None
+    main_character_realm: Optional[str] = None
+    profile_private:      bool = False
+
+
+@router.patch("/auth/session/settings")
+async def update_settings(session: str, body: SettingsRequest):
+    """Zapisuje ustawienia użytkownika."""
+    info = get_session_info(session)
+    if not info or not info.get("bnet_id"):
+        raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
+    # Jeśli podano main char, waliduj
+    if body.main_character_name is not None and not body.main_character_name.strip():
+        raise HTTPException(400, "Nazwa postaci nie może być pusta.")
+    result = save_user_settings(
+        bnet_id              = info["bnet_id"],
+        main_character_name  = body.main_character_name,
+        main_character_realm = body.main_character_realm,
+        profile_private      = body.profile_private,
+    )
+    return {"ok": True, **result}
 
 
 class MainCharRequest(BaseModel):
@@ -173,7 +200,6 @@ class MainCharRequest(BaseModel):
 
 @router.patch("/auth/session/main-character")
 async def update_main_character(session: str, body: MainCharRequest):
-    """Ustawia glowna postac i kasuje flage first_login."""
     info = get_session_info(session)
     if not info:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
@@ -185,7 +211,6 @@ async def update_main_character(session: str, body: MainCharRequest):
 
 @router.post("/auth/session/skip-first-login")
 async def skip_first_login(session: str):
-    """Zamkniecie modalu bez wyboru maina — nie pokazuj go wiecej."""
     info = get_session_info(session)
     if not info:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")

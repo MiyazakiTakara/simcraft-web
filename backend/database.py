@@ -19,6 +19,7 @@ class UserModel(Base):
     bnet_id                = Column(String(64), primary_key=True)
     main_character_name    = Column(String(128), nullable=True)
     main_character_realm   = Column(String(128), nullable=True)
+    profile_private        = Column(Boolean, default=False, nullable=False)
     created_at             = Column(DateTime, default=datetime.utcnow)
 
 
@@ -149,6 +150,8 @@ def init_db():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """))
+            # nowa kolumna profile_private
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_private BOOLEAN NOT NULL DEFAULT FALSE"))
             db.commit()
         except Exception:
             db.rollback()
@@ -163,10 +166,59 @@ def get_or_create_user(bnet_id: str) -> dict:
             db.commit()
             db.refresh(user)
         return {
-            "bnet_id":               user.bnet_id,
-            "main_character_name":   user.main_character_name,
-            "main_character_realm":  user.main_character_realm,
+            "bnet_id":              user.bnet_id,
+            "main_character_name":  user.main_character_name,
+            "main_character_realm": user.main_character_realm,
+            "profile_private":      bool(user.profile_private),
         }
+
+
+def get_user_settings(bnet_id: str) -> dict | None:
+    with SessionLocal() as db:
+        user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
+        if not user:
+            return None
+        return {
+            "main_character_name":  user.main_character_name,
+            "main_character_realm": user.main_character_realm,
+            "profile_private":      bool(user.profile_private),
+        }
+
+
+def save_user_settings(bnet_id: str, main_character_name: str | None,
+                       main_character_realm: str | None, profile_private: bool) -> dict:
+    with SessionLocal() as db:
+        user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
+        if not user:
+            user = UserModel(bnet_id=bnet_id)
+            db.add(user)
+        if main_character_name is not None:
+            user.main_character_name  = main_character_name.strip() or None
+            user.main_character_realm = (main_character_realm or "").strip() or None
+        user.profile_private = profile_private
+        db.commit()
+        db.refresh(user)
+        # Synchronizuj aktywne sesje
+        if main_character_name is not None:
+            sessions = db.query(SessionModel).filter(SessionModel.bnet_id == bnet_id).all()
+            for s in sessions:
+                s.main_character_name  = user.main_character_name
+                s.main_character_realm = user.main_character_realm
+            db.commit()
+        return {
+            "main_character_name":  user.main_character_name,
+            "main_character_realm": user.main_character_realm,
+            "profile_private":      bool(user.profile_private),
+        }
+
+
+def is_user_private(bnet_id: str) -> bool:
+    """Sprawdza czy user ma prywatny profil. Szybki lookup."""
+    if not bnet_id:
+        return False
+    with SessionLocal() as db:
+        user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
+        return bool(user and user.profile_private)
 
 
 def get_bnet_id_by_session(session_id: str) -> str | None:
@@ -224,6 +276,7 @@ def get_session_info(session_id: str) -> dict | None:
             "main_character_name":  row.main_character_name,
             "main_character_realm": row.main_character_realm,
             "is_first_login":       row.is_first_login if row.is_first_login is not None else True,
+            "bnet_id":              row.bnet_id,
         }
 
 

@@ -12,6 +12,12 @@ WOW_CLASSES = [
 
 FIGHT_STYLES = ["Patchwerk", "HecticAddCleave", "LightMovement", "HeavyMovement"]
 
+# Wspólny JOIN żeby wykluczyć prywatnych userów
+_PRIVACY_JOIN = """
+    LEFT JOIN users u ON u.bnet_id = h.user_id
+"""
+_PRIVACY_FILTER = "(u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)"
+
 
 @router.get("/api/rankings")
 def get_rankings(
@@ -20,7 +26,10 @@ def get_rankings(
     character_spec: str = Query(default=""),
     limit: int = Query(default=10, ge=1, le=100),
 ):
-    filters = ["h.dps IS NOT NULL", "h.dps > 0", "h.character_name IS NOT NULL"]
+    filters = [
+        "h.dps IS NOT NULL", "h.dps > 0", "h.character_name IS NOT NULL",
+        _PRIVACY_FILTER,
+    ]
     params = {"fight_style": fight_style, "limit": limit}
 
     if fight_style:
@@ -45,6 +54,7 @@ def get_rankings(
             h.dps,
             h.created_at
         FROM history h
+        {_PRIVACY_JOIN}
         WHERE {where}
         ORDER BY
             LOWER(h.character_name),
@@ -82,8 +92,7 @@ def get_rankings(
 
 @router.get("/api/rankings/top3")
 def get_top3(fight_style: str = Query(default="Patchwerk")):
-    """Lightweight endpoint for home page podium — always Patchwerk, no class filter."""
-    sql = text("""
+    sql = text(f"""
         SELECT DISTINCT ON (LOWER(h.character_name), LOWER(COALESCE(h.character_realm_slug, '')))
             h.job_id,
             h.character_name,
@@ -93,10 +102,12 @@ def get_top3(fight_style: str = Query(default="Patchwerk")):
             h.dps,
             h.created_at
         FROM history h
+        {_PRIVACY_JOIN}
         WHERE h.dps IS NOT NULL
           AND h.dps > 0
           AND h.character_name IS NOT NULL
           AND LOWER(h.fight_style) = LOWER(:fight_style)
+          AND {_PRIVACY_FILTER}
         ORDER BY
             LOWER(h.character_name),
             LOWER(COALESCE(h.character_realm_slug, '')),
@@ -131,12 +142,13 @@ def get_top3(fight_style: str = Query(default="Patchwerk")):
 
 @router.get("/api/rankings/meta")
 def get_rankings_meta():
-    """Returns available classes, specs and fight styles for filter dropdowns."""
     specs_sql = text("""
-        SELECT DISTINCT character_class, character_spec
-        FROM history
-        WHERE character_class IS NOT NULL AND character_spec IS NOT NULL
-        ORDER BY character_class, character_spec
+        SELECT DISTINCT h.character_class, h.character_spec
+        FROM history h
+        LEFT JOIN users u ON u.bnet_id = h.user_id
+        WHERE h.character_class IS NOT NULL AND h.character_spec IS NOT NULL
+          AND (u.profile_private IS NULL OR u.profile_private = FALSE OR h.is_guest = TRUE)
+        ORDER BY h.character_class, h.character_spec
     """)
 
     with SessionLocal() as db:

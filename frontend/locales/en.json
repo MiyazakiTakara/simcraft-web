@@ -84,25 +84,52 @@
     "title": "Profile", "tab_chars": "Characters", "tab_history": "History",
     "tab_settings": "Settings", "simulations_count": "simulations"
   },
+  "settings": {
+    "title": "⚙️ Settings",
+    "login_required": "Login required",
+    "login_required_hint": "Log in via Battle.net to manage your settings.",
+    "section_char": "👤 Main character",
+    "section_char_hint": "Your main character displayed in the header and on your public profile.",
+    "char_name": "Character name",
+    "char_name_placeholder": "e.g. Takara",
+    "char_realm": "Realm",
+    "char_realm_placeholder": "e.g. twisting-nether",
+    "realm_required": "Please also provide the character's realm.",
+    "section_privacy": "🔒 Privacy",
+    "private_profile": "Private profile",
+    "private_profile_hint": "Your simulations won't appear in rankings, public history, or on the /u/{character} profile page.",
+    "private_on": "Enabled — profile is private",
+    "private_off": "Disabled — profile is public",
+    "private_active_info": "Your profile is now private. Your results won't appear publicly.",
+    "section_ui": "🎨 Interface",
+    "language": "Language",
+    "theme": "Theme",
+    "theme_dark": "Dark",
+    "theme_light": "Light",
+    "save": "Save settings",
+    "saving": "Saving...",
+    "saved": "✓ Settings saved!"
+  },
   "errors": {
     "view_load_failed": "Failed to load view: {{name}}",
     "chars_load_failed": "Failed to load characters",
     "sim_failed": "Simulation ended with an error",
     "result_not_ready": "Result is not ready yet",
-    "network": "Network error — check your connection"
+    "network": "Network error — check your connection",
+    "not_found": "Resource not found (404).",
+    "session_expired": "Session expired. Please log in again.",
+    "forbidden": "Access denied (403).",
+    "server": "Server error. Please try again later."
   },
   "admin": {
-    "title": "Admin Panel",
-    "logout": "Log out",
-    "refresh_label": "last updated:",
+    "title": "Admin Panel", "logout": "Log out", "refresh_label": "last updated:",
     "tabs": {
       "dashboard": "Dashboard", "traffic": "📈 Traffic", "news": "News",
       "users": "Users", "logs": "Logs", "maintenance": "Maintenance",
       "limits": "Limits", "health": "Health", "tasks": "Tasks", "appearance": "Appearance"
     },
     "dashboard": {
-      "title": "Server Statistics",
-      "total_sims": "Total simulations", "total_users": "Users",
+      "title": "Server Statistics", "total_sims": "Total simulations", "total_users": "Users",
       "today": "Today", "last_7d": "Last 7 days", "last_30d": "Last 30 days",
       "active_jobs": "Active jobs", "cpu": "CPU", "ram": "RAM", "uptime": "Uptime",
       "chart_trend": "Simulations — last 30 days", "chart_classes": "Class distribution",
@@ -129,14 +156,10 @@
       "no_sims": "No simulations.", "no_sims_yet": "none",
       "last_sim": "last", "view_result": "View result ↗"
     },
-    "logs": {
-      "title": "Logs", "refresh": "Refresh", "filter_all": "All",
-      "loading": "Loading...", "empty": "No logs found."
-    },
+    "logs": { "title": "Logs", "refresh": "Refresh", "filter_all": "All", "loading": "Loading...", "empty": "No logs found." },
     "maintenance": {
       "title": "Simulation Management", "subtitle": "Delete old simulations from the database.",
-      "days_placeholder": "Days (e.g. 30)", "delete_older": "Delete older than X days",
-      "delete_all": "Delete ALL"
+      "days_placeholder": "Days (e.g. 30)", "delete_older": "Delete older than X days", "delete_all": "Delete ALL"
     },
     "limits": {
       "title": "Limit Management", "subtitle": "Change system limits.",
@@ -148,10 +171,7 @@
       "up_to_date": "✓ up to date", "outdated": "✗ outdated",
       "not_checked": "? not checked", "local": "local", "latest": "latest"
     },
-    "tasks": {
-      "title": "Task Management", "refresh": "Refresh",
-      "loading": "Loading...", "empty": "No active tasks.", "cancel": "Cancel"
-    },
+    "tasks": { "title": "Task Management", "refresh": "Refresh", "loading": "Loading...", "empty": "No active tasks.", "cancel": "Cancel" },
     "appearance": {
       "title": "Site Appearance", "subtitle": "Customize the look of the main page.",
       "header_title": "Header title:", "hero_title": "Landing hero title:",
@@ -162,25 +182,18 @@
     "chart": {
       "no_data": "No data", "simulations": "simulations",
       "views": "views", "unique": "unique", "visits": "visits",
-      "page": "Page", "character": "Character", "class_spec": "Class / Spec",
-      "avg_dps": "Avg DPS"
+      "page": "Page", "character": "Character", "class_spec": "Class / Spec", "avg_dps": "Avg DPS"
     },
     "toast": {
-      "error_generic": "An error occurred.",
-      "traffic_error": "Failed to load traffic data",
-      "news_fill": "Fill in the title and content!",
-      "news_added": "News added!",
-      "deleted": "Deleted.",
-      "deleted_count": "Deleted {{n}} simulations.",
-      "task_cancelled": "Task cancelled",
-      "limits_error": "Failed to load limits",
-      "limits_saved": "Limits saved.",
-      "days_required": "Enter number of days!",
+      "error_generic": "An error occurred.", "traffic_error": "Failed to load traffic data",
+      "news_fill": "Fill in the title and content!", "news_added": "News added!",
+      "deleted": "Deleted.", "deleted_count": "Deleted {{n}} simulations.",
+      "task_cancelled": "Task cancelled", "limits_error": "Failed to load limits",
+      "limits_saved": "Limits saved.", "days_required": "Enter number of days!",
       "appearance_saved": "Appearance saved"
     },
     "confirm": {
-      "delete": "Are you sure you want to delete?",
-      "cancel_task": "Are you sure you want to cancel task",
+      "delete": "Are you sure you want to delete?", "cancel_task": "Are you sure you want to cancel task",
       "delete_older": "Are you sure you want to delete all simulations older than",
       "delete_all_1": "Are you sure you want to delete ALL simulations? This is irreversible!",
       "delete_all_2": "Are you SURE? All data will be lost!"
