@@ -6,6 +6,9 @@
   "header": {
     "simulations": "⚔️ Simulations",
     "profile": "👤 Profile",
+    "characters": "Characters",
+    "history": "History",
+    "settings": "Settings",
     "characters_count": "{{count}} characters",
     "logout": "Log out",
     "login": "🔑 Log in",
