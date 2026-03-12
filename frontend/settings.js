@@ -1,6 +1,4 @@
 function settingsMixin() {
-  console.log('settingsMixin called, returning object with form_main_character_name etc.');
-  console.trace();
   const result = {
     loading: true,
     isLoggedIn: false,
@@ -8,14 +6,6 @@ function settingsMixin() {
     saving: false,
     saveMsg: '',
     saveMsgOk: true,
-    characters: [],
-    charPrivacies: {},
-    loading:    true,
-    isLoggedIn: false,
-    error:      null,
-    saving:     false,
-    saveMsg:    '',
-    saveMsgOk:  true,
     characters: [],
     charPrivacies: {},
     form_main_character_name: '',
@@ -43,7 +33,6 @@ function settingsMixin() {
       if (!session) return;
       const key = name + '|' + realm;
       const isPrivate = !this.charPrivacies[key];
-      console.log('Toggle privacy:', name, 'realm:', realm, 'isPrivate:', isPrivate);
       try {
         const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
           method: 'PATCH',
@@ -54,7 +43,6 @@ function settingsMixin() {
             is_private: isPrivate,
           }),
         });
-        console.log('Response:', res.status);
         if (res.ok) {
           this.charPrivacies[key] = isPrivate;
         }
@@ -67,14 +55,10 @@ function settingsMixin() {
       event.preventDefault();
       event.stopPropagation();
       const session = this._getSession();
-      if (!session) {
-        console.error('No session found');
-        return;
-      }
+      if (!session) return;
       const realm = ch.realm_slug || ch.realm;
       const key = ch.name + '|' + realm;
       const isPrivate = !this.charPrivacies[key];
-      console.log('Toggle privacy:', ch.name, 'realm:', realm, 'isPrivate:', isPrivate);
       try {
         const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
           method: 'PATCH',
@@ -85,7 +69,6 @@ function settingsMixin() {
             is_private: isPrivate,
           }),
         });
-        console.log('Response:', res.status, await res.text());
         if (res.ok) {
           this.charPrivacies[key] = isPrivate;
         }
@@ -102,7 +85,6 @@ function settingsMixin() {
         if (res.ok) {
           const data = await res.json();
           this.charPrivacies = data.privacies || {};
-          // Also sync to window.__alpineApp for template access
           if (window.__alpineApp) {
             window.__alpineApp.charPrivacies = this.charPrivacies;
           }
@@ -133,13 +115,10 @@ function settingsMixin() {
     _waitForSession() {
       return new Promise((resolve) => {
         const session = this._getSession();
-        console.log('[Settings] _getSession returned:', session);
         if (session) { resolve(session); return; }
-        // __alpineApp może jeszcze nie być gotowy — czekamy max 2s
         let tries = 0;
         const interval = setInterval(() => {
           const s = this._getSession();
-          console.log('[Settings] Retry _getSession:', s, 'tries:', tries);
           if (s || ++tries > 40) {
             clearInterval(interval);
             resolve(s || null);
@@ -148,51 +127,29 @@ function settingsMixin() {
       });
     },
 
-    async init() {
-      console.log('[Settings] init called');
-      // Wait for window.__alpineApp to be defined
-      if (!window.__alpineApp) {
-        console.log('[Settings] window.__alpineApp not defined, waiting...');
-        await new Promise(resolve => {
-          const check = () => {
-            if (window.__alpineApp) resolve();
-            else setTimeout(check, 50);
-          };
-          check();
-        });
-      }
-      console.log('[Settings] __alpineApp:', window.__alpineApp?.sessionId);
-      console.log('[Settings] localStorage session:', localStorage.getItem('simcraft_session'));
-      console.log('[Settings] this:', this);
-      console.log('[Settings] form_main_character_name:', this.form_main_character_name);
+    // Przemianowane z init() na initSettings() — zapobiega nadpisaniu app.init() przez mergeMixins
+    async initSettings() {
       this.loading    = true;
       this.error      = null;
       this.isLoggedIn = false;
 
       const session = await this._waitForSession();
-      console.log('[Settings] Got session:', session);
       if (!session) {
         this.loading = false;
         return;
       }
 
       try {
-        console.log('[Settings] Fetching settings...');
         const res = await fetch(`/auth/session/settings?session=${session}`);
-        console.log('[Settings] Response status:', res.status);
-        if (res.status === 401) {
-          this.loading = false;
-          return;
-        }
+        if (res.status === 401) { this.loading = false; return; }
         if (res.status === 404) {
-          this.error   = this.$store.i18n.t('errors.not_found');
+          this.error   = 'Nie znaleziono.';
           this.loading = false;
           return;
         }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          this.error   = this.$store.i18n.t('common.error_prefix') + (data.detail || res.status);
-          console.log('[Settings] Error:', this.error);
+          this.error   = 'Błąd: ' + (data.detail || res.status);
           this.loading = false;
           return;
         }
@@ -202,23 +159,11 @@ function settingsMixin() {
         this.form_profile_private      = !!data.profile_private;
         this.isLoggedIn = true;
 
-        // Also sync to window.__alpineApp for template access
-        if (window.__alpineApp) {
-          window.__alpineApp.form = {
-            main_character_name: this.form_main_character_name,
-            main_character_realm: this.form_main_character_realm,
-            profile_private: this.form_profile_private,
-            manualEntry: this.form_manualEntry,
-          };
-        }
-
-        // Ładuj listę postaci
         try {
           const charsRes = await fetch(`/api/characters?session=${session}`);
           if (charsRes.ok) {
             const chars = await charsRes.json();
             this.characters = chars.sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
-            // Also sync to window.__alpineApp for template access
             if (window.__alpineApp) {
               window.__alpineApp.characters = this.characters;
             }
@@ -228,7 +173,7 @@ function settingsMixin() {
           console.warn('Failed to load characters for picker', e);
         }
       } catch (e) {
-        this.error = this.$store.i18n.t('errors.network');
+        this.error = 'Błąd sieci.';
       } finally {
         this.loading = false;
       }
@@ -242,7 +187,7 @@ function settingsMixin() {
       const name  = this.form_main_character_name.trim();
       const realm = this.form_main_character_realm.trim();
       if (name && !realm) {
-        this.saveMsg   = this.$store.i18n.t('settings.realm_required');
+        this.saveMsg   = 'Realm jest wymagany.';
         this.saveMsgOk = false;
         this.saving    = false;
         return;
@@ -261,18 +206,18 @@ function settingsMixin() {
 
         if (res.status === 400) {
           const data = await res.json().catch(() => ({}));
-          this.saveMsg   = this.$store.i18n.t('common.error_prefix') + (data.detail || '400');
+          this.saveMsg   = 'Błąd: ' + (data.detail || '400');
           this.saveMsgOk = false;
           return;
         }
         if (res.status === 401) {
-          this.saveMsg   = this.$store.i18n.t('errors.session_expired');
+          this.saveMsg   = 'Sesja wygasła.';
           this.saveMsgOk = false;
           return;
         }
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          this.saveMsg   = this.$store.i18n.t('common.error_prefix') + (data.detail || res.status);
+          this.saveMsg   = 'Błąd: ' + (data.detail || res.status);
           this.saveMsgOk = false;
           return;
         }
@@ -282,19 +227,13 @@ function settingsMixin() {
           window.__alpineApp.mainChar = data.main_character_name
             ? { name: data.main_character_name, realm: data.main_character_realm }
             : null;
-          window.__alpineApp.form = {
-            main_character_name: this.form_main_character_name,
-            main_character_realm: this.form_main_character_realm,
-            profile_private: this.form_profile_private,
-            manualEntry: this.form_manualEntry,
-          };
         }
-        this.saveMsg   = this.$store.i18n.t('settings.saved');
+        this.saveMsg   = 'Zapisano!';
         this.saveMsgOk = true;
         setTimeout(() => { this.saveMsg = ''; }, 4000);
 
       } catch (e) {
-        this.saveMsg   = this.$store.i18n.t('errors.network');
+        this.saveMsg   = 'Błąd sieci.';
         this.saveMsgOk = false;
       } finally {
         this.saving = false;
@@ -310,59 +249,34 @@ function settingsMixin() {
       }
     },
   };
-  console.log('Returned object keys:', Object.keys(result));
   return result;
 }
 
-// Make functions available globally for Alpine in dynamically loaded views
 window.toggleCharPrivacyGlobal = async function(name, realm) {
   const app = window.__alpineApp;
-  if (!app) {
-    console.error('No __alpineApp');
-    return;
-  }
+  if (!app) return;
   const session = app.sessionId || localStorage.getItem('simcraft_session');
   if (!session) return;
-  
   const key = name + '|' + realm;
   const isPrivate = !app.charPrivacies[key];
-  
   try {
     const res = await fetch(`/auth/session/character-privacy?session=${session}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        character_name: name,
-        character_realm: realm,
-        is_private: isPrivate,
-      }),
+      body: JSON.stringify({ character_name: name, character_realm: realm, is_private: isPrivate }),
     });
-    if (res.ok) {
-      app.charPrivacies[key] = isPrivate;
-    }
+    if (res.ok) app.charPrivacies[key] = isPrivate;
   } catch (e) {
     console.error('Failed to toggle char privacy', e);
   }
 };
 
-// Make settingsMixin available globally
-if (window.settingsMixin) {
-  console.warn('window.settingsMixin already defined, overwriting!');
-}
 window.settingsMixin = settingsMixin;
-console.log('window.settingsMixin defined:', typeof window.settingsMixin);
-console.log('window.settingsMixin is function:', typeof window.settingsMixin === 'function');
 
-// Register mixin globally with Alpine.data() for dynamically loaded views
-// Ensure Alpine is loaded before registering
 function registerSettingsMixin() {
-  console.log('registerSettingsMixin called, Alpine:', typeof Alpine);
   if (typeof Alpine !== 'undefined') {
-    console.log('Registering settingsMixin with Alpine');
     Alpine.data('settingsMixin', settingsMixin);
   } else {
-    // Retry after a short delay
-    console.log('Alpine not found, retrying...');
     setTimeout(registerSettingsMixin, 100);
   }
 }
