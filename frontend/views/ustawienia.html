@@ -1,4 +1,4 @@
-<div class="settings-view" x-data="window.settingsMixin ? window.settingsMixin() : { form_main_character_name: '', form_main_character_realm: '', form_profile_private: false, form_manualEntry: false }" x-init="init()">
+<div class="settings-view" x-data="window.settingsMixin ? window.settingsMixin() : { form_main_character_name: '', form_main_character_realm: '', form_profile_private: false, form_manualEntry: false }" x-init="console.log('form_main_character_name:', this.form_main_character_name); init()">
 
   <!-- Ładowanie -->
   <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
