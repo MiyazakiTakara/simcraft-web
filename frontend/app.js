@@ -171,7 +171,11 @@ function app() {
         const res = await fetch(url);
         if (!res.ok) throw new Error('trend fetch failed');
         const data = await res.json();
-        this.trendPoints = data.points || [];
+        // Backend zwraca klucz "trend", nie "points"
+        this.trendPoints = (data.trend || data.points || []).map(p => ({
+          ...p,
+          timestamp: p.created_at || p.timestamp,
+        }));
       } catch (e) {
         console.error('loadTrend:', e);
       } finally {
