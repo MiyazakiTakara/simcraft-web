@@ -395,7 +395,7 @@ function app() {
         container.innerHTML = this._viewCache[name];
       } else {
         try {
-          const res = await fetch('/views/' + name + '.html?v=9');
+          const res = await fetch('/views/' + name + '.html?v=10');
           if (!res.ok) throw new Error('View not found: ' + name);
           const html = await res.text();
           this._viewCache[name] = html;
@@ -408,8 +408,6 @@ function app() {
       }
       void container.offsetWidth;
       container.classList.add('view-enter');
-      // Don't call Alpine.initTree() for views that use the parent app scope
-      // Only call it for views that define their own x-data
     },
 
     navigateTo(name) {
@@ -417,18 +415,8 @@ function app() {
       this.activeTab = name;
       window.location.hash = name === 'home' ? '' : name;
 
-      // Settings page is inline, don't load via AJAX
-      if (name !== 'ustawienia') {
-        this.loadView(name);
-      } else {
-        // Clear container for settings view
-        const container = document.getElementById('view-container');
-        if (container) container.innerHTML = '';
-        // Load settings data
-        if (this.sessionId) {
-          this.loadSettings();
-        }
-      }
+      // Settings page is loaded via AJAX
+      this.loadView(name);
 
       // Przełączaj historię zależnie od widoku:
       this.historyPage = 1;
@@ -439,6 +427,10 @@ function app() {
           this.loadHistory();
         } else {
           this.loadPublicHistory();
+        }
+      } else if (name === 'ustawienia') {
+        if (this.sessionId) {
+          this.loadSettings();
         }
       }
     },

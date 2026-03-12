@@ -109,8 +109,8 @@
   <!-- Kontener widoków -->
   <div id="view-container"></div>
 
-  <!-- SETTINGS VIEW -->
-  <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;" x-data="{}">
+  <!-- SETTINGS VIEW (will be loaded from ustawienia.html) -->
+  <div x-show="currentView === 'ustawienia'" class="settings-view" style="display: none;">
     <!-- Ładowanie -->
     <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
       <span>Ładowanie...</span>
