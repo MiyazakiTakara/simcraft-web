@@ -475,5 +475,4 @@ function app() {
   return state;
 }
 
-// Make app available globally
-window.app = app;
+
