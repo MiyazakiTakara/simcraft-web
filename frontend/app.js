@@ -10,7 +10,6 @@ function mergeMixins(target, ...mixins) {
 }
 
 function app() {
-  console.log('app() called');
   const state = {
     sessionId: localStorage.getItem('simcraft_session'),
     characters: [],
@@ -75,8 +74,6 @@ function app() {
     trendPoints:     [],
     trendLoading:    false,
     _trendChart:     null,
-
-
 
     formatDps(v)                  { return Utils.formatDps(v); },
     formatDmg(v)                  { return Utils.formatDmg(v); },
@@ -263,21 +260,6 @@ function app() {
       });
     },
 
-    // Settings methods
-    classColor(className) {
-      const colors = {
-        'Death Knight': '#C41E3A', 'Demon Hunter': '#A330C9', 'Druid': '#FF7C0A',
-        'Evoker': '#33937F', 'Hunter': '#AAD372', 'Mage': '#3FC7EB', 'Monk': '#00FF98',
-        'Paladin': '#F48CBA', 'Priest': '#CCCCCC', 'Rogue': '#FFF468', 'Shaman': '#0070DD',
-        'Warlock': '#8788EE', 'Warrior': '#C69B3A',
-      };
-      return colors[className] || '#888';
-    },
-
-
-
-
-
     async loadView(name) {
       const container = document.getElementById('view-container');
       if (!container) return;
@@ -299,32 +281,23 @@ function app() {
       }
       void container.offsetWidth;
       container.classList.add('view-enter');
-      // Only call Alpine.initTree for views that define their own x-data
+
       if (name === 'ustawienia') {
-        console.log('Loading ustawienia view, window.settingsMixin:', typeof window.settingsMixin);
-        // Ensure Alpine is loaded and container is ready
+        // Widok ustawienia ma własne x-data="settingsMixin()" więc wymaga initTree
         if (typeof Alpine !== 'undefined') {
-          Alpine.nextTick(() => {
-            Alpine.initTree(container);
-          });
-        } else {
-          console.error('Alpine is not defined when trying to initTree for ustawienia');
+          Alpine.nextTick(() => Alpine.initTree(container));
         }
       }
     },
 
     navigateTo(name) {
-      if (this.currentView === name) {
-        return; // Already navigating to this view
-      }
+      if (this.currentView === name) return;
       this.currentView = name;
       this.activeTab = name;
       window.location.hash = name === 'home' ? '' : name;
 
-      // Settings page is loaded via AJAX
       this.loadView(name);
 
-      // Przełączaj historię zależnie od widoku:
       this.historyPage = 1;
       if (name === 'home') {
         this.loadPublicHistory();
@@ -334,8 +307,6 @@ function app() {
         } else {
           this.loadPublicHistory();
         }
-      } else if (name === 'ustawienia') {
-        // Settings are loaded by settingsMixin().init()
       }
     },
 
@@ -430,6 +401,7 @@ function app() {
       } catch (e) {}
     },
 
+    // app init — NIE nadpisywać przez mergeMixins!
     init() {
       window.__alpineApp = this;
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
@@ -453,31 +425,46 @@ function app() {
         this.checkFirstLogin();
       }
 
-      // handleHash wywoła navigateTo, które samo zadecyduje czy ładować publiczną czy prywatną historię
       this.handleHash();
       window.addEventListener('hashchange', () => this.handleHash());
-
-      // If starting on settings page, load settings
-      if (this.currentView === 'ustawienia' && this.sessionId) {
-        this.loadSettings();
-      }
     },
   };
 
-  // Merge settingsMixin if available
-  console.log('Checking window.settingsMixin in app.js:', typeof window.settingsMixin);
-  console.log('Checking Alpine in app.js:', typeof Alpine);
+  // Merguj miksyny — PRZED zachowaniem init, żeby settingsMixin nie nadpisał app.init
   if (typeof window.settingsMixin !== 'undefined') {
-    console.log('Merging window.settingsMixin into app state');
     mergeMixins(state, window.settingsMixin());
-  } else {
-    console.warn('window.settingsMixin not found in app.js');
   }
   mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
+
+  // Przywróć app.init() — musi być PO mergeMixins, bo mergeMixins nadpisuje init przez settingsMixin
+  state.init = function() {
+    window.__alpineApp = this;
+    document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
+    this.loadAppearance();
+
+    const params = new URLSearchParams(window.location.search);
+    const sessionFromUrl = params.get("session");
+    if (sessionFromUrl) {
+      this.sessionId = sessionFromUrl;
+      localStorage.setItem("simcraft_session", sessionFromUrl);
+      history.replaceState({}, "", "/");
+    } else {
+      const saved = localStorage.getItem("simcraft_session");
+      if (saved) this.sessionId = saved;
+    }
+
+    this.loadNews();
+
+    if (this.sessionId) {
+      this.loadCharacters();
+      this.checkFirstLogin();
+    }
+
+    this.handleHash();
+    window.addEventListener('hashchange', () => this.handleHash());
+  };
 
   return state;
 }
 
 window.app = app;
-
-
