@@ -16,12 +16,28 @@ function settingsMixin() {
       return window.__alpineApp?.sessionId || localStorage.getItem('simcraft_session');
     },
 
+    _waitForSession() {
+      return new Promise((resolve) => {
+        const session = this._getSession();
+        if (session) { resolve(session); return; }
+        // __alpineApp może jeszcze nie być gotowy — czekamy max 2s
+        let tries = 0;
+        const interval = setInterval(() => {
+          const s = this._getSession();
+          if (s || ++tries > 40) {
+            clearInterval(interval);
+            resolve(s || null);
+          }
+        }, 50);
+      });
+    },
+
     async init() {
       this.loading    = true;
       this.error      = null;
       this.isLoggedIn = false;
 
-      const session = this._getSession();
+      const session = await this._waitForSession();
       if (!session) {
         this.loading = false;
         return;
@@ -100,11 +116,6 @@ function settingsMixin() {
         }
 
         const data = await res.json();
-        if (this.$store && this.$store.session) {
-          this.$store.session.main_character_name  = data.main_character_name  || '';
-          this.$store.session.main_character_realm = data.main_character_realm || '';
-        }
-        // Aktualizuj również główną instancję app()
         if (window.__alpineApp) {
           window.__alpineApp.mainChar = data.main_character_name
             ? { name: data.main_character_name, realm: data.main_character_realm }
