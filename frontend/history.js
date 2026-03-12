@@ -3,14 +3,14 @@ const HistoryMixin = {
   async loadHistory() {
     try {
       const data = await API.getHistory(this.sessionId, this.historyPage, this.historyPerPage);
-      this.history = data.items || [];
+      this.history = data.results || [];
     } catch (e) { console.error("Failed to load history", e); }
   },
 
   async loadPublicHistory() {
     try {
       const data = await API.getPublicHistory(this.historyPage, this.historyPerPage);
-      this.history = data.items || [];
+      this.history = data.results || [];
     } catch (e) { console.error("Failed to load public history", e); }
   },
 
