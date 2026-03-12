@@ -29,12 +29,14 @@ function app() {
     _guestPollInterval: null,
     simOptions: { fight_style: "Patchwerk", iterations: 1000, target_error: 0.5 },
     loadingChars: false,
+    charsLoading: false,   // alias używany przez skeleton w profil.html
     loadingSim: false,
     errorChars: null,
     _pollInterval: null,
     history: [],
     news: [],
     loadingHistory: false,
+    historyLoading: false, // alias używany przez skeleton w profil.html i home.html
     spellSort: "total_dmg",
     copiedJobId: null,
     chartModal: null,

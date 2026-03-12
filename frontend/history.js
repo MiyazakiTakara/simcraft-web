@@ -1,17 +1,29 @@
 // Historia symulacji i newsy
 const HistoryMixin = {
   async loadHistory() {
+    this.loadingHistory = true;
+    this.historyLoading = true;
     try {
       const data = await API.getHistory(this.sessionId, this.historyPage, this.historyPerPage);
       this.history = data.results || [];
     } catch (e) { console.error("Failed to load history", e); }
+    finally {
+      this.loadingHistory = false;
+      this.historyLoading = false;
+    }
   },
 
   async loadPublicHistory() {
+    this.loadingHistory = true;
+    this.historyLoading = true;
     try {
       const data = await API.getPublicHistory(this.historyPage, this.historyPerPage);
       this.history = data.results || [];
     } catch (e) { console.error("Failed to load public history", e); }
+    finally {
+      this.loadingHistory = false;
+      this.historyLoading = false;
+    }
   },
 
   async loadNews() {

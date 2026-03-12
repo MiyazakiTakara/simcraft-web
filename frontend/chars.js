@@ -2,6 +2,7 @@
 const CharsMixin = {
   async loadCharacters() {
     this.loadingChars = true;
+    this.charsLoading = true;
     this.errorChars = null;
     try {
       const chars = await API.getCharacters(this.sessionId);
@@ -28,6 +29,7 @@ const CharsMixin = {
       }
     } finally {
       this.loadingChars = false;
+      this.charsLoading = false;
     }
   },
 
