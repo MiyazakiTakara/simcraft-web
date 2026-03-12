@@ -475,4 +475,6 @@ function app() {
   return state;
 }
 
+window.app = app;
+
 
