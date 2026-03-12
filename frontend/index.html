@@ -46,7 +46,7 @@
   <script src="/partials.js?v=1"></script>
 </head>
 <body>
-<div x-data="app()" x-init="init()" class="container">
+<div x-data="window.app()" x-init="init()" class="container">
 
   <!-- Modal powiększenia chartu -->
   <div class="chart-modal-overlay" x-show="chartModal" x-cloak @click="chartModal=false" style="display:none">

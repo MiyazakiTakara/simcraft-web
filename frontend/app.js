@@ -10,6 +10,7 @@ function mergeMixins(target, ...mixins) {
 }
 
 function app() {
+  console.log('app() called');
   const state = {
     sessionId: localStorage.getItem('simcraft_session'),
     characters: [],
@@ -473,3 +474,6 @@ function app() {
 
   return state;
 }
+
+// Make app available globally
+window.app = app;
