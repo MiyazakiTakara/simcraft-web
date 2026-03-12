@@ -326,6 +326,9 @@ window.toggleCharPrivacyGlobal = async function(name, realm) {
 };
 
 // Make settingsMixin available globally
+if (window.settingsMixin) {
+  console.warn('window.settingsMixin already defined, overwriting!');
+}
 window.settingsMixin = settingsMixin;
 console.log('window.settingsMixin defined:', typeof window.settingsMixin);
 console.log('window.settingsMixin is function:', typeof window.settingsMixin === 'function');
