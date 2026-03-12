@@ -408,6 +408,10 @@ function app() {
       }
       void container.offsetWidth;
       container.classList.add('view-enter');
+      // Only call Alpine.initTree for views that define their own x-data
+      if (name === 'ustawienia') {
+        this.$nextTick(() => Alpine.initTree(container));
+      }
     },
 
     navigateTo(name) {
