@@ -33,6 +33,7 @@ services:
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - ADMIN_REDIRECT_URI=${ADMIN_REDIRECT_URI}
+      - APP_BASE_URL=${APP_BASE_URL}
     volumes:
       - ./results:/app/results
     restart: unless-stopped
