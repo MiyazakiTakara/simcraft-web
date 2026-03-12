@@ -28,6 +28,7 @@ from simulation import router as sim_router, RESULTS_DIR, jobs, create_job
 from results import router as results_router
 from history import router as history_router
 from admin import router as admin_router, load_appearance_config
+from reactions import router as reactions_router
 
 log = setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
@@ -83,6 +84,7 @@ app.include_router(sim_router)
 app.include_router(results_router)
 app.include_router(history_router)
 app.include_router(admin_router)
+app.include_router(reactions_router)
 
 
 # ---------- Publiczny endpoint appearance (bez autoryzacji) ----------
@@ -154,11 +156,6 @@ async def result_page(job_id: str):
 
 
 def _mark_stale_running_jobs():
-    """
-    Po restarcie kontenera joby ze statusem 'running' w DB nigdy nie dostałyby
-    statusu 'done' (wątek _run_sim zginął razem z procesem).
-    Oznaczamy je jako 'error' z informacją o restarcie.
-    """
     with SessionLocal() as db:
         stale = db.query(JobModel).filter(JobModel.status == "running").all()
         for job in stale:
@@ -170,10 +167,6 @@ def _mark_stale_running_jobs():
 
 
 def _restore_jobs():
-    """
-    Przywraca joby po restarcie.
-    Priorytet: nowy format (katalog/<job_id>/output.json) > stary format (<job_id>.json).
-    """
     for entry in os.scandir(RESULTS_DIR):
         if not entry.is_dir():
             continue
@@ -196,7 +189,6 @@ def _restore_jobs():
     log.info("jobs-restored", count=len(jobs))
 
 
-# Najpierw zakónicz stare 'running', potem wczytaj z dysku
 _mark_stale_running_jobs()
 _restore_jobs()
 

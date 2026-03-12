@@ -35,6 +35,51 @@
     .spell-tooltip-row { display:flex; justify-content:space-between; gap:1.2rem; margin:.2rem 0; }
     .spell-tooltip-label { color:var(--muted); }
     .spell-tooltip-val   { font-weight:600; color:var(--text); }
+
+    /* Reactions */
+    .reactions-bar {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 1.2rem;
+      padding: .9rem 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .reaction-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: .3rem .75rem;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .1s;
+      color: var(--text);
+      user-select: none;
+    }
+    .reaction-btn:hover { background: var(--card); transform: scale(1.08); }
+    .reaction-btn.active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+    .reaction-btn .count {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--muted);
+      min-width: .9rem;
+      text-align: center;
+    }
+    .reaction-btn.active .count { color: var(--accent); }
+    .reaction-login-hint {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-left: .3rem;
+    }
   </style>
 </head>
 <body>
@@ -49,7 +94,6 @@
   <header class="header">
     <a href="/" class="header-logo" style="text-decoration:none" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</a>
     <div style="display:flex;align-items:center;gap:.6rem">
-      <!-- Przełącznik języka -->
       <div style="display:flex;gap:.2rem">
         <template x-for="lang in ['pl','en']" :key="lang">
           <button
@@ -113,6 +157,25 @@
             </div>
           </div>
 
+          <!-- Reakcje -->
+          <div class="reactions-bar">
+            <template x-for="key in reactionKeys" :key="key">
+              <button
+                class="reaction-btn"
+                :class="{active: myReaction === key}"
+                @click="react(key)"
+                :title="sessionId ? (myReaction === key ? 'Kliknij aby usunąć' : 'Kliknij aby zareagować') : 'Zaloguj się aby reagować'"
+                :disabled="!sessionId || reactionLoading"
+              >
+                <span x-text="emojiMap[key] || key"></span>
+                <span class="count" x-text="reactionCounts[key] || 0"></span>
+              </button>
+            </template>
+            <span x-show="!sessionId" class="reaction-login-hint">
+              🔑 <a href="/auth/login" style="color:var(--accent2)">Zaloguj się</a>, aby reagować
+            </span>
+          </div>
+
           <!-- Grid: stats + spelle -->
           <div class="result-grid">
             <div>
@@ -160,11 +223,11 @@
                       <span style="display:flex;gap:.6rem;align-items:center">
                         <span x-show="spellSort==='total_dmg'">
                           <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'"></span>
                         </span>
                         <span x-show="spellSort==='dps'">
                           <strong x-text="formatDps(sp.dps)"></strong> DPS
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'"></span>
                         </span>
                         <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
                       </span>
@@ -234,6 +297,14 @@ function resultPage() {
     copied: false,
     ts: Date.now(),
     hoveredSpell: null,
+    sessionId: localStorage.getItem('simcraft_session'),
+
+    // Reactions
+    reactionKeys:    ['fire', 'strong', 'sad', 'skull', 'rofl'],
+    emojiMap:        { fire: '🔥', strong: '💪', sad: '😢', skull: '💀', rofl: '🤣' },
+    reactionCounts:  { fire: 0, strong: 0, sad: 0, skull: 0, rofl: 0 },
+    myReaction:      null,
+    reactionLoading: false,
 
     appearance: {
       header_title: 'SimCraft Web',
@@ -278,6 +349,43 @@ function resultPage() {
         this.error = Alpine.store('i18n').t('result.not_found_error');
       } finally {
         this.loading = false;
+      }
+
+      // Załaduj reakcje po załadowaniu wyniku
+      await this.loadReactions();
+    },
+
+    async loadReactions() {
+      try {
+        const params = this.sessionId ? `?session=${encodeURIComponent(this.sessionId)}` : '';
+        const res = await fetch(`/api/reactions/${this.jobId}${params}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        this.reactionCounts = data.counts   || this.reactionCounts;
+        this.myReaction     = data.my_reaction || null;
+        if (data.emoji_map) this.emojiMap = data.emoji_map;
+      } catch (e) {
+        console.error('loadReactions:', e);
+      }
+    },
+
+    async react(key) {
+      if (!this.sessionId || this.reactionLoading) return;
+      this.reactionLoading = true;
+      try {
+        const res = await fetch(`/api/reactions/${this.jobId}`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ session: this.sessionId, emoji: key }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        this.reactionCounts = data.counts     || this.reactionCounts;
+        this.myReaction     = data.my_reaction || null;
+      } catch (e) {
+        console.error('react:', e);
+      } finally {
+        this.reactionLoading = false;
       }
     },
 
