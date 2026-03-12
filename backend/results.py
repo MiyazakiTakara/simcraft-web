@@ -414,6 +414,25 @@ async def get_result_json(job_id: str):
     return parse_results(job["json_path"])
 
 
+@router.get("/api/result/{job_id}/meta")
+async def get_result_meta(job_id: str):
+    from database import SessionLocal, HistoryEntryModel
+    with SessionLocal() as db:
+        entry = db.query(HistoryEntryModel).filter(
+            HistoryEntryModel.job_id == job_id
+        ).first()
+    if not entry:
+        return {}
+    return {
+        "character_name": entry.character_name,
+        "character_class": entry.character_class,
+        "character_spec": entry.character_spec,
+        "character_realm": entry.character_realm_slug,
+        "fight_style": entry.fight_style,
+        "role": entry.role,
+    }
+
+
 @router.get("/api/result/{job_id}/csv")
 async def get_result_csv(job_id: str):
     job = _get_job(job_id)
