@@ -96,7 +96,7 @@
         <span x-show="!loadingSim" x-text="'\u25b6 ' + $store.i18n.t('sim.run_sim') + ' (\u2694\ufe0f DPS)'"></span>
       </button>
       <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:var(--text-sm);color:var(--muted)">
-        <span x-text="$store.i18n.t('sim.running') + ' (job: '"></span><span x-text="job?.id?.slice(0,8)"></span><span>\u2026)</span>
+        <span x-text="$store.i18n.t('sim.running') + ' (job: '"></span><span x-text="job?.id?.slice(0,8)"></span><span>&#8230;)</span>
       </p>
     </div>
 
@@ -110,7 +110,7 @@
               <a :href="armoryUrl(job.realmSlug, job.charName)" target="_blank" rel="noopener"
                 :style="{background: classColor(job.charClass), color: classTextColor(job.charClass), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '.3rem'}">
                 <span x-text="job.charName + (job.charSpec || job.charClass ? ' \xb7 ' + (job.charSpec ? job.charSpec + ' ' : '') + (job.charClass || '') : '')"></span>
-                <span style="font-size:.75rem;opacity:.8">\u2197</span>
+                <span style="font-size:.75rem;opacity:.8">&#8599;</span>
               </a>
             </template>
             <template x-if="!job.charName"><span x-text="simResult.name"></span></template>
@@ -137,23 +137,14 @@
             </div>
             <div class="spell-list">
               <template x-for="sp in sortedSpells" :key="sp.name">
-                <div class="spell-row"
-                  @mouseenter="sp.spell_id > 0 && showTooltip(sp.spell_id)"
-                >
-                  <!-- Async Wowhead-style tooltip -->
+                <div class="spell-row" @mouseenter="sp.spell_id > 0 && showTooltip(sp.spell_id)">
                   <div class="wh-tooltip" x-show="sp.spell_id > 0 && tooltipCache[sp.spell_id] !== undefined">
-                    <template x-if="tooltipCache[sp.spell_id] === 'loading'">
-                      <div class="wh-tooltip-loading">Loading&#8230;</div>
-                    </template>
+                    <template x-if="tooltipCache[sp.spell_id] === 'loading'"><div class="wh-tooltip-loading">Loading&#8230;</div></template>
                     <template x-if="tooltipCache[sp.spell_id] && tooltipCache[sp.spell_id] !== 'loading'">
                       <div>
                         <div class="wh-tooltip-header">
                           <template x-if="tooltipCache[sp.spell_id].icon">
-                            <img class="wh-tooltip-icon"
-                              :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[sp.spell_id].icon + '.jpg'"
-                              :alt="tooltipCache[sp.spell_id].name"
-                              @error="$el.style.display='none'"
-                            />
+                            <img class="wh-tooltip-icon" :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[sp.spell_id].icon + '.jpg'" :alt="tooltipCache[sp.spell_id].name" @error="$el.style.display='none'"/>
                           </template>
                           <div>
                             <div class="wh-tooltip-name" x-text="tooltipCache[sp.spell_id].name"></div>
@@ -170,7 +161,6 @@
                       </div>
                     </template>
                   </div>
-                  <!-- Fallback SimC tooltip (brak spell_id) -->
                   <div class="wh-tooltip" x-show="!sp.spell_id || sp.spell_id <= 0">
                     <div class="wh-tooltip-name" x-text="sp.name"></div>
                     <div class="wh-tooltip-meta" style="border-top:none;margin-top:.2rem;padding-top:0">
@@ -187,8 +177,7 @@
                     </template>
                     <template x-if="!sp.spell_id && sp.icon && sp.icon !== 'inv_misc_questionmark'">
                       <img style="width:22px;height:22px;border-radius:4px;flex-shrink:0;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
-                        :src="'https://wow.zamimg.com/images/wow/icons/medium/' + sp.icon + '.jpg'"
-                        :alt="sp.name" @error="$el.style.display='none'" loading="lazy"/>
+                        :src="'https://wow.zamimg.com/images/wow/icons/medium/' + sp.icon + '.jpg'" :alt="sp.name" @error="$el.style.display='none'" loading="lazy"/>
                     </template>
                     <span x-text="sp.name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                     <span style="display:flex;gap:.6rem;align-items:center;flex-shrink:0">
@@ -211,15 +200,52 @@
             <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Buffs and debuffs with partial uptime (0%&#8211;100%)</p>
             <div style="display:flex;flex-direction:column;gap:.45rem">
               <template x-for="b in simResult.buffs" :key="b.name">
-                <div>
+                <div class="buff-row"
+                  @mouseenter="b.spell_id > 0 && showTooltip(b.spell_id)"
+                >
+                  <!-- Async tooltip -->
+                  <div class="wh-tooltip" x-show="b.spell_id > 0 && tooltipCache[b.spell_id] !== undefined">
+                    <template x-if="tooltipCache[b.spell_id] === 'loading'"><div class="wh-tooltip-loading">Loading&#8230;</div></template>
+                    <template x-if="tooltipCache[b.spell_id] && tooltipCache[b.spell_id] !== 'loading'">
+                      <div>
+                        <div class="wh-tooltip-header">
+                          <template x-if="tooltipCache[b.spell_id].icon">
+                            <img class="wh-tooltip-icon" :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[b.spell_id].icon + '.jpg'" :alt="tooltipCache[b.spell_id].name" @error="$el.style.display='none'"/>
+                          </template>
+                          <div>
+                            <div class="wh-tooltip-name" x-text="tooltipCache[b.spell_id].name"></div>
+                            <div class="wh-tooltip-school" x-show="tooltipCache[b.spell_id].school" x-text="tooltipCache[b.spell_id].school"></div>
+                          </div>
+                        </div>
+                        <div class="wh-tooltip-desc" x-show="tooltipCache[b.spell_id].description" x-text="tooltipCache[b.spell_id].description"></div>
+                        <div class="wh-tooltip-meta">
+                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[b.spell_id].cast_time">Cast: <span x-text="tooltipCache[b.spell_id].cast_time"></span></div>
+                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[b.spell_id].cooldown">CD: <span x-text="tooltipCache[b.spell_id].cooldown"></span></div>
+                        </div>
+                        <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + b.spell_id" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
+                      </div>
+                    </template>
+                  </div>
+                  <!-- Fallback -->
+                  <div class="wh-tooltip" x-show="!b.spell_id || b.spell_id <= 0">
+                    <div class="wh-tooltip-name" x-text="b.name"></div>
+                    <div class="wh-tooltip-meta" style="border-top:none;margin-top:.2rem;padding-top:0">
+                      <div class="wh-tooltip-meta-item">Uptime: <span x-text="b.uptime + '%'"></span></div>
+                      <div class="wh-tooltip-meta-item" x-show="b.kind">Type: <span x-text="b.kind"></span></div>
+                    </div>
+                  </div>
+                  <!-- Wiersz buffa -->
                   <div style="display:grid;grid-template-columns:22px 1fr auto;gap:.5rem;align-items:center;margin-bottom:.18rem">
-                    <img
-                      style="width:22px;height:22px;border-radius:4px;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
-                      :src="'https://wow.zamimg.com/images/wow/icons/medium/'+b.icon+'.jpg'"
-                      :alt="b.name"
-                      @error="$el.src='/static/icons/default.png';$el.onerror=null"
-                      loading="lazy"
-                    />
+                    <template x-if="b.spell_id > 0">
+                      <a class="spell-icon-wrap" :href="'https://www.wowhead.com/spell=' + b.spell_id" target="_blank" rel="noopener">
+                        <img :src="'/api/icon-by-spell/' + b.spell_id" :alt="b.name" @error="$el.parentElement.style.display='none'" loading="lazy"/>
+                      </a>
+                    </template>
+                    <template x-if="!b.spell_id || b.spell_id <= 0">
+                      <img style="width:22px;height:22px;border-radius:4px;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
+                        :src="'https://wow.zamimg.com/images/wow/icons/medium/'+b.icon+'.jpg'" :alt="b.name"
+                        @error="$el.src='/static/icons/default.png';$el.onerror=null" loading="lazy"/>
+                    </template>
                     <span style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="b.name" x-text="b.name"></span>
                     <span style="font-size:.78rem;color:var(--muted);white-space:nowrap" x-text="b.uptime+'%'"></span>
                   </div>
@@ -237,10 +263,7 @@
         <!-- Action Timeline -->
         <template x-if="simResult.timeline && simResult.timeline.length > 0">
           <div x-data="{open: false}" style="margin-top:1.2rem">
-            <div
-              style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;color:var(--muted);user-select:none;padding:.4rem 0"
-              @click="open = !open"
-            >
+            <div style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;color:var(--muted);user-select:none;padding:.4rem 0" @click="open = !open">
               <span x-text="open ? '\u25bc' : '\u25ba'"></span>
               <span>&#128220; Action Sequence Log</span>
               <span style="font-size:.75rem;margin-left:.3rem" x-text="'(' + simResult.timeline.length + ' events, sample iteration)'"></span>
@@ -257,10 +280,7 @@
                 </thead>
                 <tbody>
                   <template x-for="(ev, idx) in simResult.timeline" :key="idx">
-                    <tr
-                      style="position:relative"
-                      @mouseenter="ev.spell_id > 0 && showTooltip(ev.spell_id)"
-                    >
+                    <tr class="timeline-row" @mouseenter="ev.spell_id > 0 && showTooltip(ev.spell_id)">
                       <td style="color:var(--muted);font-variant-numeric:tabular-nums;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.time.toFixed(2) + 's'"></td>
                       <td style="padding:.38rem .7rem;border-top:1px solid var(--border)">
                         <template x-if="ev.spell_id > 0">
@@ -269,27 +289,18 @@
                           </a>
                         </template>
                       </td>
-                      <td
-                        style="padding:.38rem .7rem;border-top:1px solid var(--border)"
+                      <td style="padding:.38rem .7rem;border-top:1px solid var(--border)"
                         :style="{color: ev.type==='proc'?'var(--accent)':ev.type==='buff'?'#7fc97f':ev.type==='debuff'?'#e74c3c':'var(--text)'}"
-                        x-text="ev.name"
-                      ></td>
+                        x-text="ev.name"></td>
                       <td style="color:var(--muted);font-size:.78rem;text-transform:capitalize;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.type"></td>
-                      <!-- Tooltip na wierszu timeline -->
-                      <td style="position:relative;padding:0;border:none;width:0">
+                      <td style="position:relative;padding:0;border:none;width:0;overflow:visible">
                         <div class="wh-tooltip" style="top:100%;left:0" x-show="ev.spell_id > 0 && tooltipCache[ev.spell_id] !== undefined">
-                          <template x-if="tooltipCache[ev.spell_id] === 'loading'">
-                            <div class="wh-tooltip-loading">Loading&#8230;</div>
-                          </template>
+                          <template x-if="tooltipCache[ev.spell_id] === 'loading'"><div class="wh-tooltip-loading">Loading&#8230;</div></template>
                           <template x-if="tooltipCache[ev.spell_id] && tooltipCache[ev.spell_id] !== 'loading'">
                             <div>
                               <div class="wh-tooltip-header">
                                 <template x-if="tooltipCache[ev.spell_id].icon">
-                                  <img class="wh-tooltip-icon"
-                                    :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[ev.spell_id].icon + '.jpg'"
-                                    :alt="tooltipCache[ev.spell_id].name"
-                                    @error="$el.style.display='none'"
-                                  />
+                                  <img class="wh-tooltip-icon" :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[ev.spell_id].icon + '.jpg'" :alt="tooltipCache[ev.spell_id].name" @error="$el.style.display='none'"/>
                                 </template>
                                 <div>
                                   <div class="wh-tooltip-name" x-text="tooltipCache[ev.spell_id].name"></div>
@@ -318,10 +329,10 @@
         <div class="chart-section"><h2>&#129383; DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
         <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
           <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted);font-size:var(--text-sm)" x-text="$store.i18n.t('result.raw_json')"></a>
-          <span style="color:var(--border)">\xb7</span>
+          <span style="color:var(--border)">&#183;</span>
           <button class="btn btn-accent2 btn-sm"
             @click="copyToClipboard(getShareUrl(job.id), job.id)"
-            x-text="copiedJobId === job.id ? $store.i18n.t('common.copied') : '\ud83d\udd17 ' + $store.i18n.t('common.share')"
+            x-text="copiedJobId === job.id ? $store.i18n.t('common.copied') : '&#128279; ' + $store.i18n.t('common.share')"
           ></button>
         </div>
       </div>
@@ -360,7 +371,7 @@
           </div>
           <button class="btn btn-accent2 btn-sm btn-icon"
             @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
-            x-text="copiedJobId === entry.job_id ? '\u2713' : '\ud83d\udd17'"
+            x-text="copiedJobId === entry.job_id ? '\u2713' : '&#128279;'"
             :title="$store.i18n.t('common.copy')"
           ></button>
         </div>
