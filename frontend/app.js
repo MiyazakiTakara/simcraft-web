@@ -423,8 +423,11 @@ function app() {
         this.checkFirstLogin();
       }
 
-      this.handleHash();
-      window.addEventListener('hashchange', () => this.handleHash());
+      // $nextTick zapewnia że #view-container istnieje w DOM zanim loadView() go szuka
+      this.$nextTick(() => {
+        this.handleHash();
+        window.addEventListener('hashchange', () => this.handleHash());
+      });
     },
   };
 
@@ -458,8 +461,11 @@ function app() {
       this.checkFirstLogin();
     }
 
-    this.handleHash();
-    window.addEventListener('hashchange', () => this.handleHash());
+    // $nextTick zapewnia że #view-container istnieje w DOM zanim loadView() go szuka
+    this.$nextTick(() => {
+      this.handleHash();
+      window.addEventListener('hashchange', () => this.handleHash());
+    });
   };
 
   return state;
