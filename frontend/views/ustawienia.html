@@ -31,7 +31,7 @@
       <div class="settings-row">
         <label x-text="$store.i18n.t('settings.char_name')"></label>
         <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
-           <select x-model="form_main_character_name || ''" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
+          <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
             <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
             <template x-for="ch in characters" :key="ch.id">
               <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
