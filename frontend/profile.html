@@ -28,159 +28,163 @@
     </nav>
   </header>
 
-  <!-- Loading -->
-  <div x-show="loading" style="text-align:center;padding:6rem;color:var(--muted)">
-    <span class="spinner" style="width:2rem;height:2rem"></span>
-  </div>
+  <div style="max-width:960px;margin:0 auto">
 
-  <!-- 404 -->
-  <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
-    <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
-    <h2 style="margin-bottom:.5rem">Profil nie istnieje</h2>
-    <p style="color:var(--muted)">Ten profil jest prywatny lub użytkownik nie ma jeszcze konta w SimCraft Web.</p>
-    <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Strona główna</a>
-  </div>
+    <!-- Loading -->
+    <div x-show="loading" style="text-align:center;padding:6rem;color:var(--muted)">
+      <span class="spinner" style="width:2rem;height:2rem"></span>
+    </div>
 
-  <!-- Profil -->
-  <div x-show="!loading && !notFound">
+    <!-- 404 -->
+    <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
+      <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+      <h2 style="margin-bottom:.5rem">Profil nie istnieje</h2>
+      <p style="color:var(--muted)">Ten profil jest prywatny lub użytkownik nie ma jeszcze konta w SimCraft Web.</p>
+      <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Strona główna</a>
+    </div>
 
-    <!-- Hero -->
-    <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-      <div style="display:flex;flex-direction:column;gap:.3rem">
-        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)"
-            x-text="profile.name || 'Nieznana postać'"></h1>
-        <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm || ''"></div>
-        <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
-          <div>
-            <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Best DPS</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)"
-                 x-text="formatDps(profile.best_dps)"></div>
-          </div>
-          <div>
-            <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Symulacje</div>
-            <div style="font-size:var(--text-2xl);font-weight:800" x-text="profile.sim_count"></div>
+    <!-- Profil -->
+    <div x-show="!loading && !notFound">
+
+      <!-- Hero -->
+      <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)"
+              x-text="profile.name || 'Nieznana postać'"></h1>
+          <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm || ''"></div>
+          <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Best DPS</div>
+              <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)"
+                   x-text="formatDps(profile.best_dps)"></div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Symulacje</div>
+              <div style="font-size:var(--text-2xl);font-weight:800" x-text="profile.sim_count"></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Tabs -->
-    <div class="sim-tabs" style="margin-bottom:1.5rem">
-      <button class="tab" :class="{active: tab==='history'}" @click="tab='history'">📜 Historia symulacji</button>
-      <button class="tab" :class="{active: tab==='trend'}"   @click="tab='trend'">📈 DPS Trend</button>
-    </div>
+      <!-- Tabs -->
+      <div class="sim-tabs" style="margin-bottom:1.5rem">
+        <button class="tab" :class="{active: tab==='history'}" @click="tab='history'">📜 Historia symulacji</button>
+        <button class="tab" :class="{active: tab==='trend'}"   @click="tab='trend'">📈 DPS Trend</button>
+      </div>
 
-    <!-- TAB: HISTORIA -->
-    <template x-if="tab==='history'">
-      <div>
-        <div x-show="!profile.history || profile.history.length === 0"
-             style="text-align:center;padding:3rem;color:var(--muted)">
-          Brak publicznych symulacji.
-        </div>
-        <div class="history-list" style="max-height:600px;overflow-y:auto">
-          <template x-for="entry in pagedHistory" :key="entry.job_id">
-            <div class="history-item"
-                 style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
-                 @click="window.open('/result/' + entry.job_id, '_blank')">
-              <div style="flex:1;min-width:0">
-                <div class="history-char">
-                  <span x-text="entry.character_name"></span>
-                  <span x-show="entry.character_class"
-                        :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
-                        x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+      <!-- TAB: HISTORIA -->
+      <template x-if="tab==='history'">
+        <div>
+          <div x-show="!profile.history || profile.history.length === 0"
+               style="text-align:center;padding:3rem;color:var(--muted)">
+            Brak publicznych symulacji.
+          </div>
+          <div class="history-list" style="max-height:600px;overflow-y:auto">
+            <template x-for="entry in pagedHistory" :key="entry.job_id">
+              <div class="history-item"
+                   style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
+                   @click="window.open('/result/' + entry.job_id, '_blank')">
+                <div style="flex:1;min-width:0">
+                  <div class="history-char">
+                    <span x-text="entry.character_name"></span>
+                    <span x-show="entry.character_class"
+                          :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
+                          x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                  </div>
+                  <div class="history-dps"  x-text="formatDps(entry.dps)"></div>
+                  <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                  <div class="history-style" x-text="entry.fight_style"></div>
                 </div>
-                <div class="history-dps"  x-text="formatDps(entry.dps)"></div>
-                <div class="history-time" x-text="formatTime(entry.created_at)"></div>
-                <div class="history-style" x-text="entry.fight_style"></div>
+                <a :href="'/result/' + entry.job_id" target="_blank"
+                   class="btn btn-accent2 btn-sm btn-icon" @click.stop title="Otwórz wynik">↗</a>
               </div>
-              <a :href="'/result/' + entry.job_id" target="_blank"
-                 class="btn btn-accent2 btn-sm btn-icon" @click.stop title="Otwórz wynik">↗</a>
+            </template>
+          </div>
+          <div class="pagination" x-show="pageCount > 1" style="margin-top:1rem">
+            <button @click="page > 1 && page--">&laquo;</button>
+            <template x-for="p in pages()" :key="p">
+              <button :class="{active: page === p}" x-text="p" @click="page = p"></button>
+            </template>
+            <button @click="page < pageCount && page++">&raquo;</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- TAB: TREND -->
+      <template x-if="tab==='trend'">
+        <div>
+
+          <!-- Filtry -->
+          <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
+            <div class="form-field">
+              <label>Postać</label>
+              <select class="select" style="min-width:200px" x-model="trendChar" @change="buildTrend()">
+                <template x-for="ch in trendChars" :key="ch">
+                  <option :value="ch" x-text="ch"></option>
+                </template>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Fight style</label>
+              <select class="select" style="min-width:160px" x-model="trendStyle" @change="buildTrend()">
+                <option>Patchwerk</option>
+                <option>HecticAddCleave</option>
+                <option>LightMovement</option>
+                <option>HeavyMovement</option>
+                <option>CastingPatchwerk</option>
+              </select>
+            </div>
+          </div>
+
+          <div x-show="trendPoints.length === 0" style="text-align:center;padding:3rem;color:var(--muted)">
+            Brak danych dla wybranych filtrów.
+          </div>
+
+          <template x-if="trendPoints.length > 0">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+
+              <!-- Wykres -->
+              <div style="min-width:0">
+                <canvas id="trendCanvas" style="width:100%;height:260px"></canvas>
+              </div>
+
+              <!-- Tabela -->
+              <div style="min-width:0;overflow-x:auto;max-height:320px;overflow-y:auto">
+                <table class="trend-table" style="width:100%">
+                  <thead>
+                    <tr><th>#</th><th>Data</th><th>DPS</th><th>Zmiana</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
+                      <tr>
+                        <td class="trend-neutral" x-text="i + 1"></td>
+                        <td x-text="formatTime(pt.created_at)"></td>
+                        <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
+                        <td>
+                          <span x-show="i > 0"
+                            :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
+                            x-text="(pt.dps >= trendPoints[i-1].dps ? '▲ +' : '▼ ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
+                          ></span>
+                          <span x-show="i === 0" class="trend-neutral">—</span>
+                        </td>
+                        <td>
+                          <a :href="'/result/' + pt.job_id" target="_blank"
+                             class="btn btn-accent2 btn-sm" @click.stop>↗</a>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
             </div>
           </template>
         </div>
-        <div class="pagination" x-show="pageCount > 1" style="margin-top:1rem">
-          <button @click="page > 1 && page--">&laquo;</button>
-          <template x-for="p in pages()" :key="p">
-            <button :class="{active: page === p}" x-text="p" @click="page = p"></button>
-          </template>
-          <button @click="page < pageCount && page++">&raquo;</button>
-        </div>
-      </div>
-    </template>
+      </template>
 
-    <!-- TAB: TREND -->
-    <template x-if="tab==='trend'">
-      <div>
+    </div>
 
-        <!-- Filtry -->
-        <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
-          <div class="form-field">
-            <label>Postać</label>
-            <select class="select" style="min-width:200px" x-model="trendChar" @change="buildTrend()">
-              <template x-for="ch in trendChars" :key="ch">
-                <option :value="ch" x-text="ch"></option>
-              </template>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Fight style</label>
-            <select class="select" style="min-width:160px" x-model="trendStyle" @change="buildTrend()">
-              <option>Patchwerk</option>
-              <option>HecticAddCleave</option>
-              <option>LightMovement</option>
-              <option>HeavyMovement</option>
-              <option>CastingPatchwerk</option>
-            </select>
-          </div>
-        </div>
-
-        <div x-show="trendPoints.length === 0" style="text-align:center;padding:3rem;color:var(--muted)">
-          Brak danych dla wybranych filtrów.
-        </div>
-
-        <template x-if="trendPoints.length > 0">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
-
-            <!-- Wykres -->
-            <div style="min-width:0">
-              <canvas id="trendCanvas" style="width:100%;height:260px"></canvas>
-            </div>
-
-            <!-- Tabela -->
-            <div style="min-width:0;overflow-x:auto;max-height:320px;overflow-y:auto">
-              <table class="trend-table" style="width:100%">
-                <thead>
-                  <tr><th>#</th><th>Data</th><th>DPS</th><th>Zmiana</th><th></th></tr>
-                </thead>
-                <tbody>
-                  <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
-                    <tr>
-                      <td class="trend-neutral" x-text="i + 1"></td>
-                      <td x-text="formatTime(pt.created_at)"></td>
-                      <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
-                      <td>
-                        <span x-show="i > 0"
-                          :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
-                          x-text="(pt.dps >= trendPoints[i-1].dps ? '▲ +' : '▼ ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
-                        ></span>
-                        <span x-show="i === 0" class="trend-neutral">—</span>
-                      </td>
-                      <td>
-                        <a :href="'/result/' + pt.job_id" target="_blank"
-                           class="btn btn-accent2 btn-sm" @click.stop>↗</a>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-        </template>
-      </div>
-    </template>
-
-  </div>
+  </div><!-- /max-width wrapper -->
 </div>
 
 <script src="/utils.js"></script>
