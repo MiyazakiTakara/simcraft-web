@@ -79,6 +79,10 @@
       color:#c4c4c4;
     }
     .spell-row:hover .wh-tooltip { display:block; }
+    /* timeline row hover — tr nie może być position:relative w niektórych przeglądarkach */
+    .timeline-row { position:relative; }
+    .timeline-row:hover .wh-tooltip { display:block; }
+    .timeline-row:hover td { background:var(--card); }
     .wh-tooltip-header {
       display:flex; align-items:center; gap:.5rem;
       margin-bottom:.4rem;
@@ -142,7 +146,6 @@
     .timeline-table { width:100%; border-collapse:collapse; font-size:.82rem; }
     .timeline-table th { background:var(--surface); color:var(--muted); font-weight:600; padding:.45rem .7rem; text-align:left; position:sticky; top:0; z-index:1; }
     .timeline-table td { padding:.38rem .7rem; border-top:1px solid var(--border); vertical-align:middle; }
-    .timeline-table tr:hover td { background:var(--card); }
     .ev-cast   { color:var(--text); }
     .ev-proc   { color:var(--accent); }
     .ev-buff   { color:#7fc97f; }
@@ -212,7 +215,7 @@
                   :style="{background:classColor(meta.character_class),color:classTextColor(meta.character_class),padding:'.2rem .7rem',borderRadius:'999px',fontWeight:'700',fontSize:'.85rem',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:'.3rem'}"
                 >
                   <span x-text="meta.character_name + (meta.character_spec||meta.character_class ? ' \xb7 '+(meta.character_spec?meta.character_spec+' ':'')+(meta.character_class||'') : '')"></span>
-                  <span style="font-size:.75rem;opacity:.8">↗</span>
+                  <span style="font-size:.75rem;opacity:.8">&#8599;</span>
                 </a>
               </template>
 
@@ -243,7 +246,7 @@
               </button>
             </template>
             <span x-show="!sessionId" class="reaction-login-hint">
-              🔑 <a href="/auth/login" style="color:var(--accent2)">Zaloguj się</a>, aby reagować
+              &#128273; <a href="/auth/login" style="color:var(--accent2)">Zaloguj si&#281;</a>, aby reagowa&#263;
             </span>
           </div>
 
@@ -277,7 +280,7 @@
                     <!-- Async Wowhead-style tooltip -->
                     <div class="wh-tooltip" x-show="sp.spell_id > 0 && tooltipCache[sp.spell_id] !== undefined">
                       <template x-if="tooltipCache[sp.spell_id] === 'loading'">
-                        <div class="wh-tooltip-loading">Loading…</div>
+                        <div class="wh-tooltip-loading">Loading&#8230;</div>
                       </template>
                       <template x-if="tooltipCache[sp.spell_id] && tooltipCache[sp.spell_id] !== 'loading'">
                         <div>
@@ -310,7 +313,7 @@
                           <a class="wh-tooltip-link"
                             :href="'https://www.wowhead.com/spell=' + sp.spell_id"
                             target="_blank" rel="noopener"
-                          >View on Wowhead ↗</a>
+                          >View on Wowhead &#8599;</a>
                         </div>
                       </template>
                     </div>
@@ -330,7 +333,6 @@
                       </div>
                     </div>
                     <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
-                      <!-- ikona ze spell_id -->
                       <template x-if="sp.spell_id > 0">
                         <a
                           class="spell-icon-wrap"
@@ -379,8 +381,8 @@
           <!-- Buff Uptime -->
           <template x-if="result.buffs && result.buffs.length > 0">
             <div class="buffs-section">
-              <h2 style="margin-bottom:.2rem">⚡ Buff Uptime</h2>
-              <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Buffs and debuffs with partial uptime (0%–100%)</p>
+              <h2 style="margin-bottom:.2rem">&#9889; Buff Uptime</h2>
+              <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Buffs and debuffs with partial uptime (0%&#8211;100%)</p>
               <div class="buff-list">
                 <template x-for="b in result.buffs" :key="b.name">
                   <div>
@@ -413,7 +415,7 @@
             <div class="timeline-section">
               <div class="timeline-toggle" @click="timelineOpen=!timelineOpen">
                 <span x-text="timelineOpen?'\u25bc':'\u25ba'"></span>
-                <span>📜 Action Sequence Log</span>
+                <span>&#128220; Action Sequence Log</span>
                 <span style="font-size:.75rem;margin-left:.3rem" x-text="'('+result.timeline.length+' events, sample iteration)'"></span>
               </div>
               <template x-if="timelineOpen">
@@ -429,7 +431,10 @@
                     </thead>
                     <tbody>
                       <template x-for="(ev,idx) in result.timeline" :key="idx">
-                        <tr>
+                        <tr
+                          class="timeline-row"
+                          @mouseenter="ev.spell_id > 0 && showTooltip(ev.spell_id)"
+                        >
                           <td style="color:var(--muted);font-variant-numeric:tabular-nums" x-text="ev.time.toFixed(2)+'s'"></td>
                           <td>
                             <template x-if="ev.spell_id > 0">
@@ -449,6 +454,38 @@
                           </td>
                           <td :class="'ev-'+ev.type" x-text="ev.name"></td>
                           <td style="color:var(--muted);font-size:.78rem;text-transform:capitalize" x-text="ev.type"></td>
+                          <!-- Tooltip: osobny td z width:0 żeby nie rozjeżdżał tabeli -->
+                          <td style="position:relative;padding:0;border:none;width:0;overflow:visible">
+                            <div class="wh-tooltip" style="top:100%;left:0" x-show="ev.spell_id > 0 && tooltipCache[ev.spell_id] !== undefined">
+                              <template x-if="tooltipCache[ev.spell_id] === 'loading'">
+                                <div class="wh-tooltip-loading">Loading&#8230;</div>
+                              </template>
+                              <template x-if="tooltipCache[ev.spell_id] && tooltipCache[ev.spell_id] !== 'loading'">
+                                <div>
+                                  <div class="wh-tooltip-header">
+                                    <template x-if="tooltipCache[ev.spell_id].icon">
+                                      <img class="wh-tooltip-icon"
+                                        :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[ev.spell_id].icon + '.jpg'"
+                                        :alt="tooltipCache[ev.spell_id].name"
+                                        @error="$el.style.display='none'"
+                                      />
+                                    </template>
+                                    <div>
+                                      <div class="wh-tooltip-name" x-text="tooltipCache[ev.spell_id].name"></div>
+                                      <div class="wh-tooltip-school" x-show="tooltipCache[ev.spell_id].school" x-text="tooltipCache[ev.spell_id].school"></div>
+                                    </div>
+                                  </div>
+                                  <div class="wh-tooltip-desc" x-show="tooltipCache[ev.spell_id].description" x-text="tooltipCache[ev.spell_id].description"></div>
+                                  <div class="wh-tooltip-meta">
+                                    <div class="wh-tooltip-meta-item" x-show="tooltipCache[ev.spell_id].cast_time">Cast: <span x-text="tooltipCache[ev.spell_id].cast_time"></span></div>
+                                    <div class="wh-tooltip-meta-item" x-show="tooltipCache[ev.spell_id].range">Range: <span x-text="tooltipCache[ev.spell_id].range + ' yd'"></span></div>
+                                    <div class="wh-tooltip-meta-item" x-show="tooltipCache[ev.spell_id].cooldown">CD: <span x-text="tooltipCache[ev.spell_id].cooldown"></span></div>
+                                  </div>
+                                  <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + ev.spell_id" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
+                                </div>
+                              </template>
+                            </div>
+                          </td>
                         </tr>
                       </template>
                     </tbody>
@@ -460,7 +497,7 @@
 
           <!-- Pie chart -->
           <div class="chart-section">
-            <h2>🥧 DPS Pie Chart</h2>
+            <h2>&#129383; DPS Pie Chart</h2>
             <img
               class="dps-chart-img"
               :src="'/api/result/'+jobId+'/dps-chart.png?t='+ts"
@@ -479,21 +516,21 @@
   <!-- Footer akcji -->
   <div class="result-footer">
     <a :href="'/api/result/'+jobId+'/json'" target="_blank" x-text="$store.i18n.t('result.raw_json')"></a>
-    <span style="color:var(--border)">\xb7</span>
+    <span style="color:var(--border)">&#183;</span>
     <a :href="'/api/result/'+jobId+'/dps-chart.png'" target="_blank">Chart PNG</a>
-    <span style="color:var(--border)">\xb7</span>
+    <span style="color:var(--border)">&#183;</span>
     <a
       :href="'/api/result/'+jobId+'/csv'"
       download
       class="btn"
       style="font-size:.75rem;padding:.35rem .8rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:4px;text-decoration:none"
-    >📊 Download CSV</a>
-    <span style="color:var(--border)">\xb7</span>
+    >&#128202; Download CSV</a>
+    <span style="color:var(--border)">&#183;</span>
     <button
       class="btn"
       style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
       @click="copyShare()"
-      x-text="copied?'\u2713 '+$store.i18n.t('common.copied'):'🔗 '+$store.i18n.t('result.share_result')"
+      x-text="copied?'\u2713 '+$store.i18n.t('common.copied'):'&#128279; '+$store.i18n.t('result.share_result')"
     ></button>
     <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none"
       x-text="'\u2694\ufe0f '+$store.i18n.t('result.simulate_cta')"
@@ -567,16 +604,12 @@ function resultPage() {
 
     async showTooltip(spellId) {
       if (!spellId || spellId <= 0) return;
-      if (this.tooltipCache[spellId] !== undefined) return; // already fetched or loading
+      if (this.tooltipCache[spellId] !== undefined) return;
       this.tooltipCache[spellId] = 'loading';
       try {
         const r = await fetch(`/api/spell-tooltip/${spellId}`);
-        if (!r.ok) {
-          this.tooltipCache[spellId] = null;
-          return;
-        }
-        const data = await r.json();
-        this.tooltipCache[spellId] = data;
+        if (!r.ok) { this.tooltipCache[spellId] = null; return; }
+        this.tooltipCache[spellId] = await r.json();
       } catch (e) {
         console.warn('tooltip fetch failed', spellId, e);
         this.tooltipCache[spellId] = null;
