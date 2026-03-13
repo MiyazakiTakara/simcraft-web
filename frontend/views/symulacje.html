@@ -102,6 +102,17 @@
 
     <template x-if="simResult">
       <div class="panel">
+        <!-- Wowhead tooltip JS — ᐬadowany raz gdy pojawia się wynik -->
+        <script>
+          if (!window.__wowheadLoaded) {
+            window.__wowheadLoaded = true;
+            window.whTooltips = {colorLinks: false, iconizeLinks: false, renameLinks: false};
+            var s = document.createElement('script');
+            s.src = 'https://wow.zamimg.com/js/tooltips.js';
+            document.head.appendChild(s);
+          }
+        <\/script>
+
         <div class="result-hero">
           <div class="dps-value" x-text="'\u2694\ufe0f ' + formatDps(resultMetric(simResult).value)"></div>
           <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
@@ -145,15 +156,20 @@
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                   </div>
                   <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
-                    <!-- Ikonka przez proxy backendu -->
-                    <img
-                      x-show="sp.icon && sp.icon !== 'inv_misc_questionmark'"
-                      style="width:22px;height:22px;border-radius:4px;flex-shrink:0;object-fit:cover;border:1px solid var(--border);background:var(--surface);vertical-align:middle"
-                      :src="'/api/icon/' + sp.icon + '.jpg'"
-                      :alt="sp.name"
-                      @error="$el.style.display='none'"
-                      loading="lazy"
-                    />
+                    <!-- Ikonka: link Wowhead po spell_id z data-wowhead dla tooltipa -->
+                    <template x-if="sp.spell_id && sp.spell_id > 0">
+                      <a :href="'https://www.wowhead.com/spell=' + sp.spell_id" target="_blank" rel="noopener"
+                         :data-wowhead="'spell=' + sp.spell_id"
+                         style="display:block;width:22px;height:22px;flex-shrink:0;border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+                        <img
+                          style="width:22px;height:22px;object-fit:cover;display:block"
+                          :src="'https://wow.zamimg.com/images/wow/icons/medium/'+sp.icon+'.jpg'"
+                          :alt="sp.name"
+                          @error="$el.parentElement.style.display='none'"
+                          loading="lazy"
+                        />
+                      </a>
+                    </template>
                     <span x-text="sp.name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                     <span style="display:flex;gap:.6rem;align-items:center;flex-shrink:0">
                       <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:var(--text-xs)" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
@@ -177,13 +193,19 @@
               <template x-for="b in simResult.buffs" :key="b.name">
                 <div>
                   <div style="display:grid;grid-template-columns:22px 1fr auto;gap:.5rem;align-items:center;margin-bottom:.18rem">
-                    <img
-                      style="width:22px;height:22px;border-radius:4px;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
-                      :src="'/api/icon/' + b.icon + '.jpg'"
-                      :alt="b.name"
-                      @error="$el.style.display='none'"
-                      loading="lazy"
-                    />
+                    <template x-if="b.spell_id && b.spell_id > 0">
+                      <a :href="'https://www.wowhead.com/spell=' + b.spell_id" target="_blank" rel="noopener"
+                         :data-wowhead="'spell=' + b.spell_id"
+                         style="display:block;width:22px;height:22px;border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+                        <img
+                          style="width:22px;height:22px;object-fit:cover;display:block"
+                          :src="'https://wow.zamimg.com/images/wow/icons/medium/' + b.icon + '.jpg'"
+                          :alt="b.name"
+                          @error="$el.parentElement.style.display='none'"
+                          loading="lazy"
+                        />
+                      </a>
+                    </template>
                     <span style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="b.name" x-text="b.name"></span>
                     <span style="font-size:.78rem;color:var(--muted);white-space:nowrap" x-text="b.uptime+'%'"></span>
                   </div>
@@ -199,7 +221,7 @@
           </div>
         </template>
 
-        <!-- Action Timeline — lokalny x-data, zero zależności od parent state -->
+        <!-- Action Timeline -->
         <template x-if="simResult.timeline && simResult.timeline.length > 0">
           <div x-data="{open: false}" style="margin-top:1.2rem">
             <div
@@ -225,13 +247,19 @@
                     <tr>
                       <td style="color:var(--muted);font-variant-numeric:tabular-nums;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.time.toFixed(2) + 's'"></td>
                       <td style="padding:.38rem .7rem;border-top:1px solid var(--border)">
-                        <img
-                          style="width:18px;height:18px;border-radius:3px;object-fit:cover;vertical-align:middle;border:1px solid var(--border);background:var(--surface)"
-                          :src="'/api/icon/' + ev.icon + '.jpg'"
-                          :alt="ev.name"
-                          @error="$el.style.visibility='hidden'"
-                          loading="lazy"
-                        />
+                        <template x-if="ev.spell_id && ev.spell_id > 0">
+                          <a :href="'https://www.wowhead.com/spell=' + ev.spell_id" target="_blank" rel="noopener"
+                             :data-wowhead="'spell=' + ev.spell_id"
+                             style="display:block;width:18px;height:18px;border-radius:3px;overflow:hidden;border:1px solid var(--border)">
+                            <img
+                              style="width:18px;height:18px;object-fit:cover;display:block"
+                              :src="'https://wow.zamimg.com/images/wow/icons/small/' + ev.icon + '.jpg'"
+                              :alt="ev.name"
+                              @error="$el.parentElement.style.display='none'"
+                              loading="lazy"
+                            />
+                          </a>
+                        </template>
                       </td>
                       <td
                         style="padding:.38rem .7rem;border-top:1px solid var(--border)"

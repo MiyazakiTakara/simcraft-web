@@ -178,27 +178,21 @@ def spell_display_name(ab: dict) -> str:
 
 
 def spell_icon_slug(ab: dict) -> str:
-    """Zwraca slug ikonki do URL wow.zamimg.com, np. 'spell_fire_flamebolt'."""
-    # simc eksportuje pole 'spell' z 'name' (display) i 'id',
-    # a ikonka trafia do pola 'type' lub wylicza się ze slug nazwy
     icon = ab.get("spell_icon", "") or ab.get("icon", "")
     if icon:
         return icon.lower().replace(" ", "_")
-    # fallback: slug z nazwy ability
     raw = ab.get("name", "") or ab.get("spell_name", "")
     slug = re.sub(r"[^a-z0-9_]", "_", raw.lower()).strip("_")
     return slug or "inv_misc_questionmark"
 
 
 def _parse_buffs(cd: dict) -> list:
-    """Parsuje buffs/debuffs z collected_data, zwraca listę {name, uptime, icon, kind}."""
     out = []
     for section, kind in (("buffs", "buff"), ("debuffs", "debuff")):
         for b in cd.get(section, []):
             if not isinstance(b, dict):
                 continue
             uptime = safe_float(b.get("uptime", b.get("start_count", -1)))
-            # uptime jest 0.0–1.0; pomijamy 0% i 100% bo nieinteresujące
             if uptime <= 0.0 or uptime >= 1.0:
                 continue
             name = b.get("spell_name") or b.get("name", "?")
@@ -206,37 +200,40 @@ def _parse_buffs(cd: dict) -> list:
             icon = (b.get("spell_icon") or b.get("icon") or "").lower().replace(" ", "_")
             if not icon:
                 icon = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "inv_misc_questionmark"
+            spell_id = int(b.get("id", 0))
             out.append({
-                "name":   name,
-                "uptime": round(uptime * 100, 1),  # -> procenty
-                "icon":   icon,
-                "kind":   kind,
+                "name":     name,
+                "uptime":   round(uptime * 100, 1),
+                "icon":     icon,
+                "kind":     kind,
+                "spell_id": spell_id,
             })
     out.sort(key=lambda x: x["uptime"], reverse=True)
     return out[:30]
 
 
 def _parse_timeline(cd: dict, fight_length: float) -> list:
-    """Parsuje action_sequence -> lista eventów timeline."""
     seq = cd.get("action_sequence", [])
     if not isinstance(seq, list) or not seq:
         return []
     out = []
-    for ev in seq[:200]:  # max 200 eventów
+    for ev in seq[:200]:
         if not isinstance(ev, dict):
             continue
-        time  = safe_float(ev.get("time", 0))
-        name  = ev.get("spell_name") or ev.get("name", "?")
-        name  = name.replace("_", " ").title()
-        icon  = (ev.get("spell_icon") or ev.get("icon") or "").lower()
+        time     = safe_float(ev.get("time", 0))
+        name     = ev.get("spell_name") or ev.get("name", "?")
+        name     = name.replace("_", " ").title()
+        icon     = (ev.get("spell_icon") or ev.get("icon") or "").lower()
         if not icon:
             icon = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "inv_misc_questionmark"
-        etype = ev.get("type", "cast").lower()
+        etype    = ev.get("type", "cast").lower()
+        spell_id = int(ev.get("id", 0))
         out.append({
-            "time":  round(time, 2),
-            "name":  name,
-            "icon":  icon,
-            "type":  etype,
+            "time":     round(time, 2),
+            "name":     name,
+            "icon":     icon,
+            "type":     etype,
+            "spell_id": spell_id,
         })
     return out
 
@@ -293,6 +290,7 @@ def parse_results(json_path: str):
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
             executes, is_channel        = ability_count(ab)
             icon                        = spell_icon_slug(ab)
+            spell_id                    = int(ab.get("id", 0))
 
             if avg_hit == 0 and executes > 0 and tot_dmg > 0:
                 avg_hit = round(tot_dmg / executes)
@@ -300,6 +298,7 @@ def parse_results(json_path: str):
             spells.append({
                 "name":       name,
                 "icon":       icon,
+                "spell_id":   spell_id,
                 "dps":        round(dps_v, 2),
                 "total_dmg":  round(tot_dmg),
                 "crit_pct":   crit_pct,
@@ -319,7 +318,7 @@ def parse_results(json_path: str):
                 spell_counts[sname] = spell_counts.get(sname, 0) + 1
             for sname, count in spell_counts.items():
                 spells.append({
-                    "name": sname, "icon": "inv_misc_questionmark",
+                    "name": sname, "icon": "inv_misc_questionmark", "spell_id": 0,
                     "dps": 0.0, "total_dmg": 0,
                     "crit_pct": 0.0, "executes": count, "count": count,
                     "avg_hit": 0, "miss_pct": 0.0, "is_channel": False,
@@ -340,7 +339,7 @@ def parse_results(json_path: str):
         other_dmg  = sum(s["total_dmg"] for s in spells[25:])
         if other_dps > 0 or other_dmg > 0:
             top_spells.append({
-                "name": "Other", "icon": "inv_misc_questionmark",
+                "name": "Other", "icon": "inv_misc_questionmark", "spell_id": 0,
                 "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "is_channel": False,
@@ -522,13 +521,14 @@ async def get_result_csv(job_id: str):
     buf = io.StringIO()
     writer = csv.DictWriter(
         buf,
-        fieldnames=["spell", "dps", "dps_pct", "total_dmg", "dmg_pct", "crit_pct", "avg_hit", "count"],
+        fieldnames=["spell", "spell_id", "dps", "dps_pct", "total_dmg", "dmg_pct", "crit_pct", "avg_hit", "count"],
         extrasaction="ignore",
     )
     writer.writeheader()
     for s in spells:
         writer.writerow({
             "spell":     s.get("name", ""),
+            "spell_id":  s.get("spell_id", 0),
             "dps":       s.get("dps", 0),
             "dps_pct":   s.get("dps_pct", 0),
             "total_dmg": s.get("total_dmg", 0),
@@ -586,13 +586,10 @@ async def get_debug_spell(job_id: str):
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
             cnt, is_ch = ability_count(ab)
             out.append({
-                "name":       spell_display_name(ab),
-                "icon":       spell_icon_slug(ab),
-                "count":      cnt,
-                "is_channel": is_ch,
-                "crit_pct":   crit_pct,
-                "miss_pct":   miss_pct,
-                "avg_hit":    avg_hit,
+                "name":     spell_display_name(ab),
+                "icon":     spell_icon_slug(ab),
+                "spell_id": int(ab.get("id", 0)),
+                "count":    cnt,
             })
             if len(out) >= 3:
                 break
