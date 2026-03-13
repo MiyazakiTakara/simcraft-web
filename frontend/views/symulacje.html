@@ -146,7 +146,6 @@
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                   </div>
                   <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
-                    <!-- Ikonka: przez Wowhead JS (spell_id) lub zamimg (icon slug) -->
                     <a
                       x-show="sp.spell_id > 0"
                       :href="'https://www.wowhead.com/spell=' + sp.spell_id"
@@ -228,18 +227,18 @@
                     <th style="background:var(--surface);color:var(--muted);font-weight:600;padding:.45rem .7rem;text-align:left;position:sticky;top:0;z-index:1;width:4rem">Type</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody x-effect="$nextTick(() => { if (typeof WH !== 'undefined' && WH.tooltip) WH.tooltip.refresh(); })">
                   <template x-for="(ev, idx) in simResult.timeline" :key="idx">
                     <tr>
                       <td style="color:var(--muted);font-variant-numeric:tabular-nums;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.time.toFixed(2) + 's'"></td>
                       <td style="padding:.38rem .7rem;border-top:1px solid var(--border)">
-                        <img
-                          style="width:18px;height:18px;border-radius:3px;object-fit:cover;vertical-align:middle;border:1px solid var(--border);background:var(--surface)"
-                          :src="'https://wow.zamimg.com/images/wow/icons/small/' + ev.icon + '.jpg'"
-                          :alt="ev.name"
-                          @error="$el.style.visibility='hidden'"
-                          loading="lazy"
-                        />
+                        <a
+                          x-show="ev.spell_id > 0"
+                          :href="'https://www.wowhead.com/spell=' + ev.spell_id"
+                          target="_blank" rel="noopener"
+                          :data-wowhead="'spell=' + ev.spell_id"
+                          style="display:inline-flex;width:18px;height:18px;flex-shrink:0;border-radius:3px;overflow:hidden;border:1px solid var(--border);background:var(--surface)"
+                        ></a>
                       </td>
                       <td
                         style="padding:.38rem .7rem;border-top:1px solid var(--border)"
