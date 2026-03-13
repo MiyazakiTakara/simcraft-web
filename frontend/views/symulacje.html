@@ -149,8 +149,7 @@
                       <div>
                         <div class="wh-tooltip-header">
                           <template x-if="tooltipCache[sp.spell_id].icon">
-                            <img
-                              class="wh-tooltip-icon"
+                            <img class="wh-tooltip-icon"
                               :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[sp.spell_id].icon + '.jpg'"
                               :alt="tooltipCache[sp.spell_id].name"
                               @error="$el.style.display='none'"
@@ -163,20 +162,11 @@
                         </div>
                         <div class="wh-tooltip-desc" x-show="tooltipCache[sp.spell_id].description" x-text="tooltipCache[sp.spell_id].description"></div>
                         <div class="wh-tooltip-meta">
-                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].cast_time">
-                            Cast: <span x-text="tooltipCache[sp.spell_id].cast_time"></span>
-                          </div>
-                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].range">
-                            Range: <span x-text="tooltipCache[sp.spell_id].range + ' yd'"></span>
-                          </div>
-                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].cooldown">
-                            CD: <span x-text="tooltipCache[sp.spell_id].cooldown"></span>
-                          </div>
+                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].cast_time">Cast: <span x-text="tooltipCache[sp.spell_id].cast_time"></span></div>
+                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].range">Range: <span x-text="tooltipCache[sp.spell_id].range + ' yd'"></span></div>
+                          <div class="wh-tooltip-meta-item" x-show="tooltipCache[sp.spell_id].cooldown">CD: <span x-text="tooltipCache[sp.spell_id].cooldown"></span></div>
                         </div>
-                        <a class="wh-tooltip-link"
-                          :href="'https://www.wowhead.com/spell=' + sp.spell_id"
-                          target="_blank" rel="noopener"
-                        >View on Wowhead &#8599;</a>
+                        <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + sp.spell_id" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
                       </div>
                     </template>
                   </div>
@@ -184,41 +174,21 @@
                   <div class="wh-tooltip" x-show="!sp.spell_id || sp.spell_id <= 0">
                     <div class="wh-tooltip-name" x-text="sp.name"></div>
                     <div class="wh-tooltip-meta" style="border-top:none;margin-top:.2rem;padding-top:0">
-                      <div class="wh-tooltip-meta-item">
-                        Executes: <span x-text="sp.count ?? '\u2014'"></span>
-                      </div>
-                      <div class="wh-tooltip-meta-item" x-show="sp.avg_hit > 0">
-                        Avg hit: <span x-text="formatDmg(sp.avg_hit)"></span>
-                      </div>
-                      <div class="wh-tooltip-meta-item" x-show="sp.crit_pct > 0">
-                        Crit: <span x-text="sp.crit_pct + '%'"></span>
-                      </div>
+                      <div class="wh-tooltip-meta-item">Executes: <span x-text="sp.count ?? '\u2014'"></span></div>
+                      <div class="wh-tooltip-meta-item" x-show="sp.avg_hit > 0">Avg hit: <span x-text="formatDmg(sp.avg_hit)"></span></div>
+                      <div class="wh-tooltip-meta-item" x-show="sp.crit_pct > 0">Crit: <span x-text="sp.crit_pct + '%'"></span></div>
                     </div>
                   </div>
                   <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
-                    <!-- ikona po spell_id przez backend proxy -->
                     <template x-if="sp.spell_id > 0">
-                      <a
-                        class="spell-icon-wrap"
-                        :href="'https://www.wowhead.com/spell=' + sp.spell_id"
-                        target="_blank" rel="noopener"
-                      >
-                        <img
-                          :src="'/api/icon-by-spell/' + sp.spell_id"
-                          :alt="sp.name"
-                          @error="$el.parentElement.style.display='none'"
-                          loading="lazy"
-                        />
+                      <a class="spell-icon-wrap" :href="'https://www.wowhead.com/spell=' + sp.spell_id" target="_blank" rel="noopener">
+                        <img :src="'/api/icon-by-spell/' + sp.spell_id" :alt="sp.name" @error="$el.parentElement.style.display='none'" loading="lazy"/>
                       </a>
                     </template>
                     <template x-if="!sp.spell_id && sp.icon && sp.icon !== 'inv_misc_questionmark'">
-                      <img
-                        style="width:22px;height:22px;border-radius:4px;flex-shrink:0;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
+                      <img style="width:22px;height:22px;border-radius:4px;flex-shrink:0;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
                         :src="'https://wow.zamimg.com/images/wow/icons/medium/' + sp.icon + '.jpg'"
-                        :alt="sp.name"
-                        @error="$el.style.display='none'"
-                        loading="lazy"
-                      />
+                        :alt="sp.name" @error="$el.style.display='none'" loading="lazy"/>
                     </template>
                     <span x-text="sp.name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                     <span style="display:flex;gap:.6rem;align-items:center;flex-shrink:0">
@@ -254,8 +224,7 @@
                     <span style="font-size:.78rem;color:var(--muted);white-space:nowrap" x-text="b.uptime+'%'"></span>
                   </div>
                   <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden">
-                    <div
-                      style="height:100%;border-radius:4px;transition:width .3s"
+                    <div style="height:100%;border-radius:4px;transition:width .3s"
                       :style="{width:b.uptime+'%', background: b.kind==='debuff' ? '#e74c3c' : 'var(--accent)'}"
                     ></div>
                   </div>
@@ -288,17 +257,17 @@
                 </thead>
                 <tbody>
                   <template x-for="(ev, idx) in simResult.timeline" :key="idx">
-                    <tr>
+                    <tr
+                      style="position:relative"
+                      @mouseenter="ev.spell_id > 0 && showTooltip(ev.spell_id)"
+                    >
                       <td style="color:var(--muted);font-variant-numeric:tabular-nums;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.time.toFixed(2) + 's'"></td>
                       <td style="padding:.38rem .7rem;border-top:1px solid var(--border)">
-                        <img
-                          x-show="ev.spell_id > 0"
-                          style="width:18px;height:18px;border-radius:3px;object-fit:cover;border:1px solid var(--border);background:var(--surface);vertical-align:middle"
-                          :src="'/api/icon-by-spell/' + ev.spell_id"
-                          :alt="ev.name"
-                          @error="$el.style.display='none'"
-                          loading="lazy"
-                        />
+                        <template x-if="ev.spell_id > 0">
+                          <a class="spell-icon-wrap-sm" :href="'https://www.wowhead.com/spell=' + ev.spell_id" target="_blank" rel="noopener">
+                            <img :src="'/api/icon-by-spell/' + ev.spell_id" :alt="ev.name" @error="$el.parentElement.style.display='none'" loading="lazy"/>
+                          </a>
+                        </template>
                       </td>
                       <td
                         style="padding:.38rem .7rem;border-top:1px solid var(--border)"
@@ -306,6 +275,37 @@
                         x-text="ev.name"
                       ></td>
                       <td style="color:var(--muted);font-size:.78rem;text-transform:capitalize;padding:.38rem .7rem;border-top:1px solid var(--border)" x-text="ev.type"></td>
+                      <!-- Tooltip na wierszu timeline -->
+                      <td style="position:relative;padding:0;border:none;width:0">
+                        <div class="wh-tooltip" style="top:100%;left:0" x-show="ev.spell_id > 0 && tooltipCache[ev.spell_id] !== undefined">
+                          <template x-if="tooltipCache[ev.spell_id] === 'loading'">
+                            <div class="wh-tooltip-loading">Loading&#8230;</div>
+                          </template>
+                          <template x-if="tooltipCache[ev.spell_id] && tooltipCache[ev.spell_id] !== 'loading'">
+                            <div>
+                              <div class="wh-tooltip-header">
+                                <template x-if="tooltipCache[ev.spell_id].icon">
+                                  <img class="wh-tooltip-icon"
+                                    :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[ev.spell_id].icon + '.jpg'"
+                                    :alt="tooltipCache[ev.spell_id].name"
+                                    @error="$el.style.display='none'"
+                                  />
+                                </template>
+                                <div>
+                                  <div class="wh-tooltip-name" x-text="tooltipCache[ev.spell_id].name"></div>
+                                  <div class="wh-tooltip-school" x-show="tooltipCache[ev.spell_id].school" x-text="tooltipCache[ev.spell_id].school"></div>
+                                </div>
+                              </div>
+                              <div class="wh-tooltip-desc" x-show="tooltipCache[ev.spell_id].description" x-text="tooltipCache[ev.spell_id].description"></div>
+                              <div class="wh-tooltip-meta">
+                                <div class="wh-tooltip-meta-item" x-show="tooltipCache[ev.spell_id].cast_time">Cast: <span x-text="tooltipCache[ev.spell_id].cast_time"></span></div>
+                                <div class="wh-tooltip-meta-item" x-show="tooltipCache[ev.spell_id].range">Range: <span x-text="tooltipCache[ev.spell_id].range + ' yd'"></span></div>
+                              </div>
+                              <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + ev.spell_id" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
+                            </div>
+                          </template>
+                        </div>
+                      </td>
                     </tr>
                   </template>
                 </tbody>

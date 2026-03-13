@@ -1,5 +1,21 @@
 // Logika symulacji (startSim, polling, guest sim, pubResult)
 const SimMixin = {
+  // Tooltip cache: spell_id -> 'loading' | null | { name, description, icon, school, cast_time, ... }
+  tooltipCache: {},
+
+  async showTooltip(spellId) {
+    if (!spellId || spellId <= 0) return;
+    if (this.tooltipCache[spellId] !== undefined) return;
+    this.tooltipCache[spellId] = 'loading';
+    try {
+      const r = await fetch(`/api/spell-tooltip/${spellId}`);
+      this.tooltipCache[spellId] = r.ok ? await r.json() : null;
+    } catch (e) {
+      console.warn('tooltip fetch failed', spellId, e);
+      this.tooltipCache[spellId] = null;
+    }
+  },
+
   resultMetric(result) {
     if (!result) return { value: 0, std: 0, label: 'DPS' };
     return { value: result.dps ?? 0, std: result.dps_std ?? 0, label: 'DPS' };
@@ -64,7 +80,7 @@ const SimMixin = {
           dtps:                 0,
           role:                 this.effectiveRole(),
           fight_style:          this.simOptions.fight_style,
-          user_id:              this.sessionId || null,  // backend sam rozwiaze UUID -> bnet_id
+          user_id:              this.sessionId || null,
           source:               this.job.source || 'web',
         });
         this.loadHistory();
