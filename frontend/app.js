@@ -41,6 +41,7 @@ function app() {
     copiedJobId: null,
     chartModal: null,
     hoveredSpell: null,
+    simTimelineOpen: false,
     historyPage: 1,
     historyPerPage: 5,
     profileTab: "chars",
@@ -59,7 +60,7 @@ function app() {
     appearance: {
       header_title: "SimCraft Web",
       hero_title: "World of Warcraft",
-      emoji: "⚔️",
+      emoji: "\u2694\ufe0f",
       hero_custom_text: ""
     },
     theme: localStorage.getItem("simcraft_theme") || "dark",
@@ -132,9 +133,9 @@ function app() {
     },
     roleIcon(role)  {
       const r = role || this.effectiveRole();
-      if (r === 'heal') return '💚';
-      if (r === 'tank') return '🛡️';
-      return '⚔️';
+      if (r === 'heal') return '\ud83d\udc9a';
+      if (r === 'tank') return '\ud83d\udee1\ufe0f';
+      return '\u2694\ufe0f';
     },
     roleLabel(role) {
       const r = role || this.effectiveRole();
