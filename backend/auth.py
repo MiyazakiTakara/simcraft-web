@@ -181,7 +181,6 @@ async def update_settings(session: str, body: SettingsRequest):
     info = get_session_info(session)
     if not info or not info.get("bnet_id"):
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
-    # Jeśli podano main char, waliduj
     if body.main_character_name is not None and not body.main_character_name.strip():
         raise HTTPException(400, "Nazwa postaci nie może być pusta.")
     result = save_user_settings(
@@ -220,53 +219,43 @@ async def skip_first_login(session: str):
 
 @router.get("/auth/session/character-privacy")
 async def get_character_privacy(session: str):
-    """Pobiera mapę postaci do ich statusu prywatności z bazy danych."""
-    from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
+    """
+    Zwraca mapę name|realm_slug -> bool dla wszystkich postaci użytkownika.
+    Źródłem prawdy jest tabela history — bez odpytywania Blizzard API.
+    Postacie które mają chociaż jedną prywatną symulację są oznaczone True,
+    postacie które mają symulacje ale żadna nie jest prywatna — False.
+    Postacie bez żadnych symulacji nie pojawiają się w historii, więc
+    frontend domyślnie traktuje je jako publiczne (klucz nieobecny = False).
+    """
+    from database import SessionLocal, HistoryEntryModel
 
     bnet_id = get_bnet_id_by_session(session)
     if not bnet_id:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
 
-    # Pobierz postacie użytkownika z Battle.net API
-    try:
-        access_token = await get_session_token(session)
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                "https://eu.api.blizzard.com/profile/user/wow?namespace=profile-eu&locale=en_GB",
-                headers={"Authorization": f"Bearer {access_token}"},
-                timeout=15,
-            )
-            if resp.status_code != 200:
-                return {"privacies": {}}
-            data = resp.json()
-    except Exception:
-        return {"privacies": {}}
+    privacies: dict[str, bool] = {}
 
-    # Zbuduj listę wszystkich postaci (name|realm_slug) ze struktury wow_accounts
-    all_chars: dict[str, bool] = {}
-    for account in data.get("wow_accounts", []):
-        for ch in account.get("characters", []):
-            realm_slug = ch.get("realm", {}).get("slug", "")
-            name = ch.get("name", "")
-            if name and realm_slug:
-                all_chars[name + "|" + realm_slug] = False
-
-    # Nadpisz prywatne postacie na podstawie bazy danych
     with SessionLocal() as db:
-        private_rows = db.query(
+        # Pobierz wszystkie unikalne kombinacje postac+realm dla tego usera
+        rows = db.query(
             HistoryEntryModel.character_name,
             HistoryEntryModel.character_realm_slug,
+            HistoryEntryModel.is_private,
         ).filter(
             HistoryEntryModel.user_id == bnet_id,
-            HistoryEntryModel.is_private == True,  # noqa: E712
-        ).distinct().all()
+        ).all()
 
-    for char_name, realm in private_rows:
-        key = char_name + "|" + realm
-        if key in all_chars:
-            all_chars[key] = True
+    for char_name, realm_slug, is_private in rows:
+        if not char_name or not realm_slug:
+            continue
+        key = char_name + "|" + realm_slug
+        # Raz ustawione True (prywatna) nie jest nadpisywane przez False
+        if key not in privacies:
+            privacies[key] = bool(is_private)
+        elif is_private:
+            privacies[key] = True
 
-    return {"privacies": all_chars}
+    return {"privacies": privacies}
 
 
 class CharPrivacyRequest(BaseModel):
@@ -278,7 +267,7 @@ class CharPrivacyRequest(BaseModel):
 @router.patch("/auth/session/character-privacy")
 async def update_character_privacy(session: str, body: CharPrivacyRequest):
     """Ustawia prywatność dla konkretnej postaci - ukrywa/odkrywa wszystkie jej symulacje."""
-    from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
+    from database import SessionLocal, HistoryEntryModel
 
     bnet_id = get_bnet_id_by_session(session)
     if not bnet_id:
