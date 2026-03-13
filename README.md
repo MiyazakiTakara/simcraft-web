@@ -33,23 +33,26 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **Watchdog** — automatic cleanup of old jobs and timeout handling
 - **Internationalization** — full i18n PL/EN with language switcher, browser auto-detection and `localStorage` persistence
 - **Main Character** — modal on first login to select main character; saved permanently to Battle.net account (`users` table); displayed in header dropdown
-- **User Dropdown Menu** — header dropdown under the main character name with: Characters, History, Settings, Logout
-- **View Persistence** — active view (home/simulations/profile/settings) persisted via URL hash; browser back/forward works correctly
+- **User Dropdown Menu** — header dropdown under the main character name with: Characters, History, Public Profile, Favorites, Settings, Logout
+- **View Persistence** — active view (home/symulacje/profil/ustawienia/ulubione) persisted via URL hash; browser back/forward works correctly
 - **Settings Page** — change main character (select from character list), language preference, theme preference; profile privacy toggle; per-character privacy
 - **Sliding Session** — session TTL extended by 30 days on every active use; no forced re-logins during normal usage
 - **Skeleton Loaders** — loading skeletons on home, symulacje, profil views instead of spinners
 - **Smart History Loading** — home always loads public history; `/symulacje` and `/profil` load private history for logged-in users, public for guests; history reloads on every view switch
 - **Design Tokens** — CSS custom properties for all colors (including `--danger` with dark/light theme variants), spacing, typography, radius, shadows
+- **Public Profiles** — every Battle.net user has a public profile at `/u/{bnet_id}` showing main character, best DPS, sim count and history; respects privacy settings
+- **Favorites** — logged-in users can favorite any public profile (❤️ button on profile page); favorites are tied to `bnet_id` and persist across all devices; accessible via `/#ulubione`
 
 ## Roadmap
 
 ### 🔜 Planned
-- [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
 - [ ] **Build sharing** — export simulation config as a public link to re-run
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
 - [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
+- [ ] **Result page enhancements** — spell icons from WoW CDN, action sequence timeline, buff uptime bars
 
 ### ✅ Done (2026-03-13)
+- [x] **Public profiles + Favorites** — `/u/{bnet_id}` public profile pages; ❤️ favorites system with `favorites` table; `/#ulubione` view in SPA; counter shown on profile; Alpine race condition fix (`favoritesView` extracted to `favorites.js`) ([#35](https://github.com/MiyazakiTakara/simcraft-web/issues/35))
 - [x] **Settings: remove manual character entry** — removed manual name/realm text inputs from settings view; only dropdown select from character list remains ([#28](https://github.com/MiyazakiTakara/simcraft-web/issues/28))
 - [x] **Design token `--danger`** — added `--danger` CSS variable (`#c0392b` dark / `#e74c3c` light) to `:root` and `[data-theme="light"]`; `.btn-danger` and `.seg-btn.active` now use `var(--danger)` instead of hardcoded hex
 
@@ -192,10 +195,10 @@ Top-level keys: `meta`, `header`, `nav`, `lang`, `common`, `home`, `sim`, `resul
 ```
 Browser
   │
-  ├── Alpine.js (frontend) ─────────────────────────────┐
-  │   Views: home / symulacje / profil / ustawienia   │
-  │   Mixins: SimMixin, CharsMixin, HistoryMixin       │
-  └─────────────────────────────────────────────────┘
+  ├── Alpine.js (frontend) ───────────────────────────┐
+  │   Views: home / symulacje / profil / ustawienia / ulubione   │
+  │   Mixins: SimMixin, CharsMixin, HistoryMixin                  │
+  └───────────────────────────────────────────────────┘
           │ HTTP (REST)
   ┌───────┴───────┐
   │  FastAPI backend  │
@@ -205,13 +208,14 @@ Browser
   │  characters.py    │───► Blizzard API (armory)
   │  simulation.py    │───► simc binary (subprocess)
   │  results.py       │───► Plotly/kaleido (PNG charts)
-  │  history.py       │┐
+  │  history.py       │┌
   │  reactions.py     ││
   │  rankings.py      ││
-  │  admin.py         ││─► PostgreSQL (SQLAlchemy)
-  │  database.py      │┘          tables: users, sessions,
-  └─────────────────┘          history, jobs, reactions,
-                                   news, admin_logs
+  │  profiles.py      ││
+  │  favorites.py     ││─► PostgreSQL (SQLAlchemy)
+  │  admin.py         ││          tables: users, sessions,
+  │  database.py      │┘          history, jobs, reactions,
+  └─────────────────┘          news, admin_logs, favorites
 ```
 
 ## Project Structure
@@ -227,6 +231,8 @@ simcraft-web/
 │   ├── history.py         # Simulation history (tied to bnet_id), trends, metadata
 │   ├── reactions.py       # Emoji reactions (GET/POST), toggle/swap logic
 │   ├── rankings.py        # Rankings API (top 10, top 3 podium, meta)
+│   ├── profiles.py        # Public user profiles GET /api/profile/{bnet_id}
+│   ├── favorites.py       # Favorites system (add/remove/list/check); ensure_table() on startup
 │   ├── database.py        # SQLAlchemy models + inline migrations
 │   ├── admin.py           # Admin panel (Keycloak), news, logs, limits, appearance
 │   └── logging_config.py  # Structured logging (structlog)
@@ -234,12 +240,14 @@ simcraft-web/
 │   ├── index.html         # Main SPA shell
 │   ├── result.html        # Result page (OG meta, spell breakdown, chart, reactions)
 │   ├── rankings.html      # Rankings page (podium + table, filters)
+│   ├── profile.html       # Public user profile page (/u/{bnet_id})
 │   ├── admin.html         # Admin panel
 │   ├── app.js             # Alpine.js root; view router (loadView/navigateTo/handleHash)
 │   ├── sim.js             # Simulation form logic (SimMixin)
 │   ├── chars.js           # Character list, equipment, talents (CharsMixin)
 │   ├── history.js         # History widget (HistoryMixin)
 │   ├── settings.js        # Settings mixin (main char, privacy, theme, language)
+│   ├── favorites.js       # favoritesView() Alpine component for /#ulubione
 │   ├── header.js          # Header mixin (session, dropdown)
 │   ├── api.js             # API client (fetch wrapper)
 │   ├── utils.js           # Helpers (number formatting, class colors, etc.)
@@ -250,6 +258,7 @@ simcraft-web/
 │   │   ├── home.html        # Home view (hero, addon form, top 3 podium, public history, news)
 │   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
 │   │   ├── profil.html      # Profile view (characters, history, DPS trend chart)
+│   │   ├── ulubione.html    # Favorites view (grid of favorited profiles)
 │   │   └── ustawienia.html  # Settings view (main char select, privacy, theme, language)
 │   └── locales/
 │       ├── pl.json          # Polish translations
@@ -265,10 +274,11 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 
 - `app()` is the only Alpine `x-data` on the main page
 - Views (`views/*.html`) are loaded dynamically by `loadView(name)` into `#view-container` and initialized via `Alpine.initTree()` — **they have no own `x-data`**, they operate within the parent scope
+- **Exception:** views that need isolated state (e.g. `ulubione.html`) use `x-data="favoritesView()"` but the function **must be defined globally** (in a `<script>` loaded in `index.html`) before Alpine boots — inline `<script>` inside `innerHTML` is not executed by the browser
 - Mixins (`SimMixin`, `CharsMixin`, `HistoryMixin`) are merged by `mergeMixins()` which uses `Object.defineProperties` — this ensures getters (e.g. `sortedSpells`, `filteredChars`) are correctly copied with their descriptors preserved
 - Getters referencing `this.*` must be defined directly in the `state` object in `app()`, not in mixins — `...spread` destroys getter descriptors
-- Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`
-- `rankings.html` is a **standalone page** (not a view), served by FastAPI at `GET /rankings`
+- Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`, `#ulubione`
+- `rankings.html` and `profile.html` are **standalone pages** (not views), served by FastAPI at `GET /rankings` and `GET /u/{bnet_id}`
 - **State property names matter** — views use the actual state field names (e.g. `loadingHistory`, not aliases); aliased names are not visible after `Alpine.initTree()`
 
 ## CSS Design Tokens
@@ -327,13 +337,26 @@ All visual constants are defined as CSS custom properties in `:root` and overrid
 | `GET` | `/api/character/statistics` | Character statistics |
 | `GET` | `/api/character/talents` | Character talents |
 
+### Profiles
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/profile/{bnet_id}` | Public profile (main char, best DPS, sim count, history); 404 if private |
+
+### Favorites
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/favorites` | List of favorited profiles for the logged-in user (`?session=...`) |
+| `POST` | `/api/favorites/{bnet_id}` | Add a profile to favorites (`?session=...`) |
+| `DELETE` | `/api/favorites/{bnet_id}` | Remove a profile from favorites (`?session=...`) |
+| `GET` | `/api/favorites/check/{bnet_id}` | Check if a profile is in the user's favorites (`?session=...`) |
+
 ### Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/auth/login` | Redirect to Battle.net OAuth |
 | `GET` | `/auth/callback` | OAuth callback (fetches `bnet_id` from `/userinfo`) |
 | `GET` | `/auth/logout` | Logout |
-| `GET` | `/auth/session/info` | Session info (main character, is_first_login) |
+| `GET` | `/auth/session/info` | Session info (main character, bnet_id, is_first_login) |
 | `GET` | `/auth/session/settings` | Get user settings (main char, privacy) |
 | `PATCH` | `/auth/session/settings` | Save user settings |
 | `PATCH` | `/auth/session/main-character` | Set main character |
@@ -363,6 +386,7 @@ All visual constants are defined as CSS custom properties in `:root` and overrid
 | `news` | News entries managed from admin panel |
 | `admin_logs` | Structured application logs |
 | `admin_sessions` | Keycloak admin sessions |
+| `favorites` | Favorited profiles; `UNIQUE(user_bnet_id, target_bnet_id)`; created via `ensure_table()` on startup |
 
 > Migrations are applied automatically via `init_db()` on startup using `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` — no migration tool needed.
 
