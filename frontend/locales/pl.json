@@ -34,7 +34,9 @@
     "guest_title": "Symuluj bez logowania",
     "guest_subtitle": "Wklej tekst z addona SimulationCraft i uruchom symulację",
     "login_cta": "Zaloguj się przez Battle.net aby wybrać postać z Armory",
-    "or_separator": "lub"
+    "or_separator": "lub",
+    "top_dps_empty": "Brak wyników — rozegraj pierwszą symulację!",
+    "top_dps_see_all": "Zobacz pełne rankingi →"
   },
   "sim": {
     "title": "Symulacja", "mode_armory": "Armory", "mode_addon": "Addon Export",
@@ -100,7 +102,8 @@
     "char_privacy": "🔒 Prywatność postaci",
     "char_privacy_hint": "Wybierz które postacie mają być ukryte w rankingach i historii publicznej.",
     "char_privacy_disabled": "Włączony jest tryb prywatny dla całego profilu - wszystkie symulacje są ukryte.",
-    "char_private": "Prywatna",
+    "char_private": "🔒 Prywatna",
+    "char_public": "👁️ Publiczna",
     "no_chars_for_privacy": "Brak postaci do ustawienia prywatności.",
     "section_privacy": "🔒 Prywatność",
     "private_profile": "Prywatny profil",

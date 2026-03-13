@@ -34,7 +34,9 @@
     "guest_title": "Simulate without logging in",
     "guest_subtitle": "Paste your SimulationCraft addon export and run a simulation",
     "login_cta": "Log in via Battle.net to select a character from the Armory",
-    "or_separator": "or"
+    "or_separator": "or",
+    "top_dps_empty": "No results yet — run your first simulation!",
+    "top_dps_see_all": "See full rankings →"
   },
   "sim": {
     "title": "Simulation", "mode_armory": "Armory", "mode_addon": "Addon Export",
@@ -100,7 +102,8 @@
     "char_privacy": "🔒 Character Privacy",
     "char_privacy_hint": "Select which characters should be hidden from rankings and public history.",
     "char_privacy_disabled": "Private profile mode is enabled - all simulations are hidden.",
-    "char_private": "Private",
+    "char_private": "🔒 Private",
+    "char_public": "👁️ Public",
     "no_chars_for_privacy": "No characters available to set privacy.",
     "section_privacy": "🔒 Privacy",
     "private_profile": "Private profile",

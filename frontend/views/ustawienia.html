@@ -101,7 +101,6 @@
               <div>
                 <span x-text="ch.name" style="font-weight:600"></span>
                 <span style="color:var(--muted);font-size:.8rem" x-text="' - ' + ch.realm"></span>
-                <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
               </div>
               <button
                 style="font-size:.75rem;padding:.25rem .5rem;border:none;border-radius:4px;cursor:pointer"
@@ -109,7 +108,7 @@
                   ? 'background:#c0392b;color:#fff'
                   : 'background:var(--accent2);color:#fff'"
                 @click="toggleCharPrivacy(ch, $event)"
-                x-text="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? '🔒 Prywatna' : '👁️ Publiczna'"
+                x-text="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? $store.i18n.t('settings.char_private') : $store.i18n.t('settings.char_public')"
               ></button>
             </div>
           </template>
@@ -128,11 +127,11 @@
           <button
             class="lang-toggle-btn"
             :class="{ active: $store.i18n.lang === 'pl' }"
-            @click="$store.i18n.setLang('pl')">PL</button>
+            @click="$store.i18n.setLang('pl')" x-text="$store.i18n.t('lang.pl')"></button>
           <button
             class="lang-toggle-btn"
             :class="{ active: $store.i18n.lang === 'en' }"
-            @click="$store.i18n.setLang('en')">EN</button>
+            @click="$store.i18n.setLang('en')" x-text="$store.i18n.t('lang.en')"></button>
         </div>
       </div>
 

@@ -79,7 +79,7 @@
                 <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_executes')"></span><span x-text="sp.count ?? '—'"></span></div>
                 <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_avg_hit')"></span><span x-text="formatDmg(sp.avg_hit)"></span></div>
                 <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_crit')"></span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
-                <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
+                <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
               </div>
               <div class="spell-head">
                 <span x-text="sp.name"></span>
@@ -151,7 +151,7 @@
   ">
     <div class="landing-history-header">
       <h2>🏆 Top DPS</h2>
-      <a href="/rankings" style="font-size:.85rem;color:var(--accent);text-decoration:none">Zobacz pełne rankingi →</a>
+      <a href="/rankings" style="font-size:.85rem;color:var(--accent);text-decoration:none" x-text="$store.i18n.t('home.top_dps_see_all')"></a>
     </div>
 
     <template x-if="top3Loading">
@@ -168,7 +168,7 @@
     </template>
 
     <template x-if="!top3Loading && top3.length === 0">
-      <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:.88rem">Brak wyników — rozegraj pierwszą symulację!</div>
+      <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:.88rem" x-text="$store.i18n.t('home.top_dps_empty')"></div>
     </template>
 
     <template x-if="!top3Loading && top3.length > 0">
@@ -298,7 +298,7 @@
                       <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_executes')"></span><span x-text="sp.count ?? '—'"></span></div>
                       <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_avg_hit')"></span><span x-text="formatDmg(sp.avg_hit)"></span></div>
                       <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_crit')"></span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
-                      <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
+                      <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                     </div>
                     <div class="spell-head">
                       <span x-text="sp.name"></span>
