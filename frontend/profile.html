@@ -8,8 +8,14 @@
   <meta property="og:site_name"   content="SimCraft Web" />
   <meta property="og:title"       :content="pageTitle" />
   <meta property="og:description" :content="ogDesc" />
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
   <link rel="stylesheet" href="/style.css" />
-  <script defer src="/alpine.min.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body>
 
@@ -41,12 +47,14 @@
     <!-- Hero -->
     <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
       <div style="display:flex;flex-direction:column;gap:.3rem">
-        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)" x-text="profile.name || 'Nieznana postać'"></h1>
-        <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm"></div>
+        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)"
+            x-text="profile.name || 'Nieznana postać'"></h1>
+        <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm || ''"></div>
         <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
           <div>
             <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Best DPS</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)" x-text="formatDps(profile.best_dps)"></div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)"
+                 x-text="formatDps(profile.best_dps)"></div>
           </div>
           <div>
             <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Symulacje</div>
@@ -148,7 +156,8 @@
                         <span x-show="i === 0" class="trend-neutral">—</span>
                       </td>
                       <td>
-                        <a :href="'/result/' + pt.job_id" target="_blank" class="btn btn-accent2 btn-sm" @click.stop>↗</a>
+                        <a :href="'/result/' + pt.job_id" target="_blank"
+                           class="btn btn-accent2 btn-sm" @click.stop>↗</a>
                       </td>
                     </tr>
                   </template>
@@ -181,6 +190,13 @@ function profilePage() {
     trendPoints: [],
     trendChart:  null,
 
+    CLASS_COLORS: {
+      'Death Knight':'#C41E3A','Demon Hunter':'#A330C9','Druid':'#FF7C0A',
+      'Evoker':'#33937F','Hunter':'#AAD372','Mage':'#3FC7EB','Monk':'#00FF98',
+      'Paladin':'#F48CBA','Priest':'#CCCCCC','Rogue':'#FFF468','Shaman':'#0070DD',
+      'Warlock':'#8788EE','Warrior':'#C69B3A',
+    },
+
     get pagedHistory() {
       const start = (this.page - 1) * this.perPage;
       return (this.profile.history || []).slice(start, start + this.perPage);
@@ -193,7 +209,6 @@ function profilePage() {
     },
 
     async init() {
-      // URL: /u/{bnet_id}
       const parts  = window.location.pathname.split('/');
       const bnetId = decodeURIComponent(parts[2] || '');
       if (!bnetId) { this.notFound = true; this.loading = false; return; }
@@ -205,7 +220,7 @@ function profilePage() {
         this.pageTitle = `${this.profile.name || 'Profil'} — SimCraft Web`;
         this.ogDesc    = `Best DPS: ${this.formatDps(this.profile.best_dps)} · ${this.profile.sim_count} symulacji`;
 
-        const chars    = [...new Set((this.profile.history || []).map(h => h.character_name))];
+        const chars     = [...new Set((this.profile.history || []).map(h => h.character_name))];
         this.trendChars = chars;
         this.trendChar  = chars[0] || '';
         this.buildTrend();
@@ -253,9 +268,17 @@ function profilePage() {
       });
     },
 
-    formatDps(v)  { return typeof window.formatDps  === 'function' ? window.formatDps(v)  : (v ? Math.round(v).toLocaleString() : '—'); },
-    formatTime(v) { return typeof window.formatTime === 'function' ? window.formatTime(v) : (v ? new Date(v).toLocaleDateString('pl-PL') : ''); },
-    classColor(c) { return typeof window.classColor  === 'function' ? window.classColor(c)  : '#e8e8f0'; },
+    formatDps(v)  {
+      if (!v && v !== 0) return '—';
+      if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+      if (v >= 1e3) return (v/1e3).toFixed(1)+'k';
+      return String(Math.round(v));
+    },
+    formatTime(v) {
+      if (!v) return '';
+      return new Date(v).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    },
+    classColor(c) { return this.CLASS_COLORS[c] || '#e8e8f0'; },
   };
 }
 </script>
