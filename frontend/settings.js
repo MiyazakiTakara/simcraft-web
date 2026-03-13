@@ -12,6 +12,8 @@ function settingsMixin() {
     form_main_character_realm: '',
     form_profile_private: false,
     form_manualEntry: false,
+    bnetId: null,
+    profileUrlCopied: false,
 
     classColor(className) {
       const colors = {
@@ -21,6 +23,15 @@ function settingsMixin() {
         'Warlock': '#8788EE', 'Warrior': '#C69B3A',
       };
       return colors[className] || '#888';
+    },
+
+    copyProfileUrl() {
+      if (!this.bnetId) return;
+      const url = 'https://sim.miyazakitakara.ovh/u/' + encodeURIComponent(this.bnetId);
+      navigator.clipboard.writeText(url).then(() => {
+        this.profileUrlCopied = true;
+        setTimeout(() => { this.profileUrlCopied = false; }, 2500);
+      }).catch(() => {});
     },
 
     getCharPrivacy(ch) {
@@ -127,7 +138,6 @@ function settingsMixin() {
       });
     },
 
-    // Przemianowane z init() na initSettings() — zapobiega nadpisaniu app.init() przez mergeMixins
     async initSettings() {
       this.loading    = true;
       this.error      = null;
@@ -140,6 +150,14 @@ function settingsMixin() {
       }
 
       try {
+        // Pobierz bnet_id z session/info
+        const infoRes = await fetch(`/auth/session/info?session=${session}`);
+        if (infoRes.ok) {
+          const info = await infoRes.json();
+          this.bnetId = info.bnet_id || null;
+          if (window.__alpineApp) window.__alpineApp.bnetId = this.bnetId;
+        }
+
         const res = await fetch(`/auth/session/settings?session=${session}`);
         if (res.status === 401) { this.loading = false; return; }
         if (res.status === 404) {
