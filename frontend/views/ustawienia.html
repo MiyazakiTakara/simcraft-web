@@ -104,24 +104,12 @@
                 <span v-if="ch.class" :style="{color: classColor(ch.class), fontSize:'.8rem'}" x-text="' ' + ch.class"></span>
               </div>
               <button
-                style="font-size:.75rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer"
-                @click="(async () => {
-                  const app = window.__alpineApp;
-                  const session = app?.sessionId || localStorage.getItem('simcraft_session');
-                  if (!session) return;
-                  const realm = ch.realm_slug || ch.realm;
-                  const key = ch.name + '|' + realm;
-                  const current = app?.charPrivacies?.[key] || false;
-                  const isPrivate = !current;
-                  await fetch('/auth/session/character-privacy?session=' + session, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ character_name: ch.name, character_realm: realm, is_private: isPrivate })
-                  });
-                  if (app) app.charPrivacies = app.charPrivacies || {};
-                  if (app) app.charPrivacies[key] = isPrivate;
-                })()"
-                x-text="(window.__alpineApp?.charPrivacies?.[ch.name + '|' + (ch.realm_slug || ch.realm)] ? '🔒 Prywatna' : '👁️ Publiczna')"
+                style="font-size:.75rem;padding:.25rem .5rem;border:none;border-radius:4px;cursor:pointer"
+                :style="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)]
+                  ? 'background:#c0392b;color:#fff'
+                  : 'background:var(--accent2);color:#fff'"
+                @click="toggleCharPrivacy(ch, $event)"
+                x-text="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? '🔒 Prywatna' : '👁️ Publiczna'"
               ></button>
             </div>
           </template>
