@@ -40,7 +40,24 @@
     .spell-icon {
       width:22px; height:22px; border-radius:4px; flex-shrink:0;
       object-fit:cover; border:1px solid var(--border); background:var(--surface);
-      vertical-align:middle;
+      vertical-align:middle; display:block;
+    }
+    .spell-icon-wrap {
+      display:inline-flex; flex-shrink:0;
+      width:22px; height:22px;
+      border-radius:4px; overflow:hidden;
+      border:1px solid var(--border);
+      text-decoration:none;
+    }
+    .spell-icon-wrap-sm {
+      display:inline-flex; flex-shrink:0;
+      width:18px; height:18px;
+      border-radius:3px; overflow:hidden;
+      border:1px solid var(--border);
+      text-decoration:none;
+    }
+    .spell-icon-wrap img, .spell-icon-wrap-sm img {
+      width:100%; height:100%; object-fit:cover; display:block;
     }
     .spell-icon-placeholder {
       width:22px; height:22px; border-radius:4px; flex-shrink:0;
@@ -208,7 +225,8 @@
                   <button class="tab" :class="{active:spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
                 </div>
               </div>
-              <div class="spell-list">
+              <div class="spell-list"
+                   x-effect="$nextTick(() => { if (typeof WH !== 'undefined' && WH.tooltip) WH.tooltip.refresh(); })">
                 <template x-for="sp in sortedSpells" :key="sp.name">
                   <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                     <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
@@ -230,23 +248,31 @@
                       </div>
                     </div>
                     <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
-                      <!-- ikona po spell_id przez backend proxy -->
-                      <img
-                        x-show="sp.spell_id > 0"
-                        class="spell-icon"
-                        :src="'/api/icon-by-spell/' + sp.spell_id"
-                        :alt="sp.name"
-                        @error="$el.style.display='none'"
-                        loading="lazy"
-                      />
-                      <img
-                        x-show="!sp.spell_id && sp.icon && sp.icon !== 'inv_misc_questionmark'"
-                        class="spell-icon"
-                        :src="'https://wow.zamimg.com/images/wow/icons/medium/'+sp.icon+'.jpg'"
-                        :alt="sp.name"
-                        @error="$el.style.display='none'"
-                        loading="lazy"
-                      />
+                      <!-- <a> z wowhead href (tooltip) owijajacy <img> z ikona -->
+                      <template x-if="sp.spell_id > 0">
+                        <a
+                          class="spell-icon-wrap"
+                          :href="'https://www.wowhead.com/spell=' + sp.spell_id"
+                          target="_blank" rel="noopener"
+                          :data-wowhead="'spell=' + sp.spell_id"
+                        >
+                          <img
+                            :src="'/api/icon-by-spell/' + sp.spell_id"
+                            :alt="sp.name"
+                            @error="$el.parentElement.style.display='none'"
+                            loading="lazy"
+                          />
+                        </a>
+                      </template>
+                      <template x-if="!sp.spell_id && sp.icon && sp.icon !== 'inv_misc_questionmark'">
+                        <img
+                          class="spell-icon"
+                          :src="'https://wow.zamimg.com/images/wow/icons/medium/'+sp.icon+'.jpg'"
+                          :alt="sp.name"
+                          @error="$el.style.display='none'"
+                          loading="lazy"
+                        />
+                      </template>
                       <span x-text="sp.name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                       <span style="display:flex;gap:.6rem;align-items:center;flex-shrink:0">
                         <span x-show="spellSort==='total_dmg'">
@@ -311,7 +337,8 @@
               </div>
               <template x-if="timelineOpen">
                 <div class="timeline-table-wrap">
-                  <table class="timeline-table">
+                  <table class="timeline-table"
+                         x-effect="$nextTick(() => { if (typeof WH !== 'undefined' && WH.tooltip) WH.tooltip.refresh(); })">
                     <thead>
                       <tr>
                         <th style="width:3rem">Time</th>
@@ -325,14 +352,21 @@
                         <tr>
                           <td style="color:var(--muted);font-variant-numeric:tabular-nums" x-text="ev.time.toFixed(2)+'s'"></td>
                           <td>
-                            <img
-                              x-show="ev.spell_id > 0"
-                              style="width:18px;height:18px;border-radius:3px;object-fit:cover;border:1px solid var(--border);background:var(--surface);vertical-align:middle"
-                              :src="'/api/icon-by-spell/' + ev.spell_id"
-                              :alt="ev.name"
-                              @error="$el.style.display='none'"
-                              loading="lazy"
-                            />
+                            <template x-if="ev.spell_id > 0">
+                              <a
+                                class="spell-icon-wrap-sm"
+                                :href="'https://www.wowhead.com/spell=' + ev.spell_id"
+                                target="_blank" rel="noopener"
+                                :data-wowhead="'spell=' + ev.spell_id"
+                              >
+                                <img
+                                  :src="'/api/icon-by-spell/' + ev.spell_id"
+                                  :alt="ev.name"
+                                  @error="$el.parentElement.style.display='none'"
+                                  loading="lazy"
+                                />
+                              </a>
+                            </template>
                           </td>
                           <td :class="'ev-'+ev.type" x-text="ev.name"></td>
                           <td style="color:var(--muted);font-size:.78rem;text-transform:capitalize" x-text="ev.type"></td>
