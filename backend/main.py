@@ -17,6 +17,7 @@ import reactions
 import characters
 import profiles
 import favorites
+import icons
 
 app = FastAPI()
 
@@ -45,6 +46,7 @@ app.include_router(reactions.router)
 app.include_router(characters.router)
 app.include_router(profiles.router)
 app.include_router(favorites.router)
+app.include_router(icons.router)
 
 # Publiczny endpoint wygladu
 @app.get("/api/appearance")

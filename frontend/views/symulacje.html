@@ -145,10 +145,11 @@
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                   </div>
                   <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
+                    <!-- Ikonka przez proxy backendu -->
                     <img
                       x-show="sp.icon && sp.icon !== 'inv_misc_questionmark'"
                       style="width:22px;height:22px;border-radius:4px;flex-shrink:0;object-fit:cover;border:1px solid var(--border);background:var(--surface);vertical-align:middle"
-                      :src="'https://wow.zamimg.com/images/wow/icons/medium/'+sp.icon+'.jpg'"
+                      :src="'/api/icon/' + sp.icon + '.jpg'"
                       :alt="sp.name"
                       @error="$el.style.display='none'"
                       loading="lazy"
@@ -178,9 +179,9 @@
                   <div style="display:grid;grid-template-columns:22px 1fr auto;gap:.5rem;align-items:center;margin-bottom:.18rem">
                     <img
                       style="width:22px;height:22px;border-radius:4px;object-fit:cover;border:1px solid var(--border);background:var(--surface)"
-                      :src="'https://wow.zamimg.com/images/wow/icons/medium/'+b.icon+'.jpg'"
+                      :src="'/api/icon/' + b.icon + '.jpg'"
                       :alt="b.name"
-                      @error="$el.src='/static/icons/default.png';$el.onerror=null"
+                      @error="$el.style.display='none'"
                       loading="lazy"
                     />
                     <span style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="b.name" x-text="b.name"></span>
@@ -226,7 +227,7 @@
                       <td style="padding:.38rem .7rem;border-top:1px solid var(--border)">
                         <img
                           style="width:18px;height:18px;border-radius:3px;object-fit:cover;vertical-align:middle;border:1px solid var(--border);background:var(--surface)"
-                          :src="'https://wow.zamimg.com/images/wow/icons/small/' + ev.icon + '.jpg'"
+                          :src="'/api/icon/' + ev.icon + '.jpg'"
                           :alt="ev.name"
                           @error="$el.style.visibility='hidden'"
                           loading="lazy"
