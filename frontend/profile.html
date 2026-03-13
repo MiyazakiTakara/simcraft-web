@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pl" x-data="profilePage()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title x-text="char ? char.name + ' — SimCraft Web' : 'Profile — SimCraft Web'">Profile — SimCraft Web</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/alpine.min.js"></script>
+  <script src="/utils.js"></script>
+  <script src="/i18n.js"></script>
+</head>
+<body>
+
+<div class="container" style="max-width:900px">
+
+  <!-- Header -->
+  <div class="header">
+    <a href="/" class="header-logo">⚔️ SimCraft</a>
+    <nav style="display:flex;gap:.5rem;align-items:center">
+      <a href="/" class="btn btn-ghost btn-sm">← Home</a>
+    </nav>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading" style="text-align:center;padding:5rem;color:var(--muted)">
+    <span class="spinner" style="width:2rem;height:2rem"></span>
+  </div>
+
+  <!-- 404 / private -->
+  <div x-show="!loading && error" style="text-align:center;padding:5rem">
+    <div style="font-size:3rem;margin-bottom:1rem" x-text="error === 403 ? '🔒' : '🤷'"></div>
+    <h2 style="margin-bottom:.5rem" x-text="error === 403 ? 'Profil jest prywatny' : 'Nie znaleziono profilu'"></h2>
+    <p style="color:var(--muted)" x-text="error === 403 ? 'Ten użytkownik ukrył swój profil.' : 'Sprawdź czy adres jest poprawny.'"></p>
+    <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Wróć do strony głównej</a>
+  </div>
+
+  <!-- Profil -->
+  <div x-show="!loading && !error">
+
+    <!-- Hero postaci -->
+    <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
+      <img
+        :src="char && char.avatar ? char.avatar : '/static/default_avatar.png'"
+        :alt="char ? char.name : ''"
+        style="width:96px;height:96px;border-radius:var(--radius);object-fit:cover;border:2px solid var(--border);background:var(--surface)"
+        @error="$el.src='/static/default_avatar.png'"
+      />
+      <div>
+        <h1 style="font-size:var(--text-2xl);font-weight:800;margin-bottom:.3rem" x-text="char ? char.name : ''"></h1>
+        <div style="color:var(--muted);font-size:var(--text-sm);margin-bottom:.2rem"
+          x-text="char ? (char.realm || '') + (char.realm ? ' · ' : '') + (char.spec ? char.spec + ' ' : '') + (char.class || '') + (char.level ? ' · ' + char.level + ' lvl' : '') : ''"
+        ></div>
+        <div style="font-size:var(--text-xs);color:var(--muted)" x-text="'Symulacje: ' + total"></div>
+      </div>
+    </div>
+
+    <!-- Historia -->
+    <h2 style="font-size:var(--text-lg);font-weight:700;margin-bottom:1rem">📜 Historia symulacji</h2>
+
+    <div x-show="history.length === 0 && !loading" style="text-align:center;padding:3rem;color:var(--muted)">
+      Brak publicznych symulacji.
+    </div>
+
+    <div class="history-list" style="max-height:none">
+      <template x-for="entry in history" :key="entry.job_id">
+        <div class="history-item"
+          style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;cursor:pointer"
+          @click="window.open('/result/' + entry.job_id, '_blank')"
+        >
+          <div style="flex:1;min-width:0">
+            <div class="history-char">
+              <span x-text="entry.character_name || 'Addon Export'"></span>
+              <span x-show="entry.character_class"
+                :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
+                x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"
+              ></span>
+            </div>
+            <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+            <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+            <div class="history-style" x-text="entry.fight_style"></div>
+          </div>
+          <a :href="'/result/' + entry.job_id" target="_blank" class="btn btn-accent2 btn-sm btn-icon" @click.stop>↗</a>
+        </div>
+      </template>
+    </div>
+
+    <!-- Paginacja -->
+    <div class="pagination" x-show="pages > 1" style="margin-top:1.5rem">
+      <button :disabled="page <= 1" @click="loadPage(page - 1)">&laquo;</button>
+      <template x-for="p in pageList" :key="p">
+        <button :class="{active: page === p}" @click="loadPage(p)" x-text="p"></button>
+      </template>
+      <button :disabled="page >= pages" @click="loadPage(page + 1)">&raquo;</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function profilePage() {
+  return {
+    loading: true,
+    error:   null,
+    char:    null,
+    history: [],
+    total:   0,
+    page:    1,
+    pages:   1,
+
+    get pageList() {
+      const list = [];
+      const start = Math.max(1, this.page - 2);
+      const end   = Math.min(this.pages, this.page + 2);
+      for (let i = start; i <= end; i++) list.push(i);
+      return list;
+    },
+
+    async init() {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      // /u/{realm}/{name}
+      if (parts.length < 3 || parts[0] !== 'u') {
+        this.error = 404;
+        this.loading = false;
+        return;
+      }
+      const realm = parts[1];
+      const name  = parts[2];
+      await this.loadPage(1, realm, name);
+    },
+
+    async loadPage(p, realm, name) {
+      this.loading = true;
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const r = realm || parts[1];
+      const n = name  || parts[2];
+      try {
+        const resp = await fetch(`/api/profile/${r}/${n}?page=${p}&limit=20`);
+        if (resp.status === 404) { this.error = 404; return; }
+        if (resp.status === 403) { this.error = 403; return; }
+        const data = await resp.json();
+        this.char    = data.character;
+        this.history = data.history;
+        this.total   = data.total;
+        this.page    = data.page;
+        this.pages   = data.pages;
+        this.error   = null;
+
+        // Aktualizuj title
+        if (this.char) document.title = this.char.name + ' — SimCraft Web';
+      } catch(e) {
+        this.error = 500;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    formatDps(v) {
+      if (!v) return '0';
+      if (v >= 1000000) return (v/1000000).toFixed(2) + 'M';
+      if (v >= 1000)    return (v/1000).toFixed(1) + 'k';
+      return Math.round(v).toString();
+    },
+
+    formatTime(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString('pl-PL', { dateStyle:'short', timeStyle:'short' });
+    },
+
+    classColor(cls) {
+      if (typeof window.classColor === 'function') return window.classColor(cls);
+      return 'var(--text)';
+    },
+  };
+}
+</script>
+</body>
+</html>
