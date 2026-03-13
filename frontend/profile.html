@@ -3,175 +3,289 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title x-text="char ? char.name + ' — SimCraft Web' : 'Profile — SimCraft Web'">Profile — SimCraft Web</title>
+  <title x-text="pageTitle">Profil — SimCraft Web</title>
+
+  <!-- OG meta -->
+  <meta property="og:type"        content="profile" />
+  <meta property="og:site_name"   content="SimCraft Web" />
+  <meta property="og:title"       :content="pageTitle" />
+  <meta property="og:description" :content="ogDesc" />
+
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/alpine.min.js"></script>
-  <script src="/utils.js"></script>
-  <script src="/i18n.js"></script>
 </head>
 <body>
 
-<div class="container" style="max-width:900px">
+<div class="container">
 
   <!-- Header -->
-  <div class="header">
-    <a href="/" class="header-logo">⚔️ SimCraft</a>
-    <nav style="display:flex;gap:.5rem;align-items:center">
-      <a href="/" class="btn btn-ghost btn-sm">← Home</a>
+  <header class="header">
+    <a href="/" class="header-logo">⚔️ SimCraft Web</a>
+    <nav>
+      <a href="/" class="btn btn-ghost btn-sm">← Wróć do aplikacji</a>
     </nav>
-  </div>
+  </header>
 
   <!-- Loading -->
-  <div x-show="loading" style="text-align:center;padding:5rem;color:var(--muted)">
+  <div x-show="loading" style="text-align:center;padding:6rem;color:var(--muted)">
     <span class="spinner" style="width:2rem;height:2rem"></span>
   </div>
 
-  <!-- 404 / private -->
-  <div x-show="!loading && error" style="text-align:center;padding:5rem">
-    <div style="font-size:3rem;margin-bottom:1rem" x-text="error === 403 ? '🔒' : '🤷'"></div>
-    <h2 style="margin-bottom:.5rem" x-text="error === 403 ? 'Profil jest prywatny' : 'Nie znaleziono profilu'"></h2>
-    <p style="color:var(--muted)" x-text="error === 403 ? 'Ten użytkownik ukrył swój profil.' : 'Sprawdź czy adres jest poprawny.'"></p>
-    <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Wróć do strony głównej</a>
+  <!-- 404 -->
+  <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
+    <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+    <h2 style="margin-bottom:.5rem">Profil nie istnieje</h2>
+    <p style="color:var(--muted)">Ten profil jest prywatny lub postać nie ma jeszcze konta w SimCraft Web.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Strona główna</a>
   </div>
 
   <!-- Profil -->
-  <div x-show="!loading && !error">
+  <div x-show="!loading && !notFound">
 
     <!-- Hero postaci -->
     <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-      <img
-        :src="char && char.avatar ? char.avatar : '/static/default_avatar.png'"
-        :alt="char ? char.name : ''"
-        style="width:96px;height:96px;border-radius:var(--radius);object-fit:cover;border:2px solid var(--border);background:var(--surface)"
-        @error="$el.src='/static/default_avatar.png'"
-      />
-      <div>
-        <h1 style="font-size:var(--text-2xl);font-weight:800;margin-bottom:.3rem" x-text="char ? char.name : ''"></h1>
-        <div style="color:var(--muted);font-size:var(--text-sm);margin-bottom:.2rem"
-          x-text="char ? (char.realm || '') + (char.realm ? ' · ' : '') + (char.spec ? char.spec + ' ' : '') + (char.class || '') + (char.level ? ' · ' + char.level + ' lvl' : '') : ''"
-        ></div>
-        <div style="font-size:var(--text-xs);color:var(--muted)" x-text="'Symulacje: ' + total"></div>
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)" x-text="profile.name"></h1>
+        <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm"></div>
+        <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
+          <div>
+            <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Best DPS</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)" x-text="formatDps(profile.best_dps)"></div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Symulacje</div>
+            <div style="font-size:var(--text-2xl);font-weight:800" x-text="profile.sim_count"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Historia -->
-    <h2 style="font-size:var(--text-lg);font-weight:700;margin-bottom:1rem">📜 Historia symulacji</h2>
-
-    <div x-show="history.length === 0 && !loading" style="text-align:center;padding:3rem;color:var(--muted)">
-      Brak publicznych symulacji.
+    <!-- Tabs -->
+    <div class="sim-tabs" style="margin-bottom:1.5rem">
+      <button class="tab" :class="{active: tab==='history'}" @click="tab='history'">📜 Historia symulacji</button>
+      <button class="tab" :class="{active: tab==='trend'}"   @click="tab='trend'">📈 DPS Trend</button>
     </div>
 
-    <div class="history-list" style="max-height:none">
-      <template x-for="entry in history" :key="entry.job_id">
-        <div class="history-item"
-          style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;cursor:pointer"
-          @click="window.open('/result/' + entry.job_id, '_blank')"
-        >
-          <div style="flex:1;min-width:0">
-            <div class="history-char">
-              <span x-text="entry.character_name || 'Addon Export'"></span>
-              <span x-show="entry.character_class"
-                :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
-                x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"
-              ></span>
-            </div>
-            <div class="history-dps" x-text="formatDps(entry.dps)"></div>
-            <div class="history-time" x-text="formatTime(entry.created_at)"></div>
-            <div class="history-style" x-text="entry.fight_style"></div>
-          </div>
-          <a :href="'/result/' + entry.job_id" target="_blank" class="btn btn-accent2 btn-sm btn-icon" @click.stop>↗</a>
+    <!-- TAB: HISTORIA -->
+    <template x-if="tab==='history'">
+      <div>
+        <div x-show="profile.history && profile.history.length === 0"
+             style="text-align:center;padding:3rem;color:var(--muted)">
+          Brak publicznych symulacji.
         </div>
-      </template>
-    </div>
 
-    <!-- Paginacja -->
-    <div class="pagination" x-show="pages > 1" style="margin-top:1.5rem">
-      <button :disabled="page <= 1" @click="loadPage(page - 1)">&laquo;</button>
-      <template x-for="p in pageList" :key="p">
-        <button :class="{active: page === p}" @click="loadPage(p)" x-text="p"></button>
-      </template>
-      <button :disabled="page >= pages" @click="loadPage(page + 1)">&raquo;</button>
-    </div>
+        <div class="history-list" style="max-height:600px;overflow-y:auto">
+          <template x-for="entry in pagedHistory" :key="entry.job_id">
+            <div class="history-item"
+                 style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
+                 @click="window.open('/result/' + entry.job_id, '_blank')">
+              <div style="flex:1;min-width:0">
+                <div class="history-char">
+                  <span x-text="entry.character_name"></span>
+                  <span x-show="entry.character_class"
+                        :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
+                        x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                </div>
+                <div class="history-dps"  x-text="formatDps(entry.dps)"></div>
+                <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                <div class="history-style" x-text="entry.fight_style"></div>
+              </div>
+              <a :href="'/result/' + entry.job_id" target="_blank"
+                 class="btn btn-accent2 btn-sm btn-icon" @click.stop
+                 title="Otwórz wynik">↗</a>
+            </div>
+          </template>
+        </div>
+
+        <!-- Paginacja -->
+        <div class="pagination" x-show="pageCount > 1" style="margin-top:1rem">
+          <button @click="page > 1 && page--">&laquo;</button>
+          <template x-for="p in pages()" :key="p">
+            <button :class="{active: page === p}" x-text="p" @click="page = p"></button>
+          </template>
+          <button @click="page < pageCount && page++">&raquo;</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- TAB: TREND -->
+    <template x-if="tab==='trend'">
+      <div>
+        <!-- Filtry -->
+        <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
+          <div class="form-field">
+            <label>Postać</label>
+            <select class="select" style="min-width:200px" x-model="trendChar" @change="buildTrend()">
+              <template x-for="ch in trendChars" :key="ch">
+                <option :value="ch" x-text="ch"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Fight style</label>
+            <select class="select" style="min-width:160px" x-model="trendStyle" @change="buildTrend()">
+              <option>Patchwerk</option>
+              <option>HecticAddCleave</option>
+              <option>LightMovement</option>
+              <option>HeavyMovement</option>
+              <option>CastingPatchwerk</option>
+            </select>
+          </div>
+        </div>
+
+        <div x-show="trendPoints.length === 0" style="text-align:center;padding:3rem;color:var(--muted)">
+          Brak danych dla wybranych filtrów.
+        </div>
+
+        <template x-if="trendPoints.length > 0">
+          <div>
+            <canvas id="trendCanvas" height="300" style="max-width:860px;width:100%"></canvas>
+            <div style="margin-top:1.2rem;overflow-x:auto">
+              <table class="trend-table">
+                <thead>
+                  <tr><th>#</th><th>Data</th><th>DPS</th><th>Zmiana</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
+                    <tr>
+                      <td class="trend-neutral" x-text="i + 1"></td>
+                      <td x-text="formatTime(pt.created_at)"></td>
+                      <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
+                      <td>
+                        <span x-show="i > 0"
+                          :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
+                          x-text="(pt.dps >= trendPoints[i-1].dps ? '▲ +' : '▼ ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
+                        ></span>
+                        <span x-show="i === 0" class="trend-neutral">—</span>
+                      </td>
+                      <td>
+                        <a :href="'/result/' + pt.job_id" target="_blank"
+                           class="btn btn-accent2 btn-sm" @click.stop>↗</a>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
 
   </div>
 </div>
 
+<script src="/utils.js"></script>
 <script>
 function profilePage() {
   return {
-    loading: true,
-    error:   null,
-    char:    null,
-    history: [],
-    total:   0,
-    page:    1,
-    pages:   1,
+    loading:     true,
+    notFound:    false,
+    profile:     { name: '', realm: '', history: [], best_dps: 0, sim_count: 0 },
+    tab:         'history',
+    page:        1,
+    perPage:     20,
+    pageTitle:   'Profil — SimCraft Web',
+    ogDesc:      '',
 
-    get pageList() {
-      const list = [];
-      const start = Math.max(1, this.page - 2);
-      const end   = Math.min(this.pages, this.page + 2);
-      for (let i = start; i <= end; i++) list.push(i);
-      return list;
+    // Trend
+    trendChar:   '',
+    trendStyle:  'Patchwerk',
+    trendChars:  [],
+    trendPoints: [],
+    trendChart:  null,
+
+    get pagedHistory() {
+      const start = (this.page - 1) * this.perPage;
+      return (this.profile.history || []).slice(start, start + this.perPage);
+    },
+    get pageCount() {
+      return Math.max(1, Math.ceil((this.profile.history || []).length / this.perPage));
+    },
+    pages() {
+      return Array.from({ length: this.pageCount }, (_, i) => i + 1);
     },
 
     async init() {
-      const parts = window.location.pathname.split('/').filter(Boolean);
+      const parts  = window.location.pathname.split('/');
       // /u/{realm}/{name}
-      if (parts.length < 3 || parts[0] !== 'u') {
-        this.error = 404;
-        this.loading = false;
-        return;
-      }
-      const realm = parts[1];
-      const name  = parts[2];
-      await this.loadPage(1, realm, name);
-    },
+      const realm  = decodeURIComponent(parts[2] || '');
+      const name   = decodeURIComponent(parts[3] || '');
+      if (!realm || !name) { this.notFound = true; this.loading = false; return; }
 
-    async loadPage(p, realm, name) {
-      this.loading = true;
-      const parts = window.location.pathname.split('/').filter(Boolean);
-      const r = realm || parts[1];
-      const n = name  || parts[2];
       try {
-        const resp = await fetch(`/api/profile/${r}/${n}?page=${p}&limit=20`);
-        if (resp.status === 404) { this.error = 404; return; }
-        if (resp.status === 403) { this.error = 403; return; }
-        const data = await resp.json();
-        this.char    = data.character;
-        this.history = data.history;
-        this.total   = data.total;
-        this.page    = data.page;
-        this.pages   = data.pages;
-        this.error   = null;
+        const res = await fetch(`/api/profile/${encodeURIComponent(realm)}/${encodeURIComponent(name)}`);
+        if (!res.ok) { this.notFound = true; this.loading = false; return; }
+        this.profile = await res.json();
+        this.pageTitle = `${this.profile.name} — SimCraft Web`;
+        this.ogDesc    = `Best DPS: ${this.formatDps(this.profile.best_dps)} · ${this.profile.sim_count} symulacji`;
 
-        // Aktualizuj title
-        if (this.char) document.title = this.char.name + ' — SimCraft Web';
-      } catch(e) {
-        this.error = 500;
+        // Zbierz unikalne postaci do trend selecta
+        const chars = [...new Set((this.profile.history || []).map(h => h.character_name))];
+        this.trendChars = chars;
+        this.trendChar  = chars[0] || '';
+        this.buildTrend();
+      } catch {
+        this.notFound = true;
       } finally {
         this.loading = false;
       }
     },
 
-    formatDps(v) {
-      if (!v) return '0';
-      if (v >= 1000000) return (v/1000000).toFixed(2) + 'M';
-      if (v >= 1000)    return (v/1000).toFixed(1) + 'k';
-      return Math.round(v).toString();
+    buildTrend() {
+      this.trendPoints = (this.profile.history || [])
+        .filter(h => h.character_name === this.trendChar &&
+                     h.fight_style    === this.trendStyle)
+        .slice()
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+      this.$nextTick(() => this.renderChart());
     },
 
-    formatTime(iso) {
-      if (!iso) return '';
-      return new Date(iso).toLocaleString('pl-PL', { dateStyle:'short', timeStyle:'short' });
+    renderChart() {
+      if (typeof Chart === 'undefined') return;
+      const canvas = document.getElementById('trendCanvas');
+      if (!canvas) return;
+      if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
+      if (!this.trendPoints.length) return;
+
+      const labels = this.trendPoints.map(p => this.formatTime(p.created_at));
+      const data   = this.trendPoints.map(p => p.dps);
+
+      this.trendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'DPS',
+            data,
+            borderColor: '#c89a3c',
+            backgroundColor: 'rgba(200,154,60,.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#c89a3c',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#8888aa' }, grid: { color: '#2e3040' } },
+            y: { ticks: { color: '#8888aa', callback: v => this.formatDps(v) }, grid: { color: '#2e3040' } }
+          }
+        }
+      });
     },
 
-    classColor(cls) {
-      if (typeof window.classColor === 'function') return window.classColor(cls);
-      return 'var(--text)';
-    },
+    formatDps(v)  { return typeof window.formatDps  === 'function' ? window.formatDps(v)  : (v ? Math.round(v).toLocaleString() : '—'); },
+    formatTime(v) { return typeof window.formatTime === 'function' ? window.formatTime(v) : (v ? new Date(v).toLocaleDateString('pl-PL') : ''); },
+    classColor(c) { return typeof window.classColor  === 'function' ? window.classColor(c)  : '#e8e8f0'; },
   };
 }
 </script>
+
+<!-- Chart.js CDN dla trend chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </body>
 </html>

@@ -1,106 +1,33 @@
-import httpx
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import text
-from database import SessionLocal, UserModel, HistoryEntryModel, get_bnet_id_by_session
-from auth import get_blizzard_token
+from database import SessionLocal, UserModel, HistoryEntryModel
+from sqlalchemy import func
 
 router = APIRouter()
 
-_REGION_HOSTS = {
-    "eu": "eu.api.blizzard.com",
-    "us": "us.api.blizzard.com",
-    "kr": "kr.api.blizzard.com",
-    "tw": "tw.api.blizzard.com",
-}
-_DEFAULT_REGION = "eu"
-
-
-def _blizzard_base(region: str) -> str:
-    host = _REGION_HOSTS.get(region.lower(), _REGION_HOSTS[_DEFAULT_REGION])
-    return f"https://{host}"
-
-
-def _namespace(region: str) -> str:
-    r = region.lower() if region.lower() in _REGION_HOSTS else _DEFAULT_REGION
-    return f"profile-{r}"
-
-
-async def _fetch_avatar(token: str, realm_slug: str, name: str, region: str = _DEFAULT_REGION) -> str | None:
-    base = _blizzard_base(region)
-    ns   = _namespace(region)
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{base}/profile/wow/character/{realm_slug}/{name.lower()}/character-media"
-                f"?namespace={ns}&locale=en_GB",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                for a in resp.json().get("assets", []):
-                    if a.get("key") == "avatar":
-                        return a.get("value")
-    except Exception:
-        pass
-    return None
-
-
-async def _fetch_char_info(token: str, realm_slug: str, name: str, region: str = _DEFAULT_REGION) -> dict:
-    base = _blizzard_base(region)
-    ns   = _namespace(region)
-    result = {"class": "", "spec": "", "level": 0, "realm": ""}
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{base}/profile/wow/character/{realm_slug}/{name.lower()}"
-                f"?namespace={ns}&locale=en_GB",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                result["class"]  = data.get("character_class", {}).get("name", "")
-                result["spec"]   = data.get("active_spec", {}).get("name", "")
-                result["level"]  = data.get("level", 0)
-                result["realm"]  = data.get("realm", {}).get("name", "")
-    except Exception:
-        pass
-    return result
-
 
 @router.get("/api/profile/{realm}/{name}")
-async def get_user_profile(
-    realm: str,
-    name: str,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=20, ge=1, le=50),
-    region: str = Query(default=_DEFAULT_REGION),
-):
-    realm_slug = realm.lower()
-    name_norm  = name.lower()
-
-    # Znajdź usera po main_character
+def get_public_profile(realm: str, name: str):
+    """
+    Publiczny profil użytkownika po nazwie głównej postaci i realmie.
+    Zwraca dane profilu + historię symulacji tej postaci.
+    """
     with SessionLocal() as db:
         user = db.query(UserModel).filter(
-            text("LOWER(main_character_name) = :name AND LOWER(main_character_realm) = :realm"),
-        ).params(name=name_norm, realm=realm_slug).first()
+            func.lower(UserModel.main_character_name)  == name.lower(),
+            func.lower(UserModel.main_character_realm) == realm.lower(),
+        ).first()
 
         if not user:
-            raise HTTPException(404, "Profile not found")
+            raise HTTPException(404, "Profil nie istnieje lub jest prywatny.")
 
         if user.profile_private:
-            raise HTTPException(403, "Profile is private")
+            raise HTTPException(404, "Profil nie istnieje lub jest prywatny.")
 
-        offset = (page - 1) * limit
-        total = db.query(HistoryEntryModel).filter(
-            HistoryEntryModel.user_id == user.bnet_id,
-            HistoryEntryModel.is_private == False,
-        ).count()
-
+        # Historia symulacji tej postaci (tylko publiczne)
         rows = db.query(HistoryEntryModel).filter(
             HistoryEntryModel.user_id == user.bnet_id,
             HistoryEntryModel.is_private == False,
-        ).order_by(HistoryEntryModel.created_at.desc()).offset(offset).limit(limit).all()
+        ).order_by(HistoryEntryModel.created_at.desc()).limit(50).all()
 
         history = [
             {
@@ -116,27 +43,13 @@ async def get_user_profile(
             for r in rows
         ]
 
-    # Pobierz awatar i info o postaci z Blizzard
-    try:
-        token = await get_blizzard_token()
-        avatar    = await _fetch_avatar(token, realm_slug, user.main_character_name, region)
-        char_info = await _fetch_char_info(token, realm_slug, user.main_character_name, region)
-    except Exception:
-        avatar    = None
-        char_info = {"class": "", "spec": "", "level": 0, "realm": ""}
+        # Najlepszy DPS na postaci
+        best = max((r["dps"] for r in history), default=0.0)
 
-    return {
-        "character": {
-            "name":       user.main_character_name,
-            "realm":      char_info["realm"] or realm,
-            "realm_slug": realm_slug,
-            "class":      char_info["class"],
-            "spec":       char_info["spec"],
-            "level":      char_info["level"],
-            "avatar":     avatar,
-        },
-        "history": history,
-        "total":   total,
-        "page":    page,
-        "pages":   max(1, -(-total // limit)),
-    }
+        return {
+            "name":            user.main_character_name,
+            "realm":           user.main_character_realm,
+            "history":         history,
+            "best_dps":        best,
+            "sim_count":       len(history),
+        }
