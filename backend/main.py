@@ -15,6 +15,7 @@ import history
 import rankings
 import reactions
 import characters
+import profiles
 
 app = FastAPI()
 
@@ -40,6 +41,7 @@ app.include_router(history.router)
 app.include_router(rankings.router)
 app.include_router(reactions.router)
 app.include_router(characters.router)
+app.include_router(profiles.router)
 
 # Publiczny endpoint wygladu — bez autoryzacji, tylko odczyt
 @app.get("/api/appearance")
@@ -54,5 +56,9 @@ async def page_rankings():
 @app.get("/result/{job_id}")
 async def page_result(job_id: str):
     return FileResponse("/app/frontend/result.html")
+
+@app.get("/u/{realm}/{name}")
+async def page_user_profile(realm: str, name: str):
+    return FileResponse("/app/frontend/profile.html")
 
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")
