@@ -35,7 +35,7 @@
   <script>var whTooltips = {colorLinks: false, iconizeLinks: false, renameLinks: false};</script>
   <script src="https://wow.zamimg.com/js/tooltips.js"></script>
 
-  <link rel="stylesheet" href="/style.css?v=9"/>
+  <link rel="stylesheet" href="/style.css?v=10"/>
   <script src="/i18n.js?v=1"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -187,108 +187,8 @@
     </div>
   </template>
 
-<div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
+  <div id="item-tooltip" class="item-tooltip" style="display:none;"></div>
 
-<style>
-.settings-view { padding: 1rem; }
-.settings-section {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-.settings-section h3 {
-  margin: 0 0 .25rem;
-  font-size: 1rem;
-  color: var(--text);
-}
-.settings-hint {
-  font-size: .82rem;
-  color: var(--muted);
-  margin: 0 0 1rem;
-}
-.settings-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: .75rem;
-}
-.settings-row label {
-  width: 160px;
-  min-width: 140px;
-  font-size: .88rem;
-  color: var(--muted);
-  padding-top: .55rem;
-}
-.settings-input {
-  flex: 1;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: .5rem .75rem;
-  font-size: .9rem;
-  outline: none;
-  transition: border-color .15s;
-}
-.settings-input:focus { border-color: #f4a01c; }
-.settings-input option { background: var(--bg); color: var(--text); }
-.settings-toggle-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-.settings-toggle-label {
-  font-size: .9rem;
-  color: var(--text);
-  font-weight: 500;
-}
-.toggle-btn {
-  position: relative;
-  width: 48px;
-  height: 26px;
-  border-radius: 13px;
-  background: #333;
-  border: none;
-  cursor: pointer;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-.toggle-btn.active { background: #f4a01c; }
-.toggle-knob {
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform .2s;
-  pointer-events: none;
-}
-.toggle-btn.active .toggle-knob { transform: translateX(22px); }
-.settings-private-banner {
-  margin-top: .75rem;
-  background: rgba(244,160,28,.08);
-  border: 1px solid rgba(244,160,28,.25);
-  border-radius: 8px;
-  padding: .6rem 1rem;
-  font-size: .83rem;
-  color: #f4a01c;
-  display: flex;
-  gap: .5rem;
-}
-.settings-error-banner {
-  background: rgba(229,85,85,.1);
-  border: 1px solid rgba(229,85,85,.3);
-  border-radius: 8px;
-  padding: .75rem 1rem;
-  color: #e55;
-  font-size: .88rem;
-  margin-bottom: 1rem;
-}
-.settings-ok { color: #4c4; font-size: .88rem; }
-.settings-err { color: #e55; font-size: .88rem; }
-</style>
-
+</div>
 </body>
 </html>
