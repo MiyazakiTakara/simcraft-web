@@ -24,29 +24,13 @@
       <p class="settings-hint" x-text="$store.i18n.t('settings.section_char_hint')"></p>
       <div class="settings-row">
         <label x-text="$store.i18n.t('settings.char_name')"></label>
-        <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
+        <div style="flex:1">
           <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input">
             <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
             <template x-for="ch in characters" :key="ch.id">
               <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
             </template>
           </select>
-          <div style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:.5rem">
-            <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer">
-              <input type="checkbox" x-model="form_manualEntry" @change="onManualToggle()" />
-              <span x-text="$store.i18n.t('settings.manual_entry')"></span>
-            </label>
-          </div>
-          <template x-if="form_manualEntry">
-            <div style="display:flex;flex-direction:column;gap:.5rem">
-              <input type="text" x-model="form_main_character_name"
-                     :placeholder="$store.i18n.t('settings.char_name_placeholder')"
-                     class="settings-input" />
-              <input type="text" x-model="form_main_character_realm"
-                     :placeholder="$store.i18n.t('settings.char_realm_placeholder')"
-                     class="settings-input" />
-            </div>
-          </template>
         </div>
       </div>
     </section>
