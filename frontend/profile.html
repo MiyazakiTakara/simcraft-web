@@ -47,12 +47,12 @@
     <div x-show="!loading && !notFound">
 
       <!-- Hero -->
-      <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)"
               x-text="profile.name || 'Nieznana postać'"></h1>
           <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm || ''"></div>
-          <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
+          <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
             <div>
               <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Best DPS</div>
               <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)"
@@ -62,7 +62,22 @@
               <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Symulacje</div>
               <div style="font-size:var(--text-2xl);font-weight:800" x-text="profile.sim_count"></div>
             </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Ulubieni</div>
+              <div style="font-size:var(--text-2xl);font-weight:800;color:var(--danger)" x-text="(profile.favorites_count || 0) + ' ❤️'"></div>
+            </div>
           </div>
+        </div>
+
+        <!-- Przycisk ulubione -->
+        <div x-show="sessionId && !isOwnProfile" style="padding-top:.5rem">
+          <button
+            class="btn btn-lg"
+            :class="isFavorite ? 'btn-danger' : 'btn-ghost'"
+            @click="toggleFavorite()"
+            :disabled="favLoading"
+            x-text="isFavorite ? '❤️ Ulubiony' : '🤍 Dodaj do ulubionych'"
+          ></button>
         </div>
       </div>
 
@@ -113,8 +128,6 @@
       <!-- TAB: TREND -->
       <template x-if="tab==='trend'">
         <div>
-
-          <!-- Filtry -->
           <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
             <div class="form-field">
               <label>Postać</label>
@@ -142,13 +155,9 @@
 
           <template x-if="trendPoints.length > 0">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
-
-              <!-- Wykres -->
               <div style="min-width:0">
                 <canvas id="trendCanvas" style="width:100%;height:260px"></canvas>
               </div>
-
-              <!-- Tabela -->
               <div style="min-width:0;overflow-x:auto;max-height:320px;overflow-y:auto">
                 <table class="trend-table" style="width:100%">
                   <thead>
@@ -176,7 +185,6 @@
                   </tbody>
                 </table>
               </div>
-
             </div>
           </template>
         </div>
@@ -193,7 +201,7 @@ function profilePage() {
   return {
     loading:     true,
     notFound:    false,
-    profile:     { name: '', realm: '', history: [], best_dps: 0, sim_count: 0 },
+    profile:     { name: '', realm: '', history: [], best_dps: 0, sim_count: 0, favorites_count: 0 },
     tab:         'history',
     page:        1,
     perPage:     20,
@@ -204,6 +212,14 @@ function profilePage() {
     trendChars:  [],
     trendPoints: [],
     trendChart:  null,
+    sessionId:   localStorage.getItem('simcraft_session'),
+    bnetId:      null,
+    isFavorite:  false,
+    favLoading:  false,
+
+    get isOwnProfile() {
+      return this.bnetId && this.profile.bnet_id && this.bnetId === this.profile.bnet_id;
+    },
 
     CLASS_COLORS: {
       'Death Knight':'#C41E3A','Demon Hunter':'#A330C9','Druid':'#FF7C0A',
@@ -225,11 +241,19 @@ function profilePage() {
 
     async init() {
       const parts  = window.location.pathname.split('/');
-      const bnetId = decodeURIComponent(parts[2] || '');
-      if (!bnetId) { this.notFound = true; this.loading = false; return; }
+      const targetBnetId = decodeURIComponent(parts[2] || '');
+      if (!targetBnetId) { this.notFound = true; this.loading = false; return; }
+
+      // Pobierz własne bnet_id jeśli zalogowany
+      if (this.sessionId) {
+        try {
+          const r = await fetch(`/auth/session/info?session=${encodeURIComponent(this.sessionId)}`);
+          if (r.ok) { const d = await r.json(); this.bnetId = d.bnet_id || null; }
+        } catch(e) {}
+      }
 
       try {
-        const res = await fetch(`/api/profile/${encodeURIComponent(bnetId)}`);
+        const res = await fetch(`/api/profile/${encodeURIComponent(targetBnetId)}`);
         if (!res.ok) { this.notFound = true; this.loading = false; return; }
         this.profile   = await res.json();
         this.pageTitle = `${this.profile.name || 'Profil'} — SimCraft Web`;
@@ -239,11 +263,34 @@ function profilePage() {
         this.trendChars = chars;
         this.trendChar  = chars[0] || '';
         this.buildTrend();
+
+        // Sprawdź czy w ulubionych (tylko zalogowani, nie własny profil)
+        if (this.sessionId && !this.isOwnProfile) {
+          try {
+            const fr = await fetch(`/api/favorites/check/${encodeURIComponent(targetBnetId)}?session=${encodeURIComponent(this.sessionId)}`);
+            if (fr.ok) { const fd = await fr.json(); this.isFavorite = fd.is_favorite; }
+          } catch(e) {}
+        }
       } catch {
         this.notFound = true;
       } finally {
         this.loading = false;
       }
+    },
+
+    async toggleFavorite() {
+      if (!this.sessionId || this.favLoading) return;
+      this.favLoading = true;
+      const targetBnetId = decodeURIComponent(window.location.pathname.split('/')[2] || '');
+      const method = this.isFavorite ? 'DELETE' : 'POST';
+      try {
+        const res = await fetch(`/api/favorites/${encodeURIComponent(targetBnetId)}?session=${encodeURIComponent(this.sessionId)}`, { method });
+        if (res.ok) {
+          this.isFavorite = !this.isFavorite;
+          this.profile.favorites_count = (this.profile.favorites_count || 0) + (this.isFavorite ? 1 : -1);
+        }
+      } catch(e) {}
+      finally { this.favLoading = false; }
     },
 
     buildTrend() {

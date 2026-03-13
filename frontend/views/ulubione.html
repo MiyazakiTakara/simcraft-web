@@ -1,0 +1,90 @@
+<div x-data="favoritesView()" x-init="init()" class="view-enter">
+
+  <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
+    <span class="spinner" style="width:1.5rem;height:1.5rem"></span>
+  </div>
+
+  <div x-show="!loading && !sessionId" style="max-width:480px;margin:4rem auto;text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:1rem">🔒</div>
+    <h2 style="margin-bottom:.5rem">Musisz się zalogować</h2>
+    <p style="color:var(--muted)">Ulubione profile są dostępne tylko dla zalogowanych użytkowników.</p>
+    <a href="/auth/login" class="btn btn-primary btn-lg" style="margin-top:1.5rem">Zaloguj przez Battle.net</a>
+  </div>
+
+  <div x-show="!loading && sessionId">
+    <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:1.2rem;font-weight:700">⭐ Ulubione profile</h2>
+      <span style="font-size:.85rem;color:var(--muted)" x-text="favorites.length + ' profili'"></span>
+    </div>
+
+    <div x-show="favorites.length === 0" style="text-align:center;padding:3rem;color:var(--muted)">
+      <div style="font-size:2.5rem;margin-bottom:.75rem">🤔</div>
+      <p>Nie masz jeszcze żadnych ulubionych profilów.<br>Wejdź na czyjegoś profil i kliknij ❤️.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem">
+      <template x-for="fav in favorites" :key="fav.bnet_id">
+        <div class="card card-interactive" @click="window.open('/u/' + fav.bnet_id, '_blank')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+            <div style="min-width:0">
+              <div style="font-weight:700;font-size:var(--text-base);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                   x-text="fav.name || 'Nieznana postać'"></div>
+              <div style="font-size:var(--text-xs);color:var(--muted)" x-text="fav.realm || ''"></div>
+            </div>
+            <button
+              class="btn btn-sm btn-danger"
+              @click.stop="removeFavorite(fav.bnet_id)"
+              title="Usuń z ulubionych"
+            >❤️</button>
+          </div>
+          <div style="margin-top:.75rem;display:flex;gap:1.5rem">
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Ulubieni</div>
+              <div style="font-weight:700;color:var(--accent)" x-text="fav.favorites_count + ' ❤️'"></div>
+            </div>
+          </div>
+          <div style="margin-top:.5rem;font-size:var(--text-xs);color:var(--muted)"
+               x-text="'Dodano ' + formatTime(fav.added_at)"></div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function favoritesView() {
+  return {
+    loading: true,
+    sessionId: localStorage.getItem('simcraft_session'),
+    favorites: [],
+
+    async init() {
+      if (!this.sessionId) { this.loading = false; return; }
+      try {
+        const res = await fetch(`/api/favorites?session=${encodeURIComponent(this.sessionId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.favorites = data.favorites || [];
+        }
+      } catch(e) {}
+      finally { this.loading = false; }
+    },
+
+    async removeFavorite(targetBnetId) {
+      if (!this.sessionId) return;
+      try {
+        await fetch(`/api/favorites/${encodeURIComponent(targetBnetId)}?session=${encodeURIComponent(this.sessionId)}`, {
+          method: 'DELETE',
+        });
+        this.favorites = this.favorites.filter(f => f.bnet_id !== targetBnetId);
+      } catch(e) {}
+    },
+
+    formatTime(v) {
+      if (!v) return '';
+      return new Date(v).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric' });
+    },
+  };
+}
+</script>
