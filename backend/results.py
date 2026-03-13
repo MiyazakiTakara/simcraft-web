@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+import re
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 from simulation import jobs
@@ -176,6 +177,70 @@ def spell_display_name(ab: dict) -> str:
     return ab.get("name", "?").replace("_", " ").title()
 
 
+def spell_icon_slug(ab: dict) -> str:
+    """Zwraca slug ikonki do URL wow.zamimg.com, np. 'spell_fire_flamebolt'."""
+    # simc eksportuje pole 'spell' z 'name' (display) i 'id',
+    # a ikonka trafia do pola 'type' lub wylicza się ze slug nazwy
+    icon = ab.get("spell_icon", "") or ab.get("icon", "")
+    if icon:
+        return icon.lower().replace(" ", "_")
+    # fallback: slug z nazwy ability
+    raw = ab.get("name", "") or ab.get("spell_name", "")
+    slug = re.sub(r"[^a-z0-9_]", "_", raw.lower()).strip("_")
+    return slug or "inv_misc_questionmark"
+
+
+def _parse_buffs(cd: dict) -> list:
+    """Parsuje buffs/debuffs z collected_data, zwraca listę {name, uptime, icon, kind}."""
+    out = []
+    for section, kind in (("buffs", "buff"), ("debuffs", "debuff")):
+        for b in cd.get(section, []):
+            if not isinstance(b, dict):
+                continue
+            uptime = safe_float(b.get("uptime", b.get("start_count", -1)))
+            # uptime jest 0.0–1.0; pomijamy 0% i 100% bo nieinteresujące
+            if uptime <= 0.0 or uptime >= 1.0:
+                continue
+            name = b.get("spell_name") or b.get("name", "?")
+            name = name.replace("_", " ").title()
+            icon = (b.get("spell_icon") or b.get("icon") or "").lower().replace(" ", "_")
+            if not icon:
+                icon = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "inv_misc_questionmark"
+            out.append({
+                "name":   name,
+                "uptime": round(uptime * 100, 1),  # -> procenty
+                "icon":   icon,
+                "kind":   kind,
+            })
+    out.sort(key=lambda x: x["uptime"], reverse=True)
+    return out[:30]
+
+
+def _parse_timeline(cd: dict, fight_length: float) -> list:
+    """Parsuje action_sequence -> lista eventów timeline."""
+    seq = cd.get("action_sequence", [])
+    if not isinstance(seq, list) or not seq:
+        return []
+    out = []
+    for ev in seq[:200]:  # max 200 eventów
+        if not isinstance(ev, dict):
+            continue
+        time  = safe_float(ev.get("time", 0))
+        name  = ev.get("spell_name") or ev.get("name", "?")
+        name  = name.replace("_", " ").title()
+        icon  = (ev.get("spell_icon") or ev.get("icon") or "").lower()
+        if not icon:
+            icon = re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_") or "inv_misc_questionmark"
+        etype = ev.get("type", "cast").lower()
+        out.append({
+            "time":  round(time, 2),
+            "name":  name,
+            "icon":  icon,
+            "type":  etype,
+        })
+    return out
+
+
 def parse_results(json_path: str):
     try:
         with open(json_path) as f:
@@ -227,12 +292,14 @@ def parse_results(json_path: str):
             name                        = spell_display_name(ab)
             crit_pct, miss_pct, avg_hit = _weighted_stats(ab)
             executes, is_channel        = ability_count(ab)
+            icon                        = spell_icon_slug(ab)
 
             if avg_hit == 0 and executes > 0 and tot_dmg > 0:
                 avg_hit = round(tot_dmg / executes)
 
             spells.append({
                 "name":       name,
+                "icon":       icon,
                 "dps":        round(dps_v, 2),
                 "total_dmg":  round(tot_dmg),
                 "crit_pct":   crit_pct,
@@ -252,7 +319,8 @@ def parse_results(json_path: str):
                 spell_counts[sname] = spell_counts.get(sname, 0) + 1
             for sname, count in spell_counts.items():
                 spells.append({
-                    "name": sname, "dps": 0.0, "total_dmg": 0,
+                    "name": sname, "icon": "inv_misc_questionmark",
+                    "dps": 0.0, "total_dmg": 0,
                     "crit_pct": 0.0, "executes": count, "count": count,
                     "avg_hit": 0, "miss_pct": 0.0, "is_channel": False,
                     "dps_pct": 0.0, "dmg_pct": 0.0,
@@ -272,12 +340,16 @@ def parse_results(json_path: str):
         other_dmg  = sum(s["total_dmg"] for s in spells[25:])
         if other_dps > 0 or other_dmg > 0:
             top_spells.append({
-                "name": "Other", "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
+                "name": "Other", "icon": "inv_misc_questionmark",
+                "dps": round(other_dps, 2), "total_dmg": round(other_dmg),
                 "crit_pct": 0, "executes": 0, "count": 0, "avg_hit": 0, "miss_pct": 0.0,
                 "is_channel": False,
                 "dps_pct": round(other_dps / total_spell_dps * 100, 1) if total_spell_dps > 0 else 0.0,
                 "dmg_pct": round(other_dmg / total_spell_dmg * 100, 1) if total_spell_dmg > 0 else 0.0,
             })
+
+        buffs    = _parse_buffs(cd)
+        timeline = _parse_timeline(cd, fight_length)
 
         return {
             "name":         player.get("name", "?"),
@@ -286,6 +358,8 @@ def parse_results(json_path: str):
             "fight_length": round(fight_length, 1),
             "stats":        stats,
             "spells":       top_spells,
+            "buffs":        buffs,
+            "timeline":     timeline,
         }
 
     except Exception as e:
@@ -424,12 +498,12 @@ async def get_result_meta(job_id: str):
     if not entry:
         return {}
     return {
-        "character_name": entry.character_name,
+        "character_name":  entry.character_name,
         "character_class": entry.character_class,
-        "character_spec": entry.character_spec,
+        "character_spec":  entry.character_spec,
         "character_realm": entry.character_realm_slug,
-        "fight_style": entry.fight_style,
-        "role": entry.role,
+        "fight_style":     entry.fight_style,
+        "role":            entry.role,
     }
 
 
@@ -513,6 +587,7 @@ async def get_debug_spell(job_id: str):
             cnt, is_ch = ability_count(ab)
             out.append({
                 "name":       spell_display_name(ab),
+                "icon":       spell_icon_slug(ab),
                 "count":      cnt,
                 "is_channel": is_ch,
                 "crit_pct":   crit_pct,
@@ -560,6 +635,8 @@ async def get_result_debug(job_id: str):
             "stats_len":           len(stats_raw) if isinstance(stats_raw, (list, dict)) else None,
             "first_3_abilities":   strip_timeseries(stats_raw[:3] if isinstance(stats_raw, list) else stats_raw),
             "collected_data_keys": list(cd.keys()),
+            "buffs_sample":        cd.get("buffs", [])[:3],
+            "timeline_sample":     cd.get("action_sequence", [])[:3],
         }
     except Exception as e:
         import traceback
