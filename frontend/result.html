@@ -31,7 +31,18 @@
     .result-footer { margin-top:1.2rem; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; font-size:.82rem; color:var(--muted); }
     .result-footer a { color:var(--muted); }
     .spinner-wrap { display:flex; justify-content:center; align-items:center; padding:4rem; }
+
+    /* Spell row */
     .spell-row { position:relative; }
+    .spell-icon {
+      width:22px; height:22px; border-radius:4px; flex-shrink:0;
+      object-fit:cover; border:1px solid var(--border); background:var(--surface);
+      vertical-align:middle;
+    }
+    .spell-icon-placeholder {
+      width:22px; height:22px; border-radius:4px; flex-shrink:0;
+      background:var(--border); display:inline-block; vertical-align:middle;
+    }
     .spell-tooltip {
       display:none;
       position:absolute; top:calc(100% + 6px); right:0; z-index:99999;
@@ -46,50 +57,55 @@
     .spell-tooltip-label { color:var(--muted); }
     .spell-tooltip-val   { font-weight:600; color:var(--text); }
 
+    /* Buff uptime */
+    .buffs-section { margin-top:1.2rem; }
+    .buff-list { display:flex; flex-direction:column; gap:.45rem; margin-top:.5rem; }
+    .buff-row { display:grid; grid-template-columns: 22px 1fr auto; gap:.5rem; align-items:center; }
+    .buff-bar-bg { height:8px; border-radius:4px; background:var(--border); overflow:hidden; }
+    .buff-bar-fill { height:100%; border-radius:4px; background:var(--accent); transition:width .3s; }
+    .buff-bar-fill.debuff { background:#e74c3c; }
+    .buff-name { font-size:.82rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .buff-pct  { font-size:.78rem; color:var(--muted); white-space:nowrap; }
+    .buff-row-wrap { display:grid; grid-template-columns: 22px 1fr; gap:.5rem; align-items:center; }
+
+    /* Timeline */
+    .timeline-section { margin-top:1.2rem; }
+    .timeline-toggle {
+      display:flex; align-items:center; gap:.5rem; cursor:pointer;
+      font-size:.9rem; color:var(--muted); user-select:none;
+      padding:.4rem 0;
+    }
+    .timeline-toggle:hover { color:var(--text); }
+    .timeline-table-wrap { overflow-x:auto; margin-top:.5rem; max-height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
+    .timeline-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .timeline-table th { background:var(--surface); color:var(--muted); font-weight:600; padding:.45rem .7rem; text-align:left; position:sticky; top:0; z-index:1; }
+    .timeline-table td { padding:.38rem .7rem; border-top:1px solid var(--border); vertical-align:middle; }
+    .timeline-table tr:hover td { background:var(--card); }
+    .ev-cast   { color:var(--text); }
+    .ev-proc   { color:var(--accent); }
+    .ev-buff   { color:#7fc97f; }
+    .ev-debuff { color:#e74c3c; }
+    .ev-other  { color:var(--muted); }
+    .ev-icon { width:18px; height:18px; border-radius:3px; object-fit:cover; vertical-align:middle; border:1px solid var(--border); background:var(--surface); }
+
     /* Reactions */
     .reactions-bar {
-      display: flex;
-      gap: .5rem;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-top: 1.2rem;
-      padding: .9rem 1rem;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;
+      margin-top:1.2rem; padding:.9rem 1rem;
+      background:var(--card); border:1px solid var(--border); border-radius:10px;
     }
     .reaction-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: 999px;
-      padding: .3rem .75rem;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: border-color .15s, background .15s, transform .1s;
-      color: var(--text);
-      user-select: none;
+      display:inline-flex; align-items:center; gap:.35rem;
+      background:var(--bg); border:1.5px solid var(--border);
+      border-radius:999px; padding:.3rem .75rem; font-size:1.1rem;
+      cursor:pointer; transition:border-color .15s,background .15s,transform .1s;
+      color:var(--text); user-select:none;
     }
-    .reaction-btn:hover { background: var(--card); transform: scale(1.08); }
-    .reaction-btn.active {
-      border-color: var(--accent);
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-    }
-    .reaction-btn .count {
-      font-size: .78rem;
-      font-weight: 600;
-      color: var(--muted);
-      min-width: .9rem;
-      text-align: center;
-    }
-    .reaction-btn.active .count { color: var(--accent); }
-    .reaction-login-hint {
-      font-size: .78rem;
-      color: var(--muted);
-      margin-left: .3rem;
-    }
+    .reaction-btn:hover { background:var(--card); transform:scale(1.08); }
+    .reaction-btn.active { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 15%,transparent); }
+    .reaction-btn .count { font-size:.78rem; font-weight:600; color:var(--muted); min-width:.9rem; text-align:center; }
+    .reaction-btn.active .count { color:var(--accent); }
+    .reaction-login-hint { font-size:.78rem; color:var(--muted); margin-left:.3rem; }
   </style>
 </head>
 <body>
@@ -124,26 +140,25 @@
 
           <!-- DPS Hero -->
           <div class="result-hero">
-            <div class="dps-value" x-text="'⚔️ ' + formatDps(resultMetric().value)"></div>
+            <div class="dps-value" x-text="'\u2694\ufe0f ' + formatDps(resultMetric().value)"></div>
             <div class="dps-label" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center">
-              <span x-text="$store.i18n.t('result.dps') + ' (±' + formatDps(resultMetric().std) + ')'"></span>
+              <span x-text="$store.i18n.t('result.dps') + ' (\xb1' + formatDps(resultMetric().std) + ')'"></span>
 
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && armoryUrl()">
                 <a
                   :href="armoryUrl()"
-                  target="_blank"
-                  rel="noopener"
-                  :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '.3rem'}"
+                  target="_blank" rel="noopener"
+                  :style="{background:classColor(meta.character_class),color:classTextColor(meta.character_class),padding:'.2rem .7rem',borderRadius:'999px',fontWeight:'700',fontSize:'.85rem',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:'.3rem'}"
                 >
-                  <span x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"></span>
+                  <span x-text="meta.character_name + (meta.character_spec||meta.character_class ? ' \xb7 '+(meta.character_spec?meta.character_spec+' ':'')+(meta.character_class||'') : '')"></span>
                   <span style="font-size:.75rem;opacity:.8">↗</span>
                 </a>
               </template>
 
               <template x-if="meta && meta.character_name && meta.character_name !== 'Addon Export' && !armoryUrl()">
                 <span
-                  :style="{background: classColor(meta.character_class), color: classTextColor(meta.character_class), padding: '.2rem .7rem', borderRadius: '999px', fontWeight: '700', fontSize: '.85rem'}"
-                  x-text="meta.character_name + (meta.character_spec || meta.character_class ? ' · ' + (meta.character_spec ? meta.character_spec + ' ' : '') + (meta.character_class || '') : '')"
+                  :style="{background:classColor(meta.character_class),color:classTextColor(meta.character_class),padding:'.2rem .7rem',borderRadius:'999px',fontWeight:'700',fontSize:'.85rem'}"
+                  x-text="meta.character_name + (meta.character_spec||meta.character_class ? ' \xb7 '+(meta.character_spec?meta.character_spec+' ':'')+(meta.character_class||'') : '')"
                 ></span>
               </template>
 
@@ -157,14 +172,13 @@
           <div class="reactions-bar">
             <template x-for="key in reactionKeys" :key="key">
               <button
-                class="reaction-btn"
-                :class="{active: myReaction === key}"
+                class="reaction-btn" :class="{active:myReaction===key}"
                 @click="react(key)"
-                :title="sessionId ? (myReaction === key ? 'Kliknij aby usunąć' : 'Kliknij aby zareagować') : 'Zaloguj się aby reagować'"
-                :disabled="!sessionId || reactionLoading"
+                :title="sessionId?(myReaction===key?'Kliknij aby usun\u0105\u0107':'Kliknij aby zareagowa\u0107'):'Zaloguj si\u0119 aby reagowa\u0107'"
+                :disabled="!sessionId||reactionLoading"
               >
-                <span x-text="emojiMap[key] || key"></span>
-                <span class="count" x-text="reactionCounts[key] || 0"></span>
+                <span x-text="emojiMap[key]||key"></span>
+                <span class="count" x-text="reactionCounts[key]||0"></span>
               </button>
             </template>
             <span x-show="!sessionId" class="reaction-login-hint">
@@ -177,20 +191,21 @@
             <div>
               <h2 style="margin-bottom:.6rem" x-text="$store.i18n.t('result.stats')"></h2>
               <div class="stat-list">
-                <template x-for="[key, val] in Object.entries(result.stats)" :key="key">
+                <template x-for="[key,val] in Object.entries(result.stats)" :key="key">
                   <div class="stat-row">
                     <span class="stat-name" x-text="formatStatName(key)"></span>
-                    <span class="stat-val"  x-text="val.toLocaleString()"></span>
+                    <span class="stat-val" x-text="val.toLocaleString()"></span>
                   </div>
                 </template>
               </div>
             </div>
+
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
                 <h2 x-text="$store.i18n.t('result.spell_breakdown')"></h2>
                 <div style="display:flex;gap:.3rem">
-                  <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
-                  <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
+                  <button class="tab" :class="{active:spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
+                  <button class="tab" :class="{active:spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
                 </div>
               </div>
               <div class="spell-list">
@@ -198,38 +213,47 @@
                   <div class="spell-row" @mouseenter="hoveredSpell=sp.name" @mouseleave="hoveredSpell=null">
                     <div x-show="hoveredSpell===sp.name" class="spell-tooltip">
                       <div class="spell-tooltip-row">
-                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Ticks' : $store.i18n.t('result.spell_executes')"></span>
-                        <span class="spell-tooltip-val" x-text="sp.count > 0 ? sp.count.toLocaleString() : '—'"></span>
+                        <span class="spell-tooltip-label" x-text="sp.is_channel?'Ticks':$store.i18n.t('result.spell_executes')"></span>
+                        <span class="spell-tooltip-val" x-text="sp.count>0?sp.count.toLocaleString():'\u2014'"></span>
                       </div>
                       <div class="spell-tooltip-row">
-                        <span class="spell-tooltip-label" x-text="sp.is_channel ? 'Avg tick' : $store.i18n.t('result.spell_avg_hit')"></span>
-                        <span class="spell-tooltip-val" x-text="sp.avg_hit > 0 ? formatDmg(sp.avg_hit) : '—'"></span>
+                        <span class="spell-tooltip-label" x-text="sp.is_channel?'Avg tick':$store.i18n.t('result.spell_avg_hit')"></span>
+                        <span class="spell-tooltip-val" x-text="sp.avg_hit>0?formatDmg(sp.avg_hit):'\u2014'"></span>
                       </div>
                       <div class="spell-tooltip-row">
                         <span class="spell-tooltip-label" x-text="$store.i18n.t('result.spell_crit')"></span>
-                        <span class="spell-tooltip-val" x-text="sp.crit_pct > 0 ? sp.crit_pct + '%' : '—'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.crit_pct>0?sp.crit_pct+'%':'\u2014'"></span>
                       </div>
-                      <div class="spell-tooltip-row" x-show="sp.miss_pct > 0">
+                      <div class="spell-tooltip-row" x-show="sp.miss_pct>0">
                         <span class="spell-tooltip-label" x-text="$store.i18n.t('result.spell_miss')"></span>
-                        <span class="spell-tooltip-val" x-text="sp.miss_pct + '%'"></span>
+                        <span class="spell-tooltip-val" x-text="sp.miss_pct+'%'"></span>
                       </div>
                     </div>
-                    <div class="spell-head">
-                      <span x-text="sp.name"></span>
-                      <span style="display:flex;gap:.6rem;align-items:center">
+                    <div class="spell-head" style="display:flex;align-items:center;gap:.5rem">
+                      <!-- Ikonka spella -->
+                      <img
+                        x-show="sp.icon && sp.icon !== 'inv_misc_questionmark'"
+                        class="spell-icon"
+                        :src="'https://wow.zamimg.com/images/wow/icons/medium/'+sp.icon+'.jpg'"
+                        :alt="sp.name"
+                        @error="$el.style.display='none'"
+                        loading="lazy"
+                      />
+                      <span x-text="sp.name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                      <span style="display:flex;gap:.6rem;align-items:center;flex-shrink:0">
                         <span x-show="spellSort==='total_dmg'">
                           <strong x-text="formatDmg(sp.total_dmg)"></strong>
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' ('+sp.dmg_pct+'%)'" ></span>
                         </span>
                         <span x-show="spellSort==='dps'">
                           <strong x-text="formatDps(sp.dps)"></strong> DPS
-                          <span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span>
+                          <span style="color:var(--muted);font-size:.8rem" x-text="' ('+sp.dps_pct+'%)'" ></span>
                         </span>
-                        <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                        <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct+'% crit'"></span>
                       </span>
                     </div>
                     <div class="spell-bar-bg">
-                      <div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div>
+                      <div class="spell-bar-fill" :style="{width:pctBarWidth(sp[spellSort],sortedSpells,spellSort)}"></div>
                     </div>
                   </div>
                 </template>
@@ -237,14 +261,89 @@
             </div>
           </div>
 
+          <!-- Buff Uptime -->
+          <template x-if="result.buffs && result.buffs.length > 0">
+            <div class="buffs-section">
+              <h2 style="margin-bottom:.2rem">⚡ Buff Uptime</h2>
+              <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Buffs and debuffs with partial uptime (0%–100%)</p>
+              <div class="buff-list">
+                <template x-for="b in result.buffs" :key="b.name">
+                  <div>
+                    <div style="display:grid;grid-template-columns:22px 1fr auto;gap:.5rem;align-items:center;margin-bottom:.18rem">
+                      <img
+                        class="spell-icon"
+                        :src="'https://wow.zamimg.com/images/wow/icons/medium/'+b.icon+'.jpg'"
+                        :alt="b.name"
+                        @error="$el.src='/static/icons/default.png';$el.onerror=null"
+                        loading="lazy"
+                      />
+                      <span class="buff-name" :title="b.name" x-text="b.name"></span>
+                      <span class="buff-pct" x-text="b.uptime+'%'"></span>
+                    </div>
+                    <div class="buff-bar-bg">
+                      <div
+                        class="buff-bar-fill"
+                        :class="{debuff: b.kind==='debuff'}"
+                        :style="{width: b.uptime+'%'}"
+                      ></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Action Timeline -->
+          <template x-if="result.timeline && result.timeline.length > 0">
+            <div class="timeline-section">
+              <div class="timeline-toggle" @click="timelineOpen=!timelineOpen">
+                <span x-text="timelineOpen?'\u25bc':'\u25ba'"></span>
+                <span>📜 Action Sequence Log</span>
+                <span style="font-size:.75rem;margin-left:.3rem" x-text="'('+result.timeline.length+' events, sample iteration)'"></span>
+              </div>
+              <template x-if="timelineOpen">
+                <div class="timeline-table-wrap">
+                  <table class="timeline-table">
+                    <thead>
+                      <tr>
+                        <th style="width:3rem">Time</th>
+                        <th style="width:1.5rem"></th>
+                        <th>Ability</th>
+                        <th style="width:4rem">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="(ev,idx) in result.timeline" :key="idx">
+                        <tr>
+                          <td style="color:var(--muted);font-variant-numeric:tabular-nums" x-text="ev.time.toFixed(2)+'s'"></td>
+                          <td>
+                            <img
+                              class="ev-icon"
+                              :src="'https://wow.zamimg.com/images/wow/icons/small/'+ev.icon+'.jpg'"
+                              :alt="ev.name"
+                              @error="$el.style.visibility='hidden'"
+                              loading="lazy"
+                            />
+                          </td>
+                          <td :class="'ev-'+ev.type" x-text="ev.name"></td>
+                          <td style="color:var(--muted);font-size:.78rem;text-transform:capitalize" x-text="ev.type"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+            </div>
+          </template>
+
           <!-- Pie chart -->
           <div class="chart-section">
             <h2>🥧 DPS Pie Chart</h2>
             <img
               class="dps-chart-img"
-              :src="'/api/result/' + jobId + '/dps-chart.png?t=' + ts"
+              :src="'/api/result/'+jobId+'/dps-chart.png?t='+ts"
               alt="DPS Chart"
-              @click="chartModal = $el.src"
+              @click="chartModal=$el.src"
               loading="lazy"
             />
           </div>
@@ -255,27 +354,27 @@
 
   </div>
 
-  <!-- Footer akcji (linki CSV, share) -->
+  <!-- Footer akcji -->
   <div class="result-footer">
-    <a :href="'/api/result/' + jobId + '/json'" target="_blank" x-text="$store.i18n.t('result.raw_json')"></a>
-    <span style="color:var(--border)">·</span>
-    <a :href="'/api/result/' + jobId + '/dps-chart.png'" target="_blank">Chart PNG</a>
-    <span style="color:var(--border)">·</span>
+    <a :href="'/api/result/'+jobId+'/json'" target="_blank" x-text="$store.i18n.t('result.raw_json')"></a>
+    <span style="color:var(--border)">\xb7</span>
+    <a :href="'/api/result/'+jobId+'/dps-chart.png'" target="_blank">Chart PNG</a>
+    <span style="color:var(--border)">\xb7</span>
     <a
-      :href="'/api/result/' + jobId + '/csv'"
+      :href="'/api/result/'+jobId+'/csv'"
       download
       class="btn"
       style="font-size:.75rem;padding:.35rem .8rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:4px;text-decoration:none"
     >📊 Download CSV</a>
-    <span style="color:var(--border)">·</span>
+    <span style="color:var(--border)">\xb7</span>
     <button
       class="btn"
       style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
       @click="copyShare()"
-      x-text="copied ? '✓ ' + $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('result.share_result')"
+      x-text="copied?'\u2713 '+$store.i18n.t('common.copied'):'🔗 '+$store.i18n.t('result.share_result')"
     ></button>
     <a href="/" class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent);color:#000;border:none;border-radius:4px;text-decoration:none"
-      x-text="'⚔️ ' + $store.i18n.t('result.simulate_cta')"
+      x-text="'\u2694\ufe0f '+$store.i18n.t('result.simulate_cta')"
     ></a>
   </div>
 
@@ -297,25 +396,21 @@ function resultPage() {
     copied: false,
     ts: Date.now(),
     hoveredSpell: null,
+    timelineOpen: false,
     sessionId: localStorage.getItem('simcraft_session'),
 
     // Reactions
-    reactionKeys:    ['fire', 'strong', 'sad', 'skull', 'rofl'],
-    emojiMap:        { fire: '🔥', strong: '💪', sad: '😢', skull: '💀', rofl: '🤣' },
-    reactionCounts:  { fire: 0, strong: 0, sad: 0, skull: 0, rofl: 0 },
+    reactionKeys:    ['fire','strong','sad','skull','rofl'],
+    emojiMap:        {fire:'\ud83d\udd25',strong:'\ud83d\udcaa',sad:'\ud83d\ude22',skull:'\ud83d\udc80',rofl:'\ud83e\udd23'},
+    reactionCounts:  {fire:0,strong:0,sad:0,skull:0,rofl:0},
     myReaction:      null,
     reactionLoading: false,
 
-    appearance: {
-      header_title: 'SimCraft Web',
-      hero_title: 'WoW DPS Simulator',
-      emoji: '⚔️',
-    },
+    appearance: { header_title:'SimCraft Web', hero_title:'WoW DPS Simulator', emoji:'\u2694\ufe0f' },
 
     STAT_LABELS: {
-      strength: 'Strength', agility: 'Agility', stamina: 'Stamina',
-      intellect: 'Intellect', crit: 'Critical Strike', haste: 'Haste',
-      mastery: 'Mastery', versatility: 'Versatility',
+      strength:'Strength',agility:'Agility',stamina:'Stamina',intellect:'Intellect',
+      crit:'Critical Strike',haste:'Haste',mastery:'Mastery',versatility:'Versatility',
     },
     CLASS_COLORS: {
       'Death Knight':'#C41E3A','Demon Hunter':'#A330C9','Druid':'#FF7C0A',
@@ -331,7 +426,6 @@ function resultPage() {
         this.loading = false;
         return;
       }
-
       try {
         const [result, meta] = await Promise.all([
           API.getResultJson(this.jobId),
@@ -344,7 +438,6 @@ function resultPage() {
       } finally {
         this.loading = false;
       }
-
       await this.loadReactions();
     },
 
@@ -354,12 +447,10 @@ function resultPage() {
         const res = await fetch(`/api/reactions/${this.jobId}${params}`);
         if (!res.ok) return;
         const data = await res.json();
-        this.reactionCounts = data.counts   || this.reactionCounts;
+        this.reactionCounts = data.counts     || this.reactionCounts;
         this.myReaction     = data.my_reaction || null;
         if (data.emoji_map) this.emojiMap = data.emoji_map;
-      } catch (e) {
-        console.error('loadReactions:', e);
-      }
+      } catch (e) { console.error('loadReactions:', e); }
     },
 
     async react(key) {
@@ -367,19 +458,15 @@ function resultPage() {
       this.reactionLoading = true;
       try {
         const res = await fetch(`/api/reactions/${this.jobId}`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ session: this.sessionId, emoji: key }),
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({session:this.sessionId,emoji:key}),
         });
         if (!res.ok) return;
         const data = await res.json();
         this.reactionCounts = data.counts     || this.reactionCounts;
         this.myReaction     = data.my_reaction || null;
-      } catch (e) {
-        console.error('react:', e);
-      } finally {
-        this.reactionLoading = false;
-      }
+      } catch (e) { console.error('react:', e); } finally { this.reactionLoading = false; }
     },
 
     armoryUrl() {
@@ -391,38 +478,38 @@ function resultPage() {
 
     get sortedSpells() {
       if (!this.result?.spells) return [];
-      return [...this.result.spells].sort((a, b) => (b[this.spellSort] ?? 0) - (a[this.spellSort] ?? 0));
+      return [...this.result.spells].sort((a,b) => (b[this.spellSort]??0)-(a[this.spellSort]??0));
     },
 
     resultMetric() {
-      if (!this.result) return { value: 0, std: 0 };
-      return { value: this.result.dps ?? 0, std: this.result.dps_std ?? 0 };
+      if (!this.result) return {value:0,std:0};
+      return {value:this.result.dps??0,std:this.result.dps_std??0};
     },
 
-    classColor(c)     { return this.CLASS_COLORS[c] || '#aaa'; },
-    classTextColor(c) { return ['Hunter','Mage','Monk','Rogue','Priest'].includes(c) ? '#111' : '#fff'; },
+    classColor(c)     { return this.CLASS_COLORS[c]||'#aaa'; },
+    classTextColor(c) { return ['Hunter','Mage','Monk','Rogue','Priest'].includes(c)?'#111':'#fff'; },
 
     formatDps(v) {
-      if (!v && v !== 0) return '—';
-      if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
-      if (v >= 1e3) return (v/1e3).toFixed(1)+'k';
+      if (!v&&v!==0) return '\u2014';
+      if (v>=1e6) return (v/1e6).toFixed(2)+'M';
+      if (v>=1e3) return (v/1e3).toFixed(1)+'k';
       return String(v);
     },
     formatDmg(v) {
-      if (!v && v !== 0) return '—';
-      if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
-      if (v >= 1e3) return (v/1e3).toFixed(0)+'k';
+      if (!v&&v!==0) return '\u2014';
+      if (v>=1e6) return (v/1e6).toFixed(2)+'M';
+      if (v>=1e3) return (v/1e3).toFixed(0)+'k';
       return String(Math.round(v));
     },
-    formatStatName(k) { return this.STAT_LABELS[k] || k; },
-    pctBarWidth(val, spells, key) {
-      const max = Math.max(...spells.map(s => s[key] ?? 0));
-      return max > 0 ? Math.round((val/max)*100)+'%' : '0%';
+    formatStatName(k) { return this.STAT_LABELS[k]||k; },
+    pctBarWidth(val,spells,key) {
+      const max=Math.max(...spells.map(s=>s[key]??0));
+      return max>0?Math.round((val/max)*100)+'%':'0%';
     },
     copyShare() {
-      navigator.clipboard.writeText(window.location.href).then(() => {
-        this.copied = true;
-        setTimeout(() => { this.copied = false; }, 2000);
+      navigator.clipboard.writeText(window.location.href).then(()=>{
+        this.copied=true;
+        setTimeout(()=>{this.copied=false;},2000);
       });
     },
   };
