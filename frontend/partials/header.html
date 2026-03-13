@@ -51,6 +51,7 @@
           <template x-if="bnetId">
             <button class="dropdown-item" @click="goProfile()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🌐 <span x-text="$store.i18n.t('header.public_profile')">Publiczny profil</span></button>
           </template>
+          <button class="dropdown-item" @click="goTo('/#ulubione')"       style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⭐ Ulubione</button>
           <button class="dropdown-item" @click="goTo('/#ustawienia')"     style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
           <div style="border-top:1px solid var(--border);margin:.3rem 0"></div>
           <button class="dropdown-item" @click="logout()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:#f66;font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>
@@ -125,6 +126,7 @@
         <template x-if="bnetId">
           <button class="mobile-menu-item" @click="goProfile()">🌐 <span x-text="$store.i18n.t('header.public_profile')">Publiczny profil</span></button>
         </template>
+        <button class="mobile-menu-item" @click="goTo('/#ulubione')">⭐ Ulubione</button>
         <button class="mobile-menu-item" @click="goTo('/#ustawienia')">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
         <div class="mobile-menu-divider"></div>
         <button class="mobile-menu-item" style="color:#f66" @click="logout()">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>

@@ -55,6 +55,7 @@ function app() {
     charDetailsError: null,
     charDetailsModal: null,
     _viewCache: {},
+    bnetId: null,
     appearance: {
       header_title: "SimCraft Web",
       hero_title: "World of Warcraft",
@@ -282,7 +283,6 @@ function app() {
       void container.offsetWidth;
       container.classList.add('view-enter');
 
-      // Inicjuj Alpine dla wszystkich widoków — niektóre (home, ustawienia) mają własne x-data
       if (typeof Alpine !== 'undefined') {
         Alpine.nextTick(() => Alpine.initTree(container));
       }
@@ -310,7 +310,7 @@ function app() {
 
     handleHash() {
       const hash = window.location.hash.slice(1);
-      const validViews = ['symulacje', 'profil', 'ustawienia'];
+      const validViews = ['symulacje', 'profil', 'ustawienia', 'ulubione'];
       if (validViews.includes(hash)) {
         this.navigateTo(hash);
       } else {
@@ -359,6 +359,7 @@ function app() {
         this.mainChar = info.main_character_name
           ? { name: info.main_character_name, realm: info.main_character_realm }
           : null;
+        this.bnetId = info.bnet_id || null;
         if (info.is_first_login) {
           this.isFirstLogin      = true;
           this.showMainCharModal = true;
@@ -399,7 +400,6 @@ function app() {
       } catch (e) {}
     },
 
-    // app init — NIE nadpisywać przez mergeMixins!
     init() {
       window.__alpineApp = this;
       document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
@@ -423,7 +423,6 @@ function app() {
         this.checkFirstLogin();
       }
 
-      // $nextTick zapewnia że #view-container istnieje w DOM zanim loadView() go szuka
       this.$nextTick(() => {
         this.handleHash();
         window.addEventListener('hashchange', () => this.handleHash());
@@ -431,13 +430,11 @@ function app() {
     },
   };
 
-  // Merguj miksyny — PRZED zachowaniem init, żeby settingsMixin nie nadpisał app.init
   if (typeof window.settingsMixin !== 'undefined') {
     mergeMixins(state, window.settingsMixin());
   }
   mergeMixins(state, SimMixin, CharsMixin, HistoryMixin);
 
-  // Przywróć app.init() — musi być PO mergeMixins, bo mergeMixins nadpisuje init przez settingsMixin
   state.init = function() {
     window.__alpineApp = this;
     document.documentElement.setAttribute("data-theme", this.theme === "light" ? "light" : "dark");
@@ -461,7 +458,6 @@ function app() {
       this.checkFirstLogin();
     }
 
-    // $nextTick zapewnia że #view-container istnieje w DOM zanim loadView() go szuka
     this.$nextTick(() => {
       this.handleHash();
       window.addEventListener('hashchange', () => this.handleHash());

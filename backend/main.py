@@ -16,6 +16,7 @@ import rankings
 import reactions
 import characters
 import profiles
+import favorites
 
 app = FastAPI()
 
@@ -32,6 +33,7 @@ app.add_middleware(TrafficMiddleware)
 @app.on_event("startup")
 async def startup():
     init_db()
+    favorites.ensure_table()
 
 app.include_router(admin.router)
 app.include_router(auth.router)
@@ -42,13 +44,13 @@ app.include_router(rankings.router)
 app.include_router(reactions.router)
 app.include_router(characters.router)
 app.include_router(profiles.router)
+app.include_router(favorites.router)
 
-# Publiczny endpoint wygladu — bez autoryzacji, tylko odczyt
+# Publiczny endpoint wygladu
 @app.get("/api/appearance")
 async def public_appearance():
     return admin.load_appearance_config()
 
-# Explicit HTML page routes (StaticFiles html=True nie mapuje /foo -> /foo.html)
 @app.get("/rankings")
 async def page_rankings():
     return FileResponse("/app/frontend/rankings.html")
