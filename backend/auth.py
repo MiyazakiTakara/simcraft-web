@@ -220,20 +220,16 @@ async def skip_first_login(session: str):
 
 @router.get("/auth/session/character-privacy")
 async def get_character_privacy(session: str):
-    """Pobiera mapowanie postaci do ich statusu prywatności."""
+    """Pobiera mapę postaci do ich statusu prywatności z bazy danych."""
     from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
-    import httpx
-    
+
     bnet_id = get_bnet_id_by_session(session)
     if not bnet_id:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
-    
-    # Pobierz postacie z Battle.net API
+
+    # Pobierz postacie użytkownika z Battle.net API
     try:
         access_token = await get_session_token(session)
-        if not access_token:
-            return {"privacies": {}}
-        
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 "https://eu.api.blizzard.com/profile/user/wow?namespace=profile-eu&locale=en_GB",
@@ -242,21 +238,20 @@ async def get_character_privacy(session: str):
             )
             if resp.status_code != 200:
                 return {"privacies": {}}
-            
             data = resp.json()
-            chars = data.get("characters", [])[:20]
     except Exception:
         return {"privacies": {}}
-    
-    # Zbuduj listę wszystkich postaci (name|realm_slug)
-    all_chars = {}
-    for ch in chars:
-        realm_slug = ch.get("realm", {}).get("slug", "")
-        if realm_slug:
-            key = ch["name"] + "|" + realm_slug
-            all_chars[key] = False
-    
-    # Pobierz statusy prywatności z historii
+
+    # Zbuduj listę wszystkich postaci (name|realm_slug) ze struktury wow_accounts
+    all_chars: dict[str, bool] = {}
+    for account in data.get("wow_accounts", []):
+        for ch in account.get("characters", []):
+            realm_slug = ch.get("realm", {}).get("slug", "")
+            name = ch.get("name", "")
+            if name and realm_slug:
+                all_chars[name + "|" + realm_slug] = False
+
+    # Nadpisz prywatne postacie na podstawie bazy danych
     with SessionLocal() as db:
         private_rows = db.query(
             HistoryEntryModel.character_name,
@@ -265,12 +260,12 @@ async def get_character_privacy(session: str):
             HistoryEntryModel.user_id == bnet_id,
             HistoryEntryModel.is_private == True,  # noqa: E712
         ).distinct().all()
-    
+
     for char_name, realm in private_rows:
         key = char_name + "|" + realm
         if key in all_chars:
             all_chars[key] = True
-    
+
     return {"privacies": all_chars}
 
 
@@ -282,13 +277,13 @@ class CharPrivacyRequest(BaseModel):
 
 @router.patch("/auth/session/character-privacy")
 async def update_character_privacy(session: str, body: CharPrivacyRequest):
-    """Ustawia prywatność dla konkretnej postaci - ukrywa/ odkrywa wszystkie jej symulacje."""
+    """Ustawia prywatność dla konkretnej postaci - ukrywa/odkrywa wszystkie jej symulacje."""
     from database import SessionLocal, HistoryEntryModel, get_bnet_id_by_session
-    
+
     bnet_id = get_bnet_id_by_session(session)
     if not bnet_id:
         raise HTTPException(401, "Sesja wygasla lub nie istnieje.")
-    
+
     with SessionLocal() as db:
         db.query(HistoryEntryModel).filter(
             HistoryEntryModel.user_id == bnet_id,
@@ -296,5 +291,5 @@ async def update_character_privacy(session: str, body: CharPrivacyRequest):
             HistoryEntryModel.character_realm_slug == body.character_realm,
         ).update({"is_private": body.is_private})
         db.commit()
-    
+
     return {"ok": True}
