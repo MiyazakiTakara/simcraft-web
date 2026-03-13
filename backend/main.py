@@ -57,8 +57,8 @@ async def page_rankings():
 async def page_result(job_id: str):
     return FileResponse("/app/frontend/result.html")
 
-@app.get("/u/{realm}/{name}")
-async def page_user_profile(realm: str, name: str):
+@app.get("/u/{bnet_id}")
+async def page_user_profile(bnet_id: str):
     return FileResponse("/app/frontend/profile.html")
 
 app.mount("/", StaticFiles(directory="/app/frontend", html=True), name="static")

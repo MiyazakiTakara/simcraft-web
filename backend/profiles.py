@@ -1,21 +1,17 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from database import SessionLocal, UserModel, HistoryEntryModel
-from sqlalchemy import func
 
 router = APIRouter()
 
 
-@router.get("/api/profile/{realm}/{name}")
-def get_public_profile(realm: str, name: str):
+@router.get("/api/profile/{bnet_id}")
+def get_public_profile(bnet_id: str):
     """
-    Publiczny profil użytkownika po nazwie głównej postaci i realmie.
-    Zwraca dane profilu + historię symulacji tej postaci.
+    Publiczny profil użytkownika po bnet_id (zapisywanym przy pierwszym logowaniu).
+    Zwraca dane profilu + historię symulacji.
     """
     with SessionLocal() as db:
-        user = db.query(UserModel).filter(
-            func.lower(UserModel.main_character_name)  == name.lower(),
-            func.lower(UserModel.main_character_realm) == realm.lower(),
-        ).first()
+        user = db.query(UserModel).filter(UserModel.bnet_id == bnet_id).first()
 
         if not user:
             raise HTTPException(404, "Profil nie istnieje lub jest prywatny.")
@@ -23,7 +19,6 @@ def get_public_profile(realm: str, name: str):
         if user.profile_private:
             raise HTTPException(404, "Profil nie istnieje lub jest prywatny.")
 
-        # Historia symulacji tej postaci (tylko publiczne)
         rows = db.query(HistoryEntryModel).filter(
             HistoryEntryModel.user_id == user.bnet_id,
             HistoryEntryModel.is_private == False,
@@ -43,13 +38,13 @@ def get_public_profile(realm: str, name: str):
             for r in rows
         ]
 
-        # Najlepszy DPS na postaci
         best = max((r["dps"] for r in history), default=0.0)
 
         return {
-            "name":            user.main_character_name,
-            "realm":           user.main_character_realm,
-            "history":         history,
-            "best_dps":        best,
-            "sim_count":       len(history),
+            "bnet_id":   user.bnet_id,
+            "name":      user.main_character_name,
+            "realm":     user.main_character_realm,
+            "history":   history,
+            "best_dps":  best,
+            "sim_count": len(history),
         }

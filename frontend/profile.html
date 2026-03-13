@@ -4,13 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title x-text="pageTitle">Profil — SimCraft Web</title>
-
-  <!-- OG meta -->
   <meta property="og:type"        content="profile" />
   <meta property="og:site_name"   content="SimCraft Web" />
   <meta property="og:title"       :content="pageTitle" />
   <meta property="og:description" :content="ogDesc" />
-
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/alpine.min.js"></script>
 </head>
@@ -18,7 +15,6 @@
 
 <div class="container">
 
-  <!-- Header -->
   <header class="header">
     <a href="/" class="header-logo">⚔️ SimCraft Web</a>
     <nav>
@@ -35,17 +31,17 @@
   <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
     <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
     <h2 style="margin-bottom:.5rem">Profil nie istnieje</h2>
-    <p style="color:var(--muted)">Ten profil jest prywatny lub postać nie ma jeszcze konta w SimCraft Web.</p>
+    <p style="color:var(--muted)">Ten profil jest prywatny lub użytkownik nie ma jeszcze konta w SimCraft Web.</p>
     <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Strona główna</a>
   </div>
 
   <!-- Profil -->
   <div x-show="!loading && !notFound">
 
-    <!-- Hero postaci -->
+    <!-- Hero -->
     <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
       <div style="display:flex;flex-direction:column;gap:.3rem">
-        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)" x-text="profile.name"></h1>
+        <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)" x-text="profile.name || 'Nieznana postać'"></h1>
         <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm"></div>
         <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap">
           <div>
@@ -69,11 +65,10 @@
     <!-- TAB: HISTORIA -->
     <template x-if="tab==='history'">
       <div>
-        <div x-show="profile.history && profile.history.length === 0"
+        <div x-show="!profile.history || profile.history.length === 0"
              style="text-align:center;padding:3rem;color:var(--muted)">
           Brak publicznych symulacji.
         </div>
-
         <div class="history-list" style="max-height:600px;overflow-y:auto">
           <template x-for="entry in pagedHistory" :key="entry.job_id">
             <div class="history-item"
@@ -91,13 +86,10 @@
                 <div class="history-style" x-text="entry.fight_style"></div>
               </div>
               <a :href="'/result/' + entry.job_id" target="_blank"
-                 class="btn btn-accent2 btn-sm btn-icon" @click.stop
-                 title="Otwórz wynik">↗</a>
+                 class="btn btn-accent2 btn-sm btn-icon" @click.stop title="Otwórz wynik">↗</a>
             </div>
           </template>
         </div>
-
-        <!-- Paginacja -->
         <div class="pagination" x-show="pageCount > 1" style="margin-top:1rem">
           <button @click="page > 1 && page--">&laquo;</button>
           <template x-for="p in pages()" :key="p">
@@ -111,7 +103,6 @@
     <!-- TAB: TREND -->
     <template x-if="tab==='trend'">
       <div>
-        <!-- Filtry -->
         <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
           <div class="form-field">
             <label>Postać</label>
@@ -132,11 +123,9 @@
             </select>
           </div>
         </div>
-
         <div x-show="trendPoints.length === 0" style="text-align:center;padding:3rem;color:var(--muted)">
           Brak danych dla wybranych filtrów.
         </div>
-
         <template x-if="trendPoints.length > 0">
           <div>
             <canvas id="trendCanvas" height="300" style="max-width:860px;width:100%"></canvas>
@@ -159,8 +148,7 @@
                         <span x-show="i === 0" class="trend-neutral">—</span>
                       </td>
                       <td>
-                        <a :href="'/result/' + pt.job_id" target="_blank"
-                           class="btn btn-accent2 btn-sm" @click.stop>↗</a>
+                        <a :href="'/result/' + pt.job_id" target="_blank" class="btn btn-accent2 btn-sm" @click.stop>↗</a>
                       </td>
                     </tr>
                   </template>
@@ -187,8 +175,6 @@ function profilePage() {
     perPage:     20,
     pageTitle:   'Profil — SimCraft Web',
     ogDesc:      '',
-
-    // Trend
     trendChar:   '',
     trendStyle:  'Patchwerk',
     trendChars:  [],
@@ -207,21 +193,19 @@ function profilePage() {
     },
 
     async init() {
+      // URL: /u/{bnet_id}
       const parts  = window.location.pathname.split('/');
-      // /u/{realm}/{name}
-      const realm  = decodeURIComponent(parts[2] || '');
-      const name   = decodeURIComponent(parts[3] || '');
-      if (!realm || !name) { this.notFound = true; this.loading = false; return; }
+      const bnetId = decodeURIComponent(parts[2] || '');
+      if (!bnetId) { this.notFound = true; this.loading = false; return; }
 
       try {
-        const res = await fetch(`/api/profile/${encodeURIComponent(realm)}/${encodeURIComponent(name)}`);
+        const res = await fetch(`/api/profile/${encodeURIComponent(bnetId)}`);
         if (!res.ok) { this.notFound = true; this.loading = false; return; }
-        this.profile = await res.json();
-        this.pageTitle = `${this.profile.name} — SimCraft Web`;
+        this.profile   = await res.json();
+        this.pageTitle = `${this.profile.name || 'Profil'} — SimCraft Web`;
         this.ogDesc    = `Best DPS: ${this.formatDps(this.profile.best_dps)} · ${this.profile.sim_count} symulacji`;
 
-        // Zbierz unikalne postaci do trend selecta
-        const chars = [...new Set((this.profile.history || []).map(h => h.character_name))];
+        const chars    = [...new Set((this.profile.history || []).map(h => h.character_name))];
         this.trendChars = chars;
         this.trendChar  = chars[0] || '';
         this.buildTrend();
@@ -234,11 +218,8 @@ function profilePage() {
 
     buildTrend() {
       this.trendPoints = (this.profile.history || [])
-        .filter(h => h.character_name === this.trendChar &&
-                     h.fight_style    === this.trendStyle)
-        .slice()
-        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
+        .filter(h => h.character_name === this.trendChar && h.fight_style === this.trendStyle)
+        .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       this.$nextTick(() => this.renderChart());
     },
 
@@ -248,23 +229,17 @@ function profilePage() {
       if (!canvas) return;
       if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
       if (!this.trendPoints.length) return;
-
-      const labels = this.trendPoints.map(p => this.formatTime(p.created_at));
-      const data   = this.trendPoints.map(p => p.dps);
-
       this.trendChart = new Chart(canvas, {
         type: 'line',
         data: {
-          labels,
+          labels: this.trendPoints.map(p => this.formatTime(p.created_at)),
           datasets: [{
             label: 'DPS',
-            data,
+            data: this.trendPoints.map(p => p.dps),
             borderColor: '#c89a3c',
             backgroundColor: 'rgba(200,154,60,.15)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 4,
-            pointBackgroundColor: '#c89a3c',
+            fill: true, tension: 0.35,
+            pointRadius: 4, pointBackgroundColor: '#c89a3c',
           }]
         },
         options: {
@@ -284,8 +259,6 @@ function profilePage() {
   };
 }
 </script>
-
-<!-- Chart.js CDN dla trend chart -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </body>
 </html>
