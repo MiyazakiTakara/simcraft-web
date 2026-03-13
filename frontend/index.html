@@ -31,6 +31,10 @@
     })();
   </script>
 
+  <!-- Wowhead tooltips -->
+  <script>var whTooltips = {colorLinks: false, iconizeLinks: false, renameLinks: false};</script>
+  <script src="https://wow.zamimg.com/js/tooltips.js"></script>
+
   <link rel="stylesheet" href="/style.css?v=9"/>
   <script src="/i18n.js?v=1"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -163,7 +167,7 @@
                       </template>
                       <template x-if="!talent.spell">
                         <div style="width:40px;height:40px;background:var(--border);border-radius:4px"></div>
-                      </template>
+          </template>
                     </div>
                   </template>
                 </div>
