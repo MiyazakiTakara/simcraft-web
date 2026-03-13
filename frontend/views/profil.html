@@ -10,13 +10,12 @@
     <div>
       <h2 style="margin-bottom:1rem" x-text="'👤 ' + $store.i18n.t('chars.title')"></h2>
 
-      <!-- Skeleton: ładowanie postaci -->
       <template x-if="charsLoading">
         <div class="char-grid">
           <template x-for="i in [1,2,3,4,5,6]" :key="i">
             <div class="char-card skeleton-card">
               <div class="char-card-header">
-                <div class="skeleton skeleton-avatar" style="width:48px;height:48px;border-radius:50%;flex-shrink:0"></div>
+                <div class="skeleton skeleton-avatar-lg"></div>
                 <div style="flex:1;display:flex;flex-direction:column;gap:.4rem">
                   <div class="skeleton skeleton-title" style="width:60%"></div>
                   <div class="skeleton skeleton-text" style="width:80%"></div>
@@ -28,7 +27,6 @@
         </div>
       </template>
 
-      <!-- Załadowane postaci -->
       <template x-if="!charsLoading">
         <div>
           <div class="char-grid">
@@ -46,18 +44,18 @@
                   <div>
                     <div class="char-card-dps" x-text="'⚔️ ' + formatDps(getCharDps(char.name).latest)"></div>
                     <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
-                    <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)"
+                    <div class="char-card-meta" style="margin-top:.4rem"
                       x-text="getCharDps(char.name).count + ' ' + $store.i18n.t('profile.simulations_count') + ' · ' + formatTime(getCharDps(char.name).lastSim)"
                     ></div>
                     <button
-                      class="btn"
-                      style="margin-top:.5rem;font-size:.72rem;padding:.2rem .55rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer"
+                      class="btn btn-accent2 btn-sm"
+                      style="margin-top:.5rem"
                       @click.stop="selectTrendChar(char); profileTab='trend'; initTrendTab()"
                     >📈 Trend</button>
                   </div>
                 </template>
                 <template x-if="!getCharDps(char.name)">
-                  <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
+                  <div class="char-card-empty" x-text="$store.i18n.t('history.empty')"></div>
                 </template>
               </div>
             </template>
@@ -65,7 +63,7 @@
           <template x-if="characters.length === 0">
             <div style="text-align:center;padding:3rem;color:var(--muted)">
               <p x-text="$store.i18n.t('chars.no_chars')"></p>
-              <p style="font-size:.85rem" x-text="$store.i18n.t('chars.no_chars_auto')"></p>
+              <p class="char-card-meta" style="margin-top:.3rem" x-text="$store.i18n.t('chars.no_chars_auto')"></p>
             </div>
           </template>
         </div>
@@ -78,7 +76,6 @@
     <div>
       <h2 style="margin-bottom:1rem" x-text="'📜 ' + $store.i18n.t('history.title')"></h2>
 
-      <!-- Skeleton: ładowanie historii -->
       <template x-if="historyLoading">
         <div class="history-list">
           <template x-for="i in [1,2,3,4,5]" :key="i">
@@ -94,13 +91,12 @@
         </div>
       </template>
 
-      <!-- Załadowana historia -->
       <template x-if="!historyLoading">
         <div>
-          <div x-show="history.length === 0" style="color:var(--muted);text-align:center;padding:2rem;font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
+          <div x-show="history.length === 0" class="char-card-empty" style="text-align:center;padding:2rem" x-text="$store.i18n.t('history.empty')"></div>
           <div x-show="history.length > 0" class="history-list" style="max-height:500px;overflow-y:auto">
             <template x-for="entry in pagedHistory" :key="entry.job_id">
-              <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
+              <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem"
                    @click="openResultPage(entry.job_id)">
                 <div style="flex:1;min-width:0">
                   <div class="history-char">
@@ -112,7 +108,7 @@
                   <div class="history-time" x-text="formatTime(entry.created_at)"></div>
                   <div class="history-style" x-text="entry.fight_style"></div>
                 </div>
-                <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0"
+                <button class="btn btn-accent2 btn-sm btn-icon"
                   @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
                   x-text="copiedJobId === entry.job_id ? '✓' : '🔗'"
                   :title="$store.i18n.t('common.copy')"
@@ -137,27 +133,24 @@
     <div>
       <h2 style="margin-bottom:1rem">📈 DPS Trend</h2>
 
-      <!-- Selektor postaci i fight style -->
       <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-bottom:1rem">
-        <div>
-          <label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:.3rem">Postać</label>
-          <select
+        <div class="form-field">
+          <label x-text="$store.i18n.t('chars.title')"></label>
+          <select class="select" style="min-width:200px"
             x-model="trendCharName"
             @change="loadTrend()"
-            style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;font-size:.9rem"
           >
-            <option value="" disabled>Wybierz postać…</option>
+            <option value="" disabled x-text="$store.i18n.t('settings.select_char')"></option>
             <template x-for="char in characters" :key="char.name">
               <option :value="char.name + '|' + char.realm_slug" x-text="char.name + ' (' + char.realm + ')'"></option>
             </template>
           </select>
         </div>
-        <div>
-          <label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:.3rem">Fight Style</label>
-          <select
+        <div class="form-field">
+          <label x-text="$store.i18n.t('sim.fight_style')"></label>
+          <select class="select" style="min-width:160px"
             x-model="trendFightStyle"
             @change="loadTrend()"
-            style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;font-size:.9rem"
           >
             <option>Patchwerk</option>
             <option>HecticAddCleave</option>
@@ -166,58 +159,50 @@
             <option>CastingPatchwerk</option>
           </select>
         </div>
-        <button
-          class="btn btn-primary"
-          style="font-size:.85rem;padding:.4rem .9rem"
-          @click="loadTrend()"
-        >🔄 Odśwież</button>
+        <button class="btn btn-ghost btn-md" @click="loadTrend()">🔄 Odśwież</button>
       </div>
 
-      <!-- Stan ładowania / brak danych -->
       <div x-show="trendLoading" style="text-align:center;padding:3rem;color:var(--muted)">
-        <span class="spinner" style="width:1.5rem;height:1.5rem;display:inline-block"></span>
+        <span class="spinner" style="width:1.5rem;height:1.5rem"></span>
       </div>
-      <div x-show="!trendLoading && trendPoints.length === 0 && trendCharName" style="text-align:center;padding:3rem;color:var(--muted);font-size:.9rem">
+      <div x-show="!trendLoading && trendPoints.length === 0 && trendCharName" class="char-card-empty" style="text-align:center;padding:3rem">
         Brak danych dla tej postaci i fight style. Uruchom kilka symulacji, żeby zobaczyć trend.
       </div>
-      <div x-show="!trendLoading && !trendCharName" style="text-align:center;padding:3rem;color:var(--muted);font-size:.9rem">
+      <div x-show="!trendLoading && !trendCharName" class="char-card-empty" style="text-align:center;padding:3rem">
         Wybierz postać powyżej.
       </div>
 
-      <!-- Canvas wykresu -->
       <div x-show="!trendLoading && trendPoints.length > 0" style="position:relative;width:100%;max-width:860px">
         <canvas id="trendChartCanvas" height="320"></canvas>
       </div>
 
-      <!-- Tabela punktów -->
       <template x-if="!trendLoading && trendPoints.length > 0">
         <div style="margin-top:1.2rem;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <table class="trend-table">
             <thead>
-              <tr style="color:var(--muted);text-align:left">
-                <th style="padding:.4rem .6rem;border-bottom:1px solid var(--border)">#</th>
-                <th style="padding:.4rem .6rem;border-bottom:1px solid var(--border)">Data</th>
-                <th style="padding:.4rem .6rem;border-bottom:1px solid var(--border)">DPS</th>
-                <th style="padding:.4rem .6rem;border-bottom:1px solid var(--border)">Zmiana</th>
-                <th style="padding:.4rem .6rem;border-bottom:1px solid var(--border)">Wynik</th>
+              <tr>
+                <th>#</th>
+                <th x-text="$store.i18n.t('history.fight_style').replace('Styl walki','Data').replace('Fight style','Date')">Data</th>
+                <th>DPS</th>
+                <th x-text="$store.i18n.t('common.unknown').replace('Nieznany','Zmiana').replace('Unknown','Change')">Zmiana</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
-                <tr style="border-bottom:1px solid var(--border);cursor:pointer" @click="openResultPage(pt.job_id)">
-                  <td style="padding:.4rem .6rem;color:var(--muted)" x-text="i + 1"></td>
-                  <td style="padding:.4rem .6rem" x-text="formatTime(pt.timestamp)"></td>
-                  <td style="padding:.4rem .6rem;font-weight:600" x-text="formatDps(pt.dps)"></td>
-                  <td style="padding:.4rem .6rem">
-                    <span
-                      x-show="i > 0"
-                      :style="{color: pt.dps >= trendPoints[i-1].dps ? '#4ade80' : '#f87171'}"
+                <tr @click="openResultPage(pt.job_id)">
+                  <td class="trend-neutral" x-text="i + 1"></td>
+                  <td x-text="formatTime(pt.timestamp)"></td>
+                  <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
+                  <td>
+                    <span x-show="i > 0"
+                      :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
                       x-text="(pt.dps >= trendPoints[i-1].dps ? '▲ +' : '▼ ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
                     ></span>
-                    <span x-show="i === 0" style="color:var(--muted)">—</span>
+                    <span x-show="i === 0" class="trend-neutral">—</span>
                   </td>
-                  <td style="padding:.4rem .6rem">
-                    <a :href="'/result/' + pt.job_id" target="_blank" style="color:var(--accent2);font-size:.8rem" @click.stop>↗ Otwórz</a>
+                  <td>
+                    <a :href="'/result/' + pt.job_id" target="_blank" class="btn btn-accent2 btn-sm" @click.stop>↗</a>
                   </td>
                 </tr>
               </template>

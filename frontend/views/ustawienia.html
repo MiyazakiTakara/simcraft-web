@@ -1,43 +1,37 @@
 <div class="settings-view" x-init="initSettings()">
 
-  <!-- Ładowanie -->
   <div x-show="loading" style="text-align:center;padding:4rem;color:var(--muted)">
     <span x-text="$store.i18n.t('common.loading')"></span>
   </div>
 
-  <!-- Błąd -->
   <div x-show="!loading && error" class="settings-error-banner">
     <span x-text="error"></span>
   </div>
 
-  <!-- Niezalogowany -->
   <div x-show="!loading && !isLoggedIn" style="max-width:600px;margin:4rem auto;text-align:center">
     <div style="font-size:2.5rem;margin-bottom:1rem">🔒</div>
     <h2 x-text="$store.i18n.t('settings.login_required')"></h2>
-    <p style="color:var(--muted)" x-text="$store.i18n.t('settings.login_required_hint')"></p>
-    <a href="/auth/login" class="btn-primary" style="display:inline-block;margin-top:1.5rem" x-text="$store.i18n.t('header.login')"></a>
+    <p class="settings-hint" style="margin-top:.5rem" x-text="$store.i18n.t('settings.login_required_hint')"></p>
+    <a href="/auth/login" class="btn btn-primary btn-lg" style="margin-top:1.5rem" x-text="$store.i18n.t('header.login')"></a>
   </div>
 
-  <!-- Treść ustawień -->
   <div x-show="!loading && isLoggedIn" style="max-width:680px;margin:2rem auto">
     <h2 style="margin-bottom:1.5rem" x-text="$store.i18n.t('settings.title')"></h2>
 
-    <!-- ── Sekcja: Postać ── -->
+    <!-- Sekcja: Postać -->
     <section class="settings-section">
       <h3 x-text="$store.i18n.t('settings.section_char')"></h3>
       <p class="settings-hint" x-text="$store.i18n.t('settings.section_char_hint')"></p>
-
-      <!-- Wybór z listy lub ręcznie -->
       <div class="settings-row">
         <label x-text="$store.i18n.t('settings.char_name')"></label>
         <div style="flex:1;display:flex;flex-direction:column;gap:.5rem">
-          <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input" style="padding:.5rem">
+          <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input">
             <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
             <template x-for="ch in characters" :key="ch.id">
               <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
             </template>
           </select>
-          <div style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:.5rem">
+          <div style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:.5rem">
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer">
               <input type="checkbox" x-model="form_manualEntry" @change="onManualToggle()" />
               <span x-text="$store.i18n.t('settings.manual_entry')"></span>
@@ -57,7 +51,7 @@
       </div>
     </section>
 
-    <!-- ── Sekcja: Prywatność ── -->
+    <!-- Sekcja: Prywatność -->
     <section class="settings-section">
       <h3 x-text="$store.i18n.t('settings.section_privacy')"></h3>
       <div class="settings-toggle-row">
@@ -75,38 +69,33 @@
           <span class="toggle-knob"></span>
         </button>
       </div>
-      <!-- Info banner gdy włączone -->
       <div x-show="form_profile_private" class="settings-private-banner">
         <span>🔒</span>
         <span x-text="$store.i18n.t('settings.private_active_info')"></span>
       </div>
     </section>
 
-    <!-- ── Sekcja: Prywatność postaci ── -->
+    <!-- Sekcja: Prywatność postaci -->
     <section class="settings-section" :style="form_profile_private ? 'opacity:0.5;pointer-events:none' : ''">
       <h3 x-text="$store.i18n.t('settings.char_privacy')"></h3>
       <p class="settings-hint" x-text="$store.i18n.t('settings.char_privacy_hint')"></p>
       <template x-if="form_profile_private">
-        <div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem" x-text="$store.i18n.t('settings.char_privacy_disabled')"></div>
+        <p class="settings-hint" style="margin-bottom:.5rem" x-text="$store.i18n.t('settings.char_privacy_disabled')"></p>
       </template>
-
       <template x-if="characters.length === 0">
-        <div style="color:var(--muted);font-size:.85rem" x-text="$store.i18n.t('settings.no_chars_for_privacy')"></div>
+        <p class="settings-hint" x-text="$store.i18n.t('settings.no_chars_for_privacy')"></p>
       </template>
-
       <template x-if="characters.length > 0">
-        <div style="display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto">
+        <div style="display:flex;flex-direction:column;gap:.4rem;max-height:300px;overflow-y:auto">
           <template x-for="ch in characters" :key="ch.id">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--bg);border-radius:6px">
-              <div>
-                <span x-text="ch.name" style="font-weight:600"></span>
-                <span style="color:var(--muted);font-size:.8rem" x-text="' - ' + ch.realm"></span>
+            <div class="char-privacy-row">
+              <div class="char-privacy-row-info">
+                <span class="char-name-text" x-text="ch.name"></span>
+                <span class="char-realm-text" x-text="'- ' + ch.realm"></span>
               </div>
               <button
-                style="font-size:.75rem;padding:.25rem .5rem;border:none;border-radius:4px;cursor:pointer"
-                :style="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)]
-                  ? 'background:#c0392b;color:#fff'
-                  : 'background:var(--accent2);color:#fff'"
+                class="btn btn-sm"
+                :class="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? 'btn-danger' : 'btn-accent2'"
                 @click="toggleCharPrivacy(ch, $event)"
                 x-text="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? $store.i18n.t('settings.char_private') : $store.i18n.t('settings.char_public')"
               ></button>
@@ -116,39 +105,21 @@
       </template>
     </section>
 
-    <!-- ── Sekcja: Interfejs ── -->
+    <!-- Sekcja: Interfejs -->
     <section class="settings-section">
       <h3 x-text="$store.i18n.t('settings.section_ui')"></h3>
-
-      <!-- Język -->
       <div class="settings-row" style="align-items:center">
         <label x-text="$store.i18n.t('settings.language')"></label>
-        <div style="display:flex;gap:.5rem">
-          <button
-            class="lang-toggle-btn"
-            :class="{ active: $store.i18n.lang === 'pl' }"
-            @click="$store.i18n.setLang('pl')" x-text="$store.i18n.t('lang.pl')"></button>
-          <button
-            class="lang-toggle-btn"
-            :class="{ active: $store.i18n.lang === 'en' }"
-            @click="$store.i18n.setLang('en')" x-text="$store.i18n.t('lang.en')"></button>
+        <div style="display:flex;gap:.4rem">
+          <button class="seg-btn" :class="{ active: $store.i18n.lang === 'pl' }" @click="$store.i18n.setLang('pl')" x-text="$store.i18n.t('lang.pl')"></button>
+          <button class="seg-btn" :class="{ active: $store.i18n.lang === 'en' }" @click="$store.i18n.setLang('en')" x-text="$store.i18n.t('lang.en')"></button>
         </div>
       </div>
-
-      <!-- Motyw -->
       <div class="settings-row" style="align-items:center">
         <label x-text="$store.i18n.t('settings.theme')"></label>
-        <div style="display:flex;gap:.5rem">
-          <button
-            class="lang-toggle-btn"
-            :class="{ active: $store.theme === 'dark' }"
-            @click="setTheme('dark')"
-            x-text="$store.i18n.t('settings.theme_dark')"></button>
-          <button
-            class="lang-toggle-btn"
-            :class="{ active: $store.theme === 'light' }"
-            @click="setTheme('light')"
-            x-text="$store.i18n.t('settings.theme_light')"></button>
+        <div style="display:flex;gap:.4rem">
+          <button class="seg-btn" :class="{ active: $store.theme === 'dark' }" @click="setTheme('dark')" x-text="$store.i18n.t('settings.theme_dark')"></button>
+          <button class="seg-btn" :class="{ active: $store.theme === 'light' }" @click="setTheme('light')" x-text="$store.i18n.t('settings.theme_light')"></button>
         </div>
       </div>
     </section>
@@ -156,154 +127,12 @@
     <!-- Zapis -->
     <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
       <button
-        class="btn-primary"
+        class="btn btn-primary btn-lg"
         :disabled="saving"
         @click="save()"
         x-text="saving ? $store.i18n.t('settings.saving') : $store.i18n.t('settings.save')"
       ></button>
       <span x-show="saveMsg" x-text="saveMsg" :class="saveMsgOk ? 'settings-ok' : 'settings-err'"></span>
     </div>
-
   </div>
 </div>
-
-
-
-<style>
-.settings-view { padding: 1rem; }
-
-.settings-section {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-.settings-section h3 {
-  margin: 0 0 .25rem;
-  font-size: 1rem;
-  color: var(--text);
-}
-.settings-hint {
-  font-size: .82rem;
-  color: var(--muted);
-  margin: 0 0 1rem;
-}
-.settings-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: .75rem;
-}
-.settings-row label {
-  width: 160px;
-  min-width: 140px;
-  font-size: .88rem;
-  color: var(--muted);
-  padding-top: .55rem;
-}
-.settings-input {
-  flex: 1;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: .5rem .75rem;
-  font-size: .9rem;
-  outline: none;
-  transition: border-color .15s;
-}
-.settings-input:focus { border-color: #f4a01c; }
-.settings-input option {
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* Toggle switch */
-.settings-toggle-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-.settings-toggle-label {
-  font-size: .9rem;
-  color: var(--text);
-  font-weight: 500;
-}
-.toggle-btn {
-  position: relative;
-  width: 48px;
-  height: 26px;
-  border-radius: 13px;
-  background: #333;
-  border: none;
-  cursor: pointer;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-.toggle-btn.active { background: #f4a01c; }
-.toggle-knob {
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform .2s;
-  pointer-events: none;
-}
-.toggle-btn.active .toggle-knob { transform: translateX(22px); }
-
-.settings-private-banner {
-  margin-top: .75rem;
-  background: rgba(244,160,28,.08);
-  border: 1px solid rgba(244,160,28,.25);
-  border-radius: 8px;
-  padding: .6rem 1rem;
-  font-size: .83rem;
-  color: #f4a01c;
-  display: flex;
-  gap: .5rem;
-}
-
-/* Lang/theme buttons */
-.lang-toggle-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  padding: .3rem .75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: .85rem;
-  transition: all .15s;
-}
-.lang-toggle-btn.active {
-  border-color: #f4a01c;
-  color: #f4a01c;
-  font-weight: 700;
-}
-
-.settings-error-banner {
-  background: rgba(229,85,85,.1);
-  border: 1px solid rgba(229,85,85,.3);
-  border-radius: 8px;
-  padding: .75rem 1rem;
-  color: #e55;
-  font-size: .88rem;
-  margin-bottom: 1rem;
-}
-.settings-ok { color: #4c4; font-size: .88rem; }
-.settings-err { color: #e55; font-size: .88rem; }
-
-.btn-primary {
-  background: #f4a01c;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  padding: .6rem 1.5rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: .95rem;
-  transition: opacity .15s;
-}
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-</style>

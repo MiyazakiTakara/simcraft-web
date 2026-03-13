@@ -2,7 +2,6 @@
   <div class="panel">
     <h2 x-text="$store.i18n.t('chars.title')"></h2>
 
-    <!-- Skeleton: ładowanie postaci -->
     <template x-if="loadingChars">
       <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
         <template x-for="i in [1,2,3,4,5]" :key="i">
@@ -17,12 +16,12 @@
       </div>
     </template>
 
-    <template x-if="errorChars"><p style="color:#f66;font-size:.85rem" x-text="errorChars"></p></template>
+    <template x-if="errorChars"><p style="color:#f66;font-size:var(--text-sm)" x-text="errorChars"></p></template>
     <template x-if="!loadingChars && !errorChars && characters.length === 0">
       <div style="text-align:center;padding:1.5rem 1rem;color:var(--muted)">
         <div style="font-size:2rem;margin-bottom:.5rem">👤</div>
-        <p style="font-size:.9rem;margin-bottom:.3rem" x-text="$store.i18n.t('chars.no_chars_account')"></p>
-        <p style="font-size:.8rem" x-text="$store.i18n.t('chars.no_chars_hint')"></p>
+        <p style="font-size:var(--text-base);margin-bottom:.3rem" x-text="$store.i18n.t('chars.no_chars_account')"></p>
+        <p style="font-size:var(--text-sm)" x-text="$store.i18n.t('chars.no_chars_hint')"></p>
       </div>
     </template>
     <template x-if="!loadingChars && characters.length">
@@ -59,17 +58,17 @@
       <template x-if="simMode==='armory'">
         <div style="margin-bottom:.8rem">
           <template x-if="selectedChar">
-            <p style="font-size:.9rem">
+            <p style="font-size:var(--text-base)">
               <span x-text="$store.i18n.t('sim.selected_char') + ': '"></span>
               <strong x-text="selectedChar.name + ' – ' + selectedChar.realm"></strong>
               <span x-show="selectedChar.class" :style="{color: classColor(selectedChar.class)}" x-text="' · ' + (selectedChar.spec ? selectedChar.spec + ' ' : '') + selectedChar.class"></span>
             </p>
           </template>
           <template x-if="!selectedChar && characters.length">
-            <p style="font-size:.88rem;color:var(--muted)" x-text="'← ' + $store.i18n.t('sim.select_char_hint')"></p>
+            <p style="font-size:var(--text-sm);color:var(--muted)" x-text="'← ' + $store.i18n.t('sim.select_char_hint')"></p>
           </template>
           <template x-if="!selectedChar && !characters.length">
-            <p style="font-size:.88rem;color:var(--muted)" x-text="$store.i18n.t('sim.no_chars_use_addon')"></p>
+            <p style="font-size:var(--text-sm);color:var(--muted)" x-text="$store.i18n.t('sim.no_chars_use_addon')"></p>
           </template>
         </div>
       </template>
@@ -96,7 +95,7 @@
         <span x-show="loadingSim" class="spinner"></span>
         <span x-show="!loadingSim" x-text="'▶ ' + $store.i18n.t('sim.run_sim') + ' (⚔️ DPS)'"></span>
       </button>
-      <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:.85rem;color:var(--muted)">
+      <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:var(--text-sm);color:var(--muted)">
         <span x-text="$store.i18n.t('sim.running') + ' (job: '"></span><span x-text="job?.id?.slice(0,8)"></span><span>…)</span>
       </p>
     </div>
@@ -129,9 +128,9 @@
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
               <h2 x-text="$store.i18n.t('result.spell_breakdown')"></h2>
-              <div>
-                <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.total_dmg')"></button>
-                <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" style="font-size:.75rem;padding:.25rem .6rem" x-text="$store.i18n.t('result.dps')"></button>
+              <div style="display:flex;gap:.3rem">
+                <button class="tab" :class="{active: spellSort==='total_dmg'}" @click="spellSort='total_dmg'" x-text="$store.i18n.t('result.total_dmg')"></button>
+                <button class="tab" :class="{active: spellSort==='dps'}" @click="spellSort='dps'" x-text="$store.i18n.t('result.dps')"></button>
               </div>
             </div>
             <div class="spell-list">
@@ -141,14 +140,14 @@
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_executes')"></span><span x-text="sp.count ?? '—'"></span></div>
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_avg_hit')"></span><span x-text="formatDmg(sp.avg_hit)"></span></div>
                     <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_crit')"></span><span x-text="(sp.crit_pct ?? '—') + '%'"></span></div>
-                    <div class="spell-tooltip-row"><span>Miss / Dodge</span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
+                    <div class="spell-tooltip-row"><span x-text="$store.i18n.t('result.spell_miss')"></span><span x-text="(sp.miss_pct ?? 0) + '%'"></span></div>
                   </div>
                   <div class="spell-head">
                     <span x-text="sp.name"></span>
                     <span style="display:flex;gap:.6rem;align-items:center">
-                      <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
-                      <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:.8rem" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
-                      <span style="color:var(--accent);font-size:.8rem" x-text="sp.crit_pct + '% crit'"></span>
+                      <span x-show="spellSort==='total_dmg'"><strong x-text="formatDmg(sp.total_dmg)"></strong><span style="color:var(--muted);font-size:var(--text-xs)" x-text="' (' + sp.dmg_pct + '%)'" ></span></span>
+                      <span x-show="spellSort==='dps'"><strong x-text="formatDps(sp.dps)"></strong> DPS<span style="color:var(--muted);font-size:var(--text-xs)" x-text="' (' + sp.dps_pct + '%)'" ></span></span>
+                      <span style="color:var(--accent);font-size:var(--text-xs)" x-text="sp.crit_pct + '% crit'"></span>
                     </span>
                   </div>
                   <div class="spell-bar-bg"><div class="spell-bar-fill" :style="{width: pctBarWidth(sp[spellSort], sortedSpells, spellSort)}"></div></div>
@@ -158,10 +157,10 @@
           </div>
         </div>
         <div class="chart-section"><h2>🥧 DPS Pie Chart</h2><img class="dps-chart-img" :src="'/api/result/' + job.id + '/dps-chart.png?t=' + Date.now()" alt="DPS Chart" @click="chartModal = $el.src" loading="lazy"/></div>
-        <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);align-items:center">
-          <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted)" x-text="$store.i18n.t('result.raw_json')"></a>
+        <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+          <a :href="'/api/result/' + job.id + '/json'" target="_blank" style="color:var(--muted);font-size:var(--text-sm)" x-text="$store.i18n.t('result.raw_json')"></a>
           <span style="color:var(--border)">·</span>
-          <button class="btn" style="font-size:.75rem;padding:.35rem .8rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;margin:0"
+          <button class="btn btn-accent2 btn-sm"
             @click="copyToClipboard(getShareUrl(job.id), job.id)"
             x-text="copiedJobId === job.id ? $store.i18n.t('common.copied') : '🔗 ' + $store.i18n.t('common.share')"
           ></button>
@@ -174,7 +173,6 @@
   <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
     <h2 x-text="$store.i18n.t('history.title')"></h2>
 
-    <!-- Skeleton: ładowanie historii -->
     <template x-if="loadingHistory">
       <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
         <template x-for="i in [1,2,3,4,5]" :key="i">
@@ -187,10 +185,10 @@
       </div>
     </template>
 
-    <div x-show="!loadingHistory && history.length === 0" style="color:var(--muted);text-align:center;padding:1rem;font-size:.85rem" x-text="$store.i18n.t('history.empty')"></div>
+    <div x-show="!loadingHistory && history.length === 0" class="char-card-empty" style="text-align:center;padding:1rem" x-text="$store.i18n.t('history.empty')"></div>
     <div x-show="!loadingHistory && history.length > 0" class="history-list" style="flex:1">
       <template x-for="entry in pagedHistory" :key="entry.job_id">
-        <div class="history-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+        <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
           <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
             <div class="history-char">
               <span x-text="entry.character_name || 'Addon Export'"></span>
@@ -201,7 +199,7 @@
             <div class="history-time" x-text="formatTime(entry.created_at)"></div>
             <div class="history-style" x-text="entry.fight_style"></div>
           </div>
-          <button class="btn" style="font-size:.7rem;padding:.25rem .5rem;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;flex-shrink:0"
+          <button class="btn btn-accent2 btn-sm btn-icon"
             @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
             x-text="copiedJobId === entry.job_id ? '✓' : '🔗'"
             :title="$store.i18n.t('common.copy')"
