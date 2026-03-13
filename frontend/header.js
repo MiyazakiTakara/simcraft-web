@@ -3,6 +3,7 @@ function header() {
     appearance: { emoji: '⚔️', header_title: 'SimCraft Web' },
     sessionId: localStorage.getItem('simcraft_session'),
     mainChar: null,
+    bnetId: null,
     theme: localStorage.getItem('simcraft_theme') || 'dark',
 
     async init() {
@@ -38,6 +39,10 @@ function header() {
             this.mainChar = mc ? { ...mc } : null;
           }
 
+          if (appInstance.bnetId && appInstance.bnetId !== this.bnetId) {
+            this.bnetId = appInstance.bnetId;
+          }
+
           const newTheme = appInstance.theme;
           if (newTheme !== this.theme) this.theme = newTheme;
         };
@@ -64,6 +69,7 @@ function header() {
             const name  = data.main_character_name  || null;
             const realm = data.main_character_realm || null;
             this.mainChar = name ? { name, realm } : null;
+            this.bnetId   = data.bnet_id || null;
           } else {
             this.sessionId = null;
             localStorage.removeItem('simcraft_session');
@@ -96,6 +102,12 @@ function header() {
         if (tab && window.__alpineApp) window.__alpineApp.profileTab = tab;
       } else {
         window.location.href = hash;
+      }
+    },
+
+    goProfile() {
+      if (this.bnetId) {
+        window.open('/u/' + encodeURIComponent(this.bnetId), '_blank');
       }
     },
 

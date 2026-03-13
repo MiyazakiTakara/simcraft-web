@@ -45,9 +45,12 @@
           <span style="font-size:.65rem;opacity:.6" x-text="open ? '▴' : '▾'"></span>
         </button>
         <div x-show="open" x-cloak @click="open=false"
-          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:170px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden">
+          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:180px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden">
           <button class="dropdown-item" @click="goTo('/#profil-chars')"   style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">👤 <span x-text="$store.i18n.t('header.characters')"></span></button>
           <button class="dropdown-item" @click="goTo('/#profil-history')" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">📜 <span x-text="$store.i18n.t('header.history')"></span></button>
+          <template x-if="bnetId">
+            <button class="dropdown-item" @click="goProfile()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🌐 <span x-text="$store.i18n.t('header.public_profile')">Publiczny profil</span></button>
+          </template>
           <button class="dropdown-item" @click="goTo('/#ustawienia')"     style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:var(--text);font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
           <div style="border-top:1px solid var(--border);margin:.3rem 0"></div>
           <button class="dropdown-item" @click="logout()" style="display:block;width:100%;text-align:left;background:none;border:none;padding:.6rem 1rem;cursor:pointer;color:#f66;font-size:.88rem" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>
@@ -119,6 +122,9 @@
         </template>
         <button class="mobile-menu-item" @click="goTo('/#profil-chars')">👤 <span x-text="$store.i18n.t('header.characters')"></span></button>
         <button class="mobile-menu-item" @click="goTo('/#profil-history')">📜 <span x-text="$store.i18n.t('header.history')"></span></button>
+        <template x-if="bnetId">
+          <button class="mobile-menu-item" @click="goProfile()">🌐 <span x-text="$store.i18n.t('header.public_profile')">Publiczny profil</span></button>
+        </template>
         <button class="mobile-menu-item" @click="goTo('/#ustawienia')">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></button>
         <div class="mobile-menu-divider"></div>
         <button class="mobile-menu-item" style="color:#f66" @click="logout()">🚪 <span x-text="$store.i18n.t('header.logout')"></span></button>

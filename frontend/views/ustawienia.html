@@ -35,6 +35,29 @@
       </div>
     </section>
 
+    <!-- Sekcja: Publiczny profil -->
+    <section class="settings-section" x-show="bnetId && !form_profile_private">
+      <h3>🌐 Publiczny profil</h3>
+      <p class="settings-hint">Udostępnij swój profil znajomym — pokazuje historię symulacji i DPS trend.</p>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.25rem">
+        <code
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .75rem;font-size:.82rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          x-text="'https://sim.miyazakitakara.ovh/u/' + bnetId"
+        ></code>
+        <button
+          class="btn btn-ghost btn-sm"
+          @click="copyProfileUrl()"
+          x-text="profileUrlCopied ? '✔ Skopiowano' : '📋 Kopiuj'"
+          :style="profileUrlCopied ? 'color:var(--accent)' : ''"
+        ></button>
+        <a
+          :href="'/u/' + bnetId"
+          target="_blank"
+          class="btn btn-accent2 btn-sm"
+        >↗ Otwórz</a>
+      </div>
+    </section>
+
     <!-- Sekcja: Prywatność -->
     <section class="settings-section">
       <h3 x-text="$store.i18n.t('settings.section_privacy')"></h3>
