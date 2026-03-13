@@ -35,10 +35,11 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - **Main Character** — modal on first login to select main character; saved permanently to Battle.net account (`users` table); displayed in header dropdown
 - **User Dropdown Menu** — header dropdown under the main character name with: Characters, History, Settings, Logout
 - **View Persistence** — active view (home/simulations/profile/settings) persisted via URL hash; browser back/forward works correctly
-- **Settings Page** — change main character, language preference, theme preference; profile privacy toggle
+- **Settings Page** — change main character (select from character list), language preference, theme preference; profile privacy toggle; per-character privacy
 - **Sliding Session** — session TTL extended by 30 days on every active use; no forced re-logins during normal usage
 - **Skeleton Loaders** — loading skeletons on home, symulacje, profil views instead of spinners
 - **Smart History Loading** — home always loads public history; `/symulacje` and `/profil` load private history for logged-in users, public for guests; history reloads on every view switch
+- **Design Tokens** — CSS custom properties for all colors (including `--danger` with dark/light theme variants), spacing, typography, radius, shadows
 
 ## Roadmap
 
@@ -46,13 +47,17 @@ A web-based DPS simulator for World of Warcraft powered by SimulationCraft.
 - [ ] **User profiles** — `/u/{realm}/{name}` page with simulation history and main character avatar
 - [ ] **Build sharing** — export simulation config as a public link to re-run
 - [ ] **Simulation comparison** — `/compare?a={job_id}&b={job_id}` with spell diff and side-by-side DPS
+- [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
+
+### ✅ Done (2026-03-13)
+- [x] **Settings: remove manual character entry** — removed manual name/realm text inputs from settings view; only dropdown select from character list remains ([#28](https://github.com/MiyazakiTakara/simcraft-web/issues/28))
+- [x] **Design token `--danger`** — added `--danger` CSS variable (`#c0392b` dark / `#e74c3c` light) to `:root` and `[data-theme="light"]`; `.btn-danger` and `.seg-btn.active` now use `var(--danger)` instead of hardcoded hex
+
+### ✅ Done (2026-03-12)
 - [x] **Settings: character picker** — replace manual name/realm text inputs with character list (same as simulation tab); user clicks to select, no typing
 - [x] **Settings: per-character privacy** — in addition to global account privacy toggle, allow hiding/showing individual characters from public profile
 - [x] **Rankings: exclude addon simulations** — filter out results submitted via the WoW addon (`source=addon` flag); only web simulations should appear in rankings
-- [ ] **Custom SVG icons (Arcane style)** — replace emoji and placeholder images with custom SVG assets: class icons, default character avatars, item slot icons, UI elements; cartoon style inspired by Arcane anime
 - [x] **Skeleton loaders: profil.html** — char cards grid and history section
-
-### ✅ Done (2026-03-12)
 - [x] **Skeleton loaders: home.html + symulacje.html** — public history grid, top 3 podium, history sidebar ([#27](https://github.com/MiyazakiTakara/simcraft-web/issues/27))
 - [x] **Smart history loading** — `navigateTo()` switches between public/private history per view; `historyLoading` → `loadingHistory` ReferenceError fixed ([#33](https://github.com/MiyazakiTakara/simcraft-web/issues/33))
 - [x] **Fix `/rankings` 404** — added explicit FastAPI route; `StaticFiles(html=True)` does not auto-map `/foo` → `foo.html` ([#32](https://github.com/MiyazakiTakara/simcraft-web/issues/32))
@@ -240,12 +245,12 @@ simcraft-web/
 │   ├── utils.js           # Helpers (number formatting, class colors, etc.)
 │   ├── admin.js           # Admin panel logic
 │   ├── i18n.js            # Translation system (Alpine store, auto-detect, localStorage)
-│   ├── style.css          # Global styles (dark theme + rankings/podium)
+│   ├── style.css          # Global styles (design tokens, dark/light theme, components)
 │   ├── views/
 │   │   ├── home.html        # Home view (hero, addon form, top 3 podium, public history, news)
 │   │   ├── symulacje.html   # Simulations view (character list, form, results, history)
 │   │   ├── profil.html      # Profile view (characters, history, DPS trend chart)
-│   │   └── ustawienia.html  # Settings view (main char, privacy, theme, language)
+│   │   └── ustawienia.html  # Settings view (main char select, privacy, theme, language)
 │   └── locales/
 │       ├── pl.json          # Polish translations
 │       └── en.json          # English translations
@@ -265,6 +270,21 @@ The frontend uses **Alpine.js** with a mixin pattern. Key rules:
 - Valid hash routes: `#symulacje`, `#profil`, `#ustawienia`
 - `rankings.html` is a **standalone page** (not a view), served by FastAPI at `GET /rankings`
 - **State property names matter** — views use the actual state field names (e.g. `loadingHistory`, not aliases); aliased names are not visible after `Alpine.initTree()`
+
+## CSS Design Tokens
+
+All visual constants are defined as CSS custom properties in `:root` and overridden in `[data-theme="light"]`:
+
+| Token | Dark | Light | Usage |
+|-------|------|-------|-------|
+| `--accent` | `#c89a3c` | `#a07820` | Primary brand color, active tabs, CTA buttons |
+| `--accent2` | `#7c5cfc` | `#5a3fd4` | Secondary accent, public char buttons |
+| `--danger` | `#c0392b` | `#e74c3c` | Destructive actions, private char buttons, active segment buttons |
+| `--bg` | `#0d0e12` | `#f4f5f7` | Page background |
+| `--surface` | `#1a1b22` | `#ffffff` | Card/panel background |
+| `--border` | `#2e3040` | `#d0d4e0` | Borders, dividers |
+| `--text` | `#e8e8f0` | `#1a1b22` | Body text |
+| `--muted` | `#8888aa` | `#666688` | Secondary text, labels |
 
 ## API Reference
 
