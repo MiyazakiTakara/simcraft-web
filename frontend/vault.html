@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Great Vault — SimCraft Web</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css?v=11" />
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=3"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=6"></script>
+  <script src="/session.js?v=1"></script>
+  <script src="/vault.js?v=1"></script>
+  <style>
+    /* Ukryj strzałki spinner w number inputs */
+    .no-spin::-webkit-outer-spin-button,
+    .no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .no-spin { -moz-appearance: textfield; }
+    .item-col-label {
+      font-size: .75rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 0 2px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" x-data="vaultPage()" x-init="init()">
+
+  <div id="site-header"></div>
+
+  <main style="max-width:900px;margin:0 auto;padding:1.5rem 1rem">
+
+    <!-- Title -->
+    <div style="margin-bottom:1.5rem">
+      <h1 style="font-size:1.6rem;font-weight:700;margin:0 0 .3rem">&#127974; <span x-text="$store.i18n.t('vault.title')"></span></h1>
+      <p style="color:var(--muted);font-size:.9rem;margin:0" x-text="$store.i18n.t('vault.subtitle')"></p>
+    </div>
+
+    <!-- Step 1: Addon export -->
+    <div class="panel" style="margin-bottom:1rem">
+      <h2 style="margin-bottom:.75rem" x-text="$store.i18n.t('vault.step1_title')"></h2>
+      <textarea
+        class="addon-box"
+        :placeholder="$store.i18n.t('vault.addon_placeholder')"
+        x-model="addonText"
+        @input="parseVaultItems()"
+        :disabled="running"
+        style="min-height:120px"
+      ></textarea>
+      <template x-if="parsedCount > 0">
+        <div style="margin-top:.5rem;font-size:.82rem;color:#4caf50;display:flex;align-items:center;gap:.4rem">
+          <span>&#10003;</span>
+          <span x-text="$store.i18n.t('vault.parsed_ok', { count: parsedCount })"></span>
+        </div>
+      </template>
+      <template x-if="parsedCount === 0 && addonText.length > 50">
+        <div style="margin-top:.5rem;font-size:.82rem;color:var(--muted)" x-text="$store.i18n.t('vault.parsed_none')"></div>
+      </template>
+    </div>
+
+    <!-- Step 2: Vault items -->
+    <div class="panel" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+        <h2 style="margin:0" x-text="$store.i18n.t('vault.step2_title')"></h2>
+        <button
+          class="btn btn-ghost btn-sm"
+          @click="addItem()"
+          :disabled="items.length >= 9 || running"
+          style="font-size:.82rem"
+          x-text="$store.i18n.t('vault.add_item')"
+        ></button>
+      </div>
+
+      <template x-if="items.length === 0">
+        <p style="color:var(--muted);font-size:.88rem;text-align:center;padding:1rem 0" x-text="$store.i18n.t('vault.empty_hint')"></p>
+      </template>
+
+      <template x-if="items.length > 0">
+        <div>
+          <!-- Column headers -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 90px 80px 28px;gap:.5rem;margin-bottom:.3rem;padding:0 2px">
+            <span class="item-col-label" x-text="$store.i18n.t('vault.col_name')"></span>
+            <span class="item-col-label" x-text="$store.i18n.t('vault.col_slot')"></span>
+            <span class="item-col-label" x-text="$store.i18n.t('vault.col_id')"></span>
+            <span class="item-col-label" x-text="$store.i18n.t('vault.col_ilvl')"></span>
+            <span></span>
+          </div>
+
+          <!-- Item rows -->
+          <div style="display:flex;flex-direction:column;gap:.6rem">
+            <template x-for="(item, idx) in items" :key="idx">
+              <div style="display:grid;grid-template-columns:1fr 1fr 90px 80px 28px;gap:.5rem;align-items:center">
+                <input
+                  class="search"
+                  placeholder="np. Feathered Cowl"
+                  x-model="item.name"
+                  :disabled="running"
+                  style="margin:0"
+                />
+                <input
+                  class="search"
+                  placeholder="np. head"
+                  x-model="item.slot"
+                  :disabled="running"
+                  style="margin:0"
+                />
+                <input
+                  class="search no-spin"
+                  type="number"
+                  placeholder="250459"
+                  x-model.number="item.item_id"
+                  :disabled="running"
+                  style="margin:0"
+                />
+                <input
+                  class="search no-spin"
+                  type="number"
+                  placeholder="253"
+                  x-model.number="item.item_level"
+                  :disabled="running"
+                  style="margin:0"
+                />
+                <button
+                  class="btn btn-ghost btn-sm btn-icon"
+                  @click="removeItem(idx)"
+                  :disabled="running"
+                  :title="$store.i18n.t('vault.remove_item')"
+                  style="width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center"
+                >&#10005;</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Step 3: Sim options -->
+    <div class="panel" style="margin-bottom:1rem">
+      <h2 style="margin-bottom:.75rem" x-text="$store.i18n.t('vault.step3_title')"></h2>
+      <div class="sim-options">
+        <div class="sim-option">
+          <label x-text="$store.i18n.t('sim.fight_style')"></label>
+          <select x-model="fightStyle" :disabled="running">
+            <option value="Patchwerk">Patchwerk</option>
+            <option value="HecticAddCleave">HecticAddCleave</option>
+            <option value="LightMovement">LightMovement</option>
+            <option value="HeavyMovement">HeavyMovement</option>
+          </select>
+        </div>
+        <div class="sim-option">
+          <label x-text="$store.i18n.t('sim.iterations')"></label>
+          <input type="number" x-model.number="iterations" min="100" max="5000" step="100" :disabled="running" />
+        </div>
+        <div class="sim-option">
+          <label x-text="$store.i18n.t('sim.target_error')"></label>
+          <input type="number" x-model.number="targetError" min="0.1" max="5" step="0.1" :disabled="running" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <template x-if="error">
+      <div style="background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.35);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;color:#f88;font-size:.9rem" x-text="error"></div>
+    </template>
+
+    <!-- Run button -->
+    <button
+      class="btn btn-primary"
+      @click="startVault()"
+      :disabled="running"
+      style="width:100%;margin-bottom:1.5rem"
+    >
+      <span x-show="running" class="spinner"></span>
+      <span x-show="running" x-text="$store.i18n.t('vault.running')"></span>
+      <span x-show="!running" x-text="$store.i18n.t('vault.run_btn')"></span>
+    </button>
+
+    <!-- Progress -->
+    <template x-if="running || groupStatus">
+      <div class="panel" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <span style="font-size:.9rem;font-weight:600">
+            &#9203;
+            <span x-text="currentLabel || $store.i18n.t('vault.running')"></span>
+          </span>
+          <span style="font-size:.82rem;color:var(--muted)">
+            <span x-text="doneCount"></span> / <span x-text="totalCount"></span>
+          </span>
+        </div>
+        <div style="background:var(--border);border-radius:999px;height:8px;overflow:hidden">
+          <div
+            style="height:100%;background:var(--accent);border-radius:999px;transition:width .4s ease"
+            :style="{width: totalCount > 0 ? (doneCount / totalCount * 100) + '%' : '0%'}"
+          ></div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Results -->
+    <template x-if="results.length > 0">
+      <div class="panel">
+        <h2 style="margin-bottom:1rem" x-text="$store.i18n.t('vault.results_title')"></h2>
+
+        <!-- Baseline -->
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:.75rem;border:1px solid var(--border)">
+          <span style="font-size:1.2rem">&#128260;</span>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem" x-text="$store.i18n.t('vault.baseline_label')"></div>
+            <div style="font-size:.8rem;color:var(--muted)" x-text="$store.i18n.t('vault.baseline_subtitle')"></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:1rem;color:var(--text)" x-text="Utils.formatDps(baselineDps)"></div>
+          </div>
+        </div>
+
+        <!-- Item list -->
+        <template x-for="(r, idx) in results" :key="r.job_id">
+          <div
+            style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;border-radius:8px;margin-bottom:.5rem;border:1px solid var(--border);transition:background .15s"
+            :style="{background: r.rank === 1 ? 'rgba(200,154,60,.10)' : 'transparent', borderColor: r.rank === 1 ? 'rgba(200,154,60,.4)' : 'var(--border)'}"
+          >
+            <div style="width:28px;text-align:center;flex-shrink:0">
+              <template x-if="r.rank === 1">
+                <span style="font-size:1.2rem">&#127947;</span>
+              </template>
+              <template x-if="r.rank !== 1">
+                <span style="font-size:.85rem;font-weight:700;color:var(--muted)" x-text="'#' + r.rank"></span>
+              </template>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" x-text="r.item_name"></div>
+              <div style="font-size:.78rem;color:var(--muted)">
+                <span x-text="r.slot"></span>
+                <template x-if="r.item_level">
+                  <span x-text="' · ' + $store.i18n.t('vault.ilvl_label') + ' ' + r.item_level"></span>
+                </template>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:700;font-size:1rem" x-text="Utils.formatDps(r.dps)"></div>
+              <div
+                style="font-size:.78rem;font-weight:600"
+                :style="{color: r.dps_delta >= 0 ? '#4caf50' : '#f44336'}"
+                x-text="(r.dps_delta >= 0 ? '+' : '') + Utils.formatDps(r.dps_delta) + ' (' + (r.dps_delta_pct >= 0 ? '+' : '') + r.dps_delta_pct + '%)'">
+              </div>
+            </div>
+            <a
+              :href="'/result/' + r.job_id"
+              target="_blank"
+              class="btn btn-ghost btn-sm btn-icon"
+              :title="$store.i18n.t('vault.full_result')"
+              style="flex-shrink:0"
+            >&#8599;</a>
+          </div>
+        </template>
+      </div>
+    </template>
+
+  </main>
+
+  <div id="site-footer"></div>
+</div>
+
+<script>
+function parseSimcItemLine(rawLine) {
+  let line = rawLine.trim();
+  if (line.startsWith('# ')) line = line.slice(2).trim();
+  else if (line.startsWith('#')) line = line.slice(1).trim();
+
+  const slotMatch = line.match(/^([a-z_0-9]+)=([^,]*),(.+)$/);
+  if (!slotMatch) return null;
+
+  const slot     = slotMatch[1].trim();
+  const namePart = slotMatch[2].trim();
+  const rest     = slotMatch[3];
+
+  const knownSlots = [
+    'head','neck','shoulder','back','chest','wrist','hands',
+    'waist','legs','feet','finger1','finger2','trinket1','trinket2',
+    'main_hand','off_hand','ranged'
+  ];
+  if (!knownSlots.includes(slot)) return null;
+
+  const idMatch   = rest.match(/(?:^|,)id=(\d+)/);
+  const ilvlMatch = rest.match(/(?:^|,)ilevel=(\d+)/);
+  if (!idMatch) return null;
+
+  return {
+    name:       namePart || ('Item ' + idMatch[1]),
+    slot:       slot,
+    item_id:    parseInt(idMatch[1], 10),
+    item_level: ilvlMatch ? parseInt(ilvlMatch[1], 10) : 0,
+    simc_line:  line.trim(),
+  };
+}
+
+function vaultPage() {
+  return {
+    sessionId:    localStorage.getItem('simcraft_session'),
+    addonText:    '',
+    items:        [],
+    parsedCount:  0,
+    fightStyle:   'Patchwerk',
+    iterations:   1000,
+    targetError:  0.5,
+    running:      false,
+    error:        null,
+    groupId:      null,
+    groupStatus:  null,
+    doneCount:    0,
+    totalCount:   0,
+    currentLabel: null,
+    baselineDps:  0,
+    results:      [],
+    _poll:        null,
+
+    async init() {
+      await loadPartials();
+    },
+
+    parseVaultItems() {
+      const text = this.addonText;
+      if (!text) { this.parsedCount = 0; return; }
+
+      const lines  = text.split('\n');
+      let inVault  = false;
+      const parsed = [];
+      let pendingName = null;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+
+        if (/^###\s*Weekly Reward Choices/i.test(line)) {
+          inVault = true;
+          pendingName = null;
+          continue;
+        }
+        if (/^###\s*End of Weekly Reward Choices/i.test(line)) {
+          inVault = false;
+          continue;
+        }
+        if (!inVault) continue;
+        if (line === '#') { pendingName = null; continue; }
+
+        if (line.startsWith('#') && !line.includes('id=')) {
+          const nameCandidate = line.replace(/^#\s*/, '').trim();
+          if (nameCandidate) pendingName = nameCandidate.replace(/\s*\(\d+\)\s*$/, '').trim();
+          continue;
+        }
+
+        if (line.startsWith('#') && line.includes('id=')) {
+          const item = parseSimcItemLine(line);
+          if (item) {
+            if (pendingName && (!item.name || item.name.startsWith('Item '))) {
+              item.name = pendingName;
+            }
+            parsed.push(item);
+            pendingName = null;
+          }
+        }
+      }
+
+      if (parsed.length > 0) {
+        this.items       = parsed;
+        this.parsedCount = parsed.length;
+      } else {
+        this.parsedCount = 0;
+      }
+    },
+
+    addItem() {
+      if (this.items.length >= 9) return;
+      this.items.push({ name: '', slot: '', item_id: 0, item_level: 0, simc_line: '' });
+    },
+
+    removeItem(idx) {
+      this.items.splice(idx, 1);
+    },
+
+    async startVault() {
+      this.error = null;
+      const t = window.Alpine ? Alpine.store('i18n').t.bind(Alpine.store('i18n')) : (k) => k;
+      if (!this.addonText.trim()) { this.error = t('vault.error_no_addon'); return; }
+      if (this.items.length === 0) { this.error = t('vault.error_no_items'); return; }
+      const invalid = this.items.find(i => !i.name.trim() || !i.slot.trim());
+      if (invalid) { this.error = t('vault.error_invalid_item'); return; }
+
+      this.running     = true;
+      this.results     = [];
+      this.doneCount   = 0;
+      this.totalCount  = 0;
+      this.baselineDps = 0;
+      this.groupId     = null;
+
+      try {
+        const body = {
+          session:         this.sessionId || null,
+          addon_text:      this.addonText.trim(),
+          items:           this.items,
+          fight_style:     this.fightStyle,
+          iterations:      this.iterations,
+          target_error:    this.targetError,
+          one_button_mode: false,
+        };
+        const r = await fetch('/api/vault/start', {
+          method:  'POST',
+          headers: {'Content-Type': 'application/json'},
+          body:    JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.detail || 'Error');
+        }
+        const data    = await r.json();
+        this.groupId  = data.group_id;
+        this.totalCount = data.total;
+        this._startPolling();
+      } catch(e) {
+        this.error   = e.message;
+        this.running = false;
+      }
+    },
+
+    _startPolling() {
+      if (this._poll) clearInterval(this._poll);
+      this._poll = setInterval(() => this._pollStatus(), 3000);
+      this._pollStatus();
+    },
+
+    async _pollStatus() {
+      if (!this.groupId) return;
+      try {
+        const r = await fetch('/api/vault/status/' + this.groupId);
+        if (!r.ok) return;
+        const d = await r.json();
+        this.doneCount    = d.done_count   || 0;
+        this.totalCount   = d.total        || this.totalCount;
+        this.currentLabel = d.current_label;
+        this.baselineDps  = d.baseline_dps || 0;
+        this.results      = d.results      || [];
+        this.groupStatus  = d.status;
+
+        if (d.status === 'done' || d.status === 'error') {
+          clearInterval(this._poll);
+          this._poll   = null;
+          this.running = false;
+          this.currentLabel = null;
+          if (d.status === 'error') {
+            const t = window.Alpine ? Alpine.store('i18n').t.bind(Alpine.store('i18n')) : (k) => k;
+            this.error = t('vault.error_sim_failed');
+          }
+        }
+      } catch(e) {}
+    },
+  };
+}
+</script>
+</body>
+</html>

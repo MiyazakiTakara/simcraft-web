@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- OG_META_PLACEHOLDER -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <script>var whTooltips = {colorLinks: false, iconizeLinks: false, renameLinks: false};</script>
+  <script src="https://wow.zamimg.com/js/tooltips.js"></script>
+  <link rel="stylesheet" href="/style.css?v=11"/>
+  <script src="/i18n.js?v=3"></script>
+  <script src="/utils.js?v=2"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=9"></script>
+  <script src="/result-panel.js?v=9"></script>
+  <!-- _resultJobId musi byc na window zanim Alpine sparsuje x-data -->
+  <script>
+    window._resultJobId = window.location.pathname.split('/').filter(Boolean).pop() || null;
+    console.log('[boot] _resultJobId=', window._resultJobId, 'ResultPanel=', typeof window.ResultPanel);
+  </script>
+  <!-- Alpine ESM build — nie startuje automatycznie, wymaga Alpine.start() -->
+  <script type="module">
+    import Alpine from 'https://unpkg.com/alpinejs@3.14.9/dist/module.esm.js';
+    window.Alpine = Alpine;
+    window._i18nReady.then(function(store) {
+      Alpine.store('i18n', store);
+      Alpine.start();
+    });
+  </script>
+</head>
+<body>
+
+  <div class="container" style="padding-bottom:0">
+    <div id="site-header"></div>
+  </div>
+
+  <!-- brak x-init: init() wywolywane jako lifecycle hook (klucz 'init' w obiekcie Alpine) -->
+  <div class="container" x-data="ResultPanel(_resultJobId, {showReactions: true, showFooter: true, showChart: true})" style="padding-top:0">
+
+    <!-- Tooltip portal -->
+    <div
+      x-show="activeTooltip && tooltipCache[activeTooltip] !== undefined"
+      :style="`position:fixed;left:${tooltipX}px;top:${tooltipY}px;z-index:99999;pointer-events:none`"
+      class="wh-tooltip"
+      style="display:none"
+    >
+      <template x-if="activeTooltip && tooltipCache[activeTooltip] === 'loading'">
+        <div class="wh-tooltip-loading">Loading&#8230;</div>
+      </template>
+      <template x-if="activeTooltip && tooltipCache[activeTooltip] && tooltipCache[activeTooltip] !== 'loading'">
+        <div>
+          <div class="wh-tooltip-header">
+            <template x-if="tooltipCache[activeTooltip].icon">
+              <img class="wh-tooltip-icon"
+                :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[activeTooltip].icon + '.jpg'"
+                :alt="tooltipCache[activeTooltip].name"
+                @error="$el.style.display='none'"/>
+            </template>
+            <div>
+              <div class="wh-tooltip-name" x-text="tooltipCache[activeTooltip].name"></div>
+              <div class="wh-tooltip-school" x-show="tooltipCache[activeTooltip].school" x-text="tooltipCache[activeTooltip].school"></div>
+            </div>
+          </div>
+          <div class="wh-tooltip-desc" x-show="tooltipCache[activeTooltip].description" x-text="tooltipCache[activeTooltip].description"></div>
+          <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + activeTooltip" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
+        </div>
+      </template>
+    </div>
+
+    <!-- Chart modal -->
+    <div class="chart-modal-overlay" x-show="chartModal" x-cloak @click="chartModal=false" style="display:none">
+      <img :src="chartModal" alt="DPS Chart"/>
+    </div>
+
+    <div class="result-page">
+      <div class="spinner-wrap" x-show="loading">
+        <span class="spinner" style="width:2rem;height:2rem"></span>
+      </div>
+
+      <div class="result-not-found" x-show="!loading && error">
+        <div class="icon">&#128269;</div>
+        <p x-text="error"></p>
+        <a href="/" class="btn btn-primary" style="margin-top:1rem" x-text="$store.i18n.t('result.back_home')"></a>
+      </div>
+
+      <div class="panel" x-show="!loading && result" style="display:none">
+        <!-- RESULT_PANEL -->
+      </div>
+    </div>
+
+  </div>
+
+  <div id="site-footer"></div>
+
+</body>
+</html>

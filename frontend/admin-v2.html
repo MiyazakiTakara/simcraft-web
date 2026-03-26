@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimCraft Admin</title>
+  <link rel="stylesheet" href="/admin-v2.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    /* Toggle dla pól config — spójny z profil-page.html */
+    .config-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .config-toggle-row .toggle-label {
+      color: #ccc;
+      font-size: 0.88rem;
+    }
+    .config-toggle-row .toggle-hint {
+      font-size: 0.78rem;
+      color: #666;
+    }
+    .toggle-btn {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .toggle-btn.active {
+      background: #f4a01c;
+      border-color: #f4a01c;
+    }
+    .toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+      pointer-events: none;
+    }
+    .toggle-btn.active .toggle-knob {
+      transform: translateX(18px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">⚙️</span>
+      <span class="sidebar-title">SimCraft Admin</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <span class="nav-group-label" data-i18n="admin.nav.group.overview">Przegląd</span>
+        <button class="nav-item" data-tab="dashboard">
+          <span class="nav-icon">📊</span><span class="nav-label" data-i18n="admin.tabs.dashboard">Dashboard</span>
+        </button>
+        <button class="nav-item" data-tab="traffic">
+          <span class="nav-icon">📈</span><span class="nav-label" data-i18n="admin.tabs.traffic">Ruch</span>
+        </button>
+        <button class="nav-item" data-tab="health">
+          <span class="nav-icon">🏥</span><span class="nav-label" data-i18n="admin.tabs.health">Health</span>
+          <span class="nav-badge" id="badge-health" style="display:none"></span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label" data-i18n="admin.nav.group.content">Treści</span>
+        <button class="nav-item" data-tab="news">
+          <span class="nav-icon">📰</span><span class="nav-label" data-i18n="admin.tabs.news">Newsy</span>
+        </button>
+        <button class="nav-item" data-tab="appearance">
+          <span class="nav-icon">🎨</span><span class="nav-label" data-i18n="admin.tabs.appearance">Wygląd</span>
+        </button>
+        <button class="nav-item" data-tab="announcement">
+          <span class="nav-icon">📣</span><span class="nav-label" data-i18n="admin.tabs.announcement">Komunikaty</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label" data-i18n="admin.nav.group.users">Użytkownicy</span>
+        <button class="nav-item" data-tab="users">
+          <span class="nav-icon">👥</span><span class="nav-label" data-i18n="admin.tabs.users">Użytkownicy</span>
+        </button>
+        <button class="nav-item" data-tab="gdpr">
+          <span class="nav-icon">🛡️</span><span class="nav-label" data-i18n="admin.tabs.gdpr">RODO</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label" data-i18n="admin.nav.group.system">System</span>
+        <button class="nav-item" data-tab="tasks">
+          <span class="nav-icon">🔧</span><span class="nav-label" data-i18n="admin.tabs.tasks">Zadania</span>
+          <span class="nav-badge" id="badge-tasks" style="display:none"></span>
+        </button>
+        <button class="nav-item" data-tab="logs">
+          <span class="nav-icon">📋</span><span class="nav-label" data-i18n="admin.tabs.logs">Logi</span>
+          <span class="nav-badge error" id="badge-logs" style="display:none"></span>
+        </button>
+        <button class="nav-item" data-tab="js-errors">
+          <span class="nav-icon">🐛</span><span class="nav-label" data-i18n="admin.tabs.js_errors">JS Errors</span>
+          <span class="nav-badge error" id="badge-js-errors" style="display:none"></span>
+        </button>
+        <button class="nav-item" data-tab="audit">
+          <span class="nav-icon">🕐</span><span class="nav-label" data-i18n="admin.tabs.audit">Audit log</span>
+        </button>
+        <button class="nav-item" data-tab="config">
+          <span class="nav-icon">🗂️</span><span class="nav-label" data-i18n="admin.tabs.config">Konfiguracja</span>
+        </button>
+        <button class="nav-item" data-tab="maintenance">
+          <span class="nav-icon">🚧</span><span class="nav-label" data-i18n="admin.tabs.maintenance">Utrzymanie</span>
+        </button>
+        <button class="nav-item" data-tab="results">
+          <span class="nav-icon">🗑️</span><span class="nav-label" data-i18n="admin.tabs.results">Pliki wyników</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label" data-i18n="admin.nav.group.other">Inne</span>
+        <button class="nav-item" data-tab="search">
+          <span class="nav-icon">🔍</span><span class="nav-label" data-i18n="admin.tabs.search">Wyszukiwarka</span>
+        </button>
+        <button class="nav-item" data-tab="docs">
+          <span class="nav-icon">📚</span><span class="nav-label" data-i18n="admin.tabs.docs">Dokumentacja</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="pl" onclick="adminSetLang('pl')">PL</button>
+        <button class="lang-btn" data-lang="en" onclick="adminSetLang('en')">EN</button>
+      </div>
+      <span id="username" class="sidebar-username"></span>
+      <a class="sidebar-logout" href="/admin/logout" data-i18n="admin.sidebar.logout">Wyloguj</a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content" id="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-menu-btn" id="mobile-toggle">☰</button>
+        <h1 class="topbar-title" id="topbar-title" data-i18n="admin.tabs.dashboard">Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-search-btn" onclick="openGlobalSearch()" data-i18n-title="admin.search.title" title="Szukaj (Ctrl+K)">🔍</button>
+        <span class="topbar-alerts" id="topbar-alerts" style="display:none">🔔 <span id="alert-count">0</span></span>
+        <span class="topbar-time" id="topbar-time"></span>
+      </div>
+    </header>
+
+    <!-- ========== DASHBOARD ========== -->
+    <section class="tab-panel" id="tab-dashboard">
+      <div class="panel-header">
+        <h2 data-i18n="admin.dashboard.title">Statystyki serwera</h2>
+        <span class="refresh-label" id="refresh-label-dashboard"></span>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card" data-i18n-tooltip="admin.dashboard.stat.total_sims_tooltip" data-tooltip="Łączna liczba wszystkich symulacji w bazie">
+          <div class="stat-value" id="stat-total-sims">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.total_sims">Wszystkich symulacji</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total-users">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.total_users">Użytkowników</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-today-sims">—</div>
+          <div class="stat-label" data-i18n="admin.stat.today">Dziś</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-week-sims">—</div>
+          <div class="stat-label" data-i18n="admin.stat.last_7d">Ostatnie 7 dni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-month-sims">—</div>
+          <div class="stat-label" data-i18n="admin.stat.last_30d">Ostatnie 30 dni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-active-jobs">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.active_jobs">Aktywne zadania</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-cpu">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.cpu">CPU</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-memory">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.memory">RAM</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-uptime">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.uptime">Uptime</div>
+        </div>
+        <div class="stat-card" data-i18n-tooltip="admin.dashboard.stat.avg_duration_tooltip" data-tooltip="Średnio tyle trwa symulacja (tylko zakończone)">
+          <div class="stat-value" id="stat-avg-duration">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.avg_duration">Śr. czas symulacji</div>
+        </div>
+        <div class="stat-card" data-i18n-tooltip="admin.dashboard.stat.median_duration_tooltip" data-tooltip="Mediana czasu trwania symulacji">
+          <div class="stat-value" id="stat-median-duration">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.median_duration">Mediana czasu sim.</div>
+        </div>
+        <div class="stat-card" data-i18n-tooltip="admin.dashboard.stat.error_rate_24h_tooltip" data-tooltip="Procent symulacji zakończonych błędem w ostatnich 24h">
+          <div class="stat-value" id="stat-error-rate-24h">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.error_rate_24h">Błędy 24h</div>
+        </div>
+        <div class="stat-card" data-i18n-tooltip="admin.dashboard.stat.error_rate_7d_tooltip" data-tooltip="Procent symulacji zakończonych błędem w ostatnich 7 dniach">
+          <div class="stat-value" id="stat-error-rate-7d">—</div>
+          <div class="stat-label" data-i18n="admin.dashboard.stat.error_rate_7d">Błędy 7 dni</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.trend">Symulacje — ostatnie 30 dni</h3>
+          <div id="chart-trend" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.classes">Rozkład klas</h3>
+          <div id="chart-classes" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.fightstyle">Fight Style</h3>
+          <div id="chart-fightstyle" style="height:220px"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.top10">Top 10 DPS</h3>
+          <div id="chart-top10" style="font-size:0.82rem"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.duration_hist">Czas trwania symulacji</h3>
+          <div id="chart-duration-hist" style="height:220px"></div>
+        </div>
+        <div class="chart-card" style="grid-column: span 2">
+          <h3 class="chart-title" data-i18n="admin.dashboard.chart.dps_trends">Średnio DPS per klasa — ostatnie 30 dni</h3>
+          <div id="chart-dps-trends" style="height:280px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== RUCH ========== -->
+    <section class="tab-panel" id="tab-traffic">
+      <div class="panel-header">
+        <h2 data-i18n="admin.traffic.title">Ruch na stronie</h2>
+        <span class="refresh-label" id="refresh-label-traffic"></span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value" id="tr-today">—</div><div class="stat-label" data-i18n="admin.stat.today">Dziś</div></div>
+        <div class="stat-card"><div class="stat-value" id="tr-unique-today">—</div><div class="stat-label" data-i18n="admin.traffic.stat.unique_today">Unikalni dziś</div></div>
+        <div class="stat-card"><div class="stat-value" id="tr-week">—</div><div class="stat-label" data-i18n="admin.stat.last_7d">7 dni</div></div>
+        <div class="stat-card"><div class="stat-value" id="tr-month">—</div><div class="stat-label" data-i18n="admin.stat.last_30d">30 dni</div></div>
+        <div class="stat-card"><div class="stat-value" id="tr-unique-30d">—</div><div class="stat-label" data-i18n="admin.traffic.stat.unique_30d">Unikalni 30 dni</div></div>
+        <div class="stat-card"><div class="stat-value" id="tr-total">—</div><div class="stat-label" data-i18n="admin.traffic.stat.total">Wszystkich wizyt</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.traffic.chart.daily">Odwiedziny — ostatnie 30 dni</h3>
+          <div id="chart-traffic-daily" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title" data-i18n="admin.traffic.chart.hourly">Aktywność wg godziny (7 dni)</h3>
+          <div id="chart-traffic-hourly" style="height:240px"></div>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:0">
+        <h3 class="chart-title" data-i18n="admin.traffic.chart.top_pages">Top 10 podstron (30 dni)</h3>
+        <div id="traffic-top-pages"></div>
+      </div>
+    </section>
+
+    <!-- ========== HEALTH ========== -->
+    <section class="tab-panel" id="tab-health">
+      <div class="panel-header">
+        <h2 data-i18n="admin.health.title">Health Check
+          <span id="alert-badge-health" style="display:none;background:#e55;color:#fff;border-radius:10px;
+            padding:0.1rem 0.55rem;font-size:0.75rem;font-weight:700;margin-left:0.5rem;vertical-align:middle"></span>
+        </h2>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span class="refresh-label" id="refresh-label-health"></span>
+          <button class="btn secondary btn-sm" onclick="window.loadHealth()" data-i18n="admin.action.refresh">Odśwież</button>
+        </div>
+      </div>
+
+      <div id="alerts-v2-section"></div>
+      <div id="health-v2-content">
+        <p class="empty" style="color:#555" data-i18n="admin.loading">Ładowanie...</p>
+      </div>
+
+      <div class="chart-card" style="margin-top:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+          <h3 class="chart-title" style="margin:0" data-i18n="admin.health.rebuild_log_title">📋 Historia Rebuild SimC</h3>
+          <button class="btn secondary btn-sm" onclick="window.loadRebuildLog()" data-i18n="admin.action.refresh">Odśwież</button>
+        </div>
+        <div id="rebuild-log-table">
+          <p class="empty" style="color:#555;font-size:0.85rem" data-i18n="admin.health.rebuild_log_hint">Kliknij Odśwież aby załadować historię.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== NEWSY ========== -->
+    <section class="tab-panel" id="tab-news">
+      <div class="panel-header"><h2 data-i18n="admin.tabs.news">Newsy</h2></div>
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.news.add_title">Dodaj news</h3>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.news.field.title">Tytuł</label>
+          <input type="text" id="news-title" class="form-input" data-i18n-placeholder="admin.news.field.title_placeholder" placeholder="Tytuł newsa...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.news.field.body">Treść</label>
+          <textarea id="news-body" class="form-textarea" data-i18n-placeholder="admin.news.field.body_placeholder" placeholder="Treść (Markdown)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="news-published" checked>
+            <span data-i18n="admin.news.field.published">Opublikowany</span>
+          </label>
+        </div>
+        <button class="btn primary" onclick="createNews()" data-i18n="admin.news.add_title">Dodaj news</button>
+      </div>
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.news.list_title">Newsy</h3>
+        <div class="item-list" id="news-list"><p class="empty" data-i18n="admin.loading">Ładowanie...</p></div>
+      </div>
+    </section>
+
+    <!-- ========== WYGLĄD ========== -->
+    <section class="tab-panel" id="tab-appearance">
+      <div class="panel-header"><h2 data-i18n="admin.appearance.title">Wygląd strony</h2></div>
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.appearance.customize">Dostosuj stronę główną</h3>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.appearance.field.header_title">Tytuł w headerze</label>
+          <input type="text" id="appearance-header-title" class="form-input" placeholder="SimCraft Web">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.appearance.field.hero_title">Tytuł landing hero</label>
+          <input type="text" id="appearance-hero-title" class="form-input" placeholder="World of Warcraft">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.appearance.field.hero_custom">Własny tekst hero <span class="form-hint" data-i18n="admin.field.optional">(opcjonalnie)</span></label>
+          <textarea id="appearance-hero-custom" class="form-textarea"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.appearance.field.icon">Ikona strony (emoji)</label>
+          <div class="emoji-picker" id="emoji-picker">
+            <button class="emoji-btn" data-emoji="⚔️">⚔️</button>
+            <button class="emoji-btn" data-emoji="🛡️">🛡️</button>
+            <button class="emoji-btn" data-emoji="💀">💀</button>
+            <button class="emoji-btn" data-emoji="🐉">🐉</button>
+            <button class="emoji-btn" data-emoji="🔥">🔥</button>
+            <button class="emoji-btn" data-emoji="❄️">❄️</button>
+            <button class="emoji-btn" data-emoji="⚡">⚡</button>
+            <button class="emoji-btn" data-emoji="🏹">🏹</button>
+            <button class="emoji-btn" data-emoji="✨">✨</button>
+            <button class="emoji-btn" data-emoji="🏆">🏆</button>
+          </div>
+        </div>
+        <button class="btn primary" onclick="saveAppearance()" data-i18n="admin.appearance.save">Zapisz wygląd</button>
+        <p id="appearance-result" class="form-result"></p>
+      </div>
+    </section>
+
+    <!-- ========== KOMUNIKATY ========== -->
+    <section class="tab-panel" id="tab-announcement">
+      <div class="panel-header">
+        <h2 data-i18n="admin.announcement.title">Komunikaty systemowe</h2>
+        <span id="announcement-status" class="badge" data-i18n="admin.announcement.status_inactive">⚪ Nieaktywny</span>
+      </div>
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.announcement.banner_title">Globalny banner</h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.announcement.banner_desc">Wyświetl komunikat na wszystkich podstronach aplikacji. Pusty komunikat = brak bannera.</p>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.announcement.field.text">Treść komunikatu</label>
+          <input type="text" id="announcement-text" class="form-input" data-i18n-placeholder="admin.announcement.field.text_placeholder" placeholder="np. Planowana przerwa techniczna 22:00–23:00..." maxlength="500">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.announcement.field.type">Typ</label>
+          <select id="announcement-type" class="form-select">
+            <option value="info" data-i18n="admin.announcement.type.info">ℹ️ Info</option>
+            <option value="warning" data-i18n="admin.announcement.type.warning">⚠️ Ostrzeżenie</option>
+            <option value="danger" data-i18n="admin.announcement.type.danger">🚨 Krytyczny</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn primary" onclick="saveAnnouncement()" data-i18n="admin.announcement.publish">Opublikuj komunikat</button>
+          <button class="btn warning" onclick="clearAnnouncement()" data-i18n="admin.announcement.clear">Usuń komunikat</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <h3 class="card-title" data-i18n="admin.announcement.preview_title">Pogląd</h3>
+        <p style="color:#666;font-size:0.82rem;margin-bottom:0.75rem" data-i18n="admin.announcement.preview_desc">Tak będzie wyglądać banner dla użytkowników:</p>
+        <div id="announcement-preview" style="display:none"></div>
+        <p id="announcement-preview-empty" style="color:#555;font-size:0.85rem" data-i18n="admin.announcement.preview_empty">— brak aktywnego komunikatu —</p>
+      </div>
+    </section>
+
+    <!-- ========== UŻYTKOWNICY ========== -->
+    <section class="tab-panel" id="tab-users">
+      <div class="panel-header"><h2 data-i18n="admin.tabs.users">Użytkownicy</h2></div>
+      <div class="toolbar">
+        <button class="btn primary" onclick="loadUsers()" data-i18n="admin.action.refresh">Odśwież</button>
+        <input type="text" id="user-search" class="toolbar-search" data-i18n-placeholder="admin.users.search_placeholder" placeholder="Szukaj..." oninput="filterUsers()">
+      </div>
+      <div class="card" style="padding:0">
+        <div class="item-list" id="user-list"><p class="empty" data-i18n="admin.loading">Ładowanie...</p></div>
+      </div>
+    </section>
+
+    <!-- ========== RODO ========== -->
+    <section class="tab-panel" id="tab-gdpr">
+      <div class="panel-header"><h2 data-i18n="admin.tabs.gdpr">RODO</h2></div>
+
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.gdpr.export_title">
+          Eksport danych użytkownika
+          <span style="font-size:0.75rem;color:#666">(Art. 15 RODO)</span>
+        </h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.gdpr.export_desc">
+          Pobierz wszystkie dane przechowywane o danym użytkowniku w formacie JSON.
+        </p>
+        <div class="form-group" style="position:relative;max-width:360px">
+          <label class="form-label" data-i18n="admin.gdpr.field.user_label">Użytkownik</label>
+          <input type="text" id="gdpr-user-id" class="form-input" data-i18n-placeholder="admin.gdpr.field.user_search_placeholder" placeholder="Szukaj po nazwie postaci lub BNet ID..." autocomplete="off">
+          <input type="hidden" id="gdpr-export-hidden">
+          <div id="gdpr-export-dropdown" class="gdpr-ac-dropdown hidden"></div>
+        </div>
+        <button class="btn primary" id="gdpr-export-btn" onclick="exportUserData()" data-i18n="admin.gdpr.export_btn">Pobierz dane (JSON)</button>
+      </div>
+
+      <div class="card danger-zone">
+        <h3 class="card-title danger" data-i18n="admin.gdpr.delete_title">
+          Usuń konto użytkownika
+          <span style="font-size:0.75rem;color:#666">(Art. 17 RODO)</span>
+        </h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.gdpr.delete_desc">
+          Trwale usuwa profil i całą historię symulacji z bazy danych.
+          Konto Keycloak należy usunąć osobno.
+        </p>
+        <div class="form-group" style="position:relative;max-width:360px">
+          <label class="form-label" data-i18n="admin.gdpr.field.user_label">Użytkownik</label>
+          <input type="text" id="gdpr-delete-id" class="form-input" data-i18n-placeholder="admin.gdpr.field.user_search_placeholder" placeholder="Szukaj po nazwie postaci lub BNet ID..." autocomplete="off">
+          <input type="hidden" id="gdpr-delete-hidden">
+          <div id="gdpr-delete-dropdown" class="gdpr-ac-dropdown hidden"></div>
+        </div>
+        <button class="btn danger" id="gdpr-delete-btn" onclick="deleteUserAccount()" data-i18n="admin.gdpr.delete_btn">Usuń konto</button>
+      </div>
+    </section>
+
+    <!-- ========== ZADANIA ========== -->
+    <section class="tab-panel" id="tab-tasks">
+      <div class="panel-header">
+        <h2 data-i18n="admin.tasks.title">Zarządzanie zadaniami</h2>
+        <span class="refresh-label" id="refresh-label-tasks"></span>
+      </div>
+
+      <div class="card">
+        <div id="tasks-list"><p class="empty" data-i18n="admin.loading">Ładowanie...</p></div>
+        <button class="btn primary" onclick="loadTasks()" style="margin-top:1rem" data-i18n="admin.action.refresh">Odśwież</button>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.tasks.test_sim_title">🧪 Testowa symulacja</h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.tasks.test_sim_desc">
+          Uruchom symulację bezpośrednio z panelu — przydatne po aktualizacji simc binary.
+          Profil musi być w formacie <code>.simc</code> (addon export).
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.tasks.test_sim_profile_label">Profil <code>.simc</code></label>
+          <textarea
+            id="test-sim-profile"
+            class="form-textarea"
+            rows="8"
+            data-i18n-placeholder="admin.tasks.test_sim_profile_placeholder"
+            placeholder="Wklej tutaj zawartość eksportu z addona SimulationCraft..."
+            style="font-family:monospace;font-size:0.8rem"
+          ></textarea>
+        </div>
+
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0">
+            <label class="form-label" data-i18n="admin.tasks.test_sim_fight_style">Fight Style</label>
+            <select id="test-sim-fight-style" class="form-select" style="width:auto">
+              <option value="Patchwerk">Patchwerk</option>
+              <option value="HecticAddCleave">HecticAddCleave</option>
+              <option value="LightMovement">LightMovement</option>
+              <option value="HeavyMovement">HeavyMovement</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" data-i18n="admin.tasks.test_sim_iterations">Iteracje</label>
+            <input
+              type="number"
+              id="test-sim-iterations"
+              class="form-input"
+              value="1000"
+              min="100"
+              max="10000"
+              step="100"
+              style="max-width:110px"
+            >
+          </div>
+        </div>
+
+        <div style="margin-top:1rem;display:flex;gap:0.75rem;align-items:center">
+          <button class="btn primary" id="test-sim-btn" onclick="runTestSim()" data-i18n="admin.tasks.test_sim_run">&#9654; Uruchom symulację</button>
+          <button class="btn secondary" onclick="document.getElementById('test-sim-profile').value='';document.getElementById('test-sim-result').style.display='none'" data-i18n-title="admin.tasks.test_sim_clear_title" title="Wyczyść formularz" data-i18n="admin.tasks.test_sim_clear">✕ Wyczyść</button>
+        </div>
+
+        <div id="test-sim-result" style="margin-top:1rem;font-size:0.88rem;display:none"></div>
+      </div>
+    </section>
+
+    <!-- ========== LOGI ========== -->
+    <section class="tab-panel" id="tab-logs">
+      <div class="panel-header">
+        <h2 data-i18n="admin.tabs.logs">Logi</h2>
+        <span class="refresh-label" id="refresh-label-logs"></span>
+      </div>
+      <div class="toolbar">
+        <button class="btn primary" onclick="loadLogs()" data-i18n="admin.action.refresh">Odśwież</button>
+        <select id="log-level" onchange="loadLogs()" class="form-select" style="width:auto">
+          <option value="" data-i18n="admin.logs.level.all">Wszystkie poziomy</option>
+          <option value="INFO">INFO</option>
+          <option value="WARNING">WARNING</option>
+          <option value="ERROR">ERROR</option>
+        </select>
+        <span style="flex:1"></span>
+        <button class="btn warning" onclick="clearLogs(30)" data-i18n-title="admin.logs.delete_30d_title" title="Usuń logi starsze niż 30 dni" data-i18n="admin.logs.delete_30d">🗑 Usuń &gt;30 dni</button>
+        <button class="btn warning" onclick="clearLogs(7)"  data-i18n-title="admin.logs.delete_7d_title"  title="Usuń logi starsze niż 7 dni"  data-i18n="admin.logs.delete_7d">🗑 Usuń &gt;7 dni</button>
+        <button class="btn danger"  onclick="clearLogs()"   data-i18n-title="admin.logs.delete_all_title" title="Usuń WSZYSTKIE logi"            data-i18n="admin.logs.delete_all">🗑 Usuń wszystkie</button>
+      </div>
+      <div class="log-container" id="log-list">
+        <p class="empty" data-i18n="admin.loading">Ładowanie...</p>
+      </div>
+      <div class="toolbar" style="margin-top:0.75rem;justify-content:flex-end">
+        <span id="logs-pagination-info" style="font-size:0.82rem;color:#888"></span>
+        <button class="btn secondary" id="logs-btn-prev" onclick="logsPrev()" disabled data-i18n="admin.pagination.prev">← Poprzednia</button>
+        <button class="btn secondary" id="logs-btn-next" onclick="logsNext()" disabled data-i18n="admin.pagination.next">Następna →</button>
+      </div>
+    </section>
+
+    <!-- ========== JS ERRORS ========== -->
+    <section class="tab-panel" id="tab-js-errors">
+      <div class="panel-header">
+        <h2 data-i18n="admin.js_errors.title">🐛 JS Errors <span style="font-size:0.75rem;color:#888;font-weight:400" data-i18n="admin.js_errors.subtitle">(błędy frontendu)</span></h2>
+        <span class="refresh-label" id="refresh-label-js-errors"></span>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:1rem">
+        <div class="stat-card">
+          <div class="stat-value" id="js-errors-count">—</div>
+          <div class="stat-label" data-i18n="admin.js_errors.stat_label">Błędów JS (ostatnie 200 logów)</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" onclick="loadJsErrors()" data-i18n="admin.action.refresh">Odśwież</button>
+        <input type="text" class="toolbar-search" data-i18n-placeholder="admin.js_errors.filter_placeholder" placeholder="Filtruj komunikaty..." oninput="filterJsErrors(this.value)" style="max-width:280px">
+        <span style="flex:1"></span>
+        <button class="btn secondary" onclick="clearJsErrorsView()" data-i18n-title="admin.js_errors.clear_view_title" title="Czyści tabelę lokalnie, nie usuwa logów z serwera" data-i18n="admin.js_errors.clear_view">✕ Wyczyść widok</button>
+        <button class="btn danger" onclick="deleteJsErrorLogs()" data-i18n-title="admin.js_errors.delete_title" title="Usuwa WSZYSTKIE logi ERROR z serwera" data-i18n="admin.js_errors.delete_btn">🗑 Usuń logi ERROR</button>
+      </div>
+
+      <div id="js-errors-loader" style="display:none;padding:1rem;color:#888;font-size:0.85rem" data-i18n="admin.loading">Ładowanie…</div>
+      <div id="js-errors-fetch-error" style="display:none;padding:0.75rem 1rem;color:#e55;font-size:0.85rem;background:rgba(238,85,85,.08);border-radius:6px;margin-bottom:0.75rem"></div>
+
+      <div class="card" style="padding:0;overflow:auto">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="min-width:140px" data-i18n="admin.js_errors.col.time">Czas</th>
+              <th style="min-width:90px"  data-i18n="admin.js_errors.col.type">Typ</th>
+              <th style="min-width:260px" data-i18n="admin.js_errors.col.message">Komunikat</th>
+              <th data-i18n="admin.js_errors.col.url_stack">URL / Stack</th>
+            </tr>
+          </thead>
+          <tbody id="js-errors-tbody">
+            <tr><td colspan="4" style="text-align:center;opacity:.5" data-i18n="admin.loading">Ładowanie...</td></tr>
+          </tbody>
+        </table>
+        <p id="js-errors-empty" style="display:none;text-align:center;padding:2rem;color:#4c4" data-i18n="admin.js_errors.empty">Brak błędów JS 🎉</p>
+      </div>
+    </section>
+
+    <!-- ========== AUDIT LOG ========== -->
+    <section class="tab-panel" id="tab-audit">
+      <div class="panel-header">
+        <h2 data-i18n="admin.audit.title">🕐 Audit log</h2>
+        <span class="refresh-label" id="refresh-label-audit"></span>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="audit-filter-username" class="toolbar-search" data-i18n-placeholder="admin.audit.filter_admin_placeholder" placeholder="Admin (filtruj)" style="max-width:180px" onkeydown="if(event.key==='Enter')loadAudit()">
+        <input type="text" id="audit-filter-action"   class="toolbar-search" data-i18n-placeholder="admin.audit.filter_action_placeholder" placeholder="Akcja (np. news)" style="max-width:180px" onkeydown="if(event.key==='Enter')loadAudit()">
+        <button class="btn primary"    onclick="loadAudit()"         data-i18n="admin.audit.search_btn">Szukaj</button>
+        <button class="btn secondary"  onclick="auditResetFilters()" data-i18n="admin.audit.reset_btn">Resetuj</button>
+      </div>
+      <div class="card" style="padding:0;overflow:auto">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="min-width:150px" data-i18n="admin.audit.col.time">Czas</th>
+              <th style="min-width:120px" data-i18n="admin.audit.col.admin">Admin</th>
+              <th style="min-width:160px" data-i18n="admin.audit.col.action">Akcja</th>
+              <th data-i18n="admin.audit.col.details">Szczegóły</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody">
+            <tr><td colspan="4" style="text-align:center;opacity:.5" data-i18n="admin.loading">Ładowanie...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="toolbar" style="margin-top:0.75rem;justify-content:flex-end">
+        <span id="audit-pagination-info" style="font-size:0.82rem;color:#888"></span>
+        <button class="btn secondary" id="audit-btn-prev" onclick="auditPrev()" disabled data-i18n="admin.pagination.prev">← Poprzednia</button>
+        <button class="btn secondary" id="audit-btn-next" onclick="auditNext()" disabled data-i18n="admin.pagination.next">Następna →</button>
+      </div>
+    </section>
+
+    <!-- ========== KONFIGURACJA ========== -->
+    <section class="tab-panel" id="tab-config">
+      <div class="panel-header">
+        <h2 data-i18n="admin.config.title">Konfiguracja aplikacji</h2>
+        <span id="config-status" class="badge"></span>
+      </div>
+
+      <!-- Symulacje -->
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.config.section.simulations">Symulacje</h3>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.max_concurrent">Max jednoczesnych symulacji</label>
+          <input type="number" id="config-max-concurrent-sims" min="1" max="20" class="form-input" style="max-width:120px">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.job_timeout">Timeout symulacji (s)</label>
+          <input type="number" id="config-job-timeout" min="30" max="3600" class="form-input" style="max-width:120px">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.rate_limit">Limit zapytań / min (rate limit)</label>
+          <input type="number" id="config-rate-limit-per-minute" min="1" max="60" class="form-input" style="max-width:120px">
+        </div>
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="config-guest-sims-enabled">
+            <span data-i18n="admin.config.field.guest_sims">Symulacje dla gości (niezalogowanych)</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.history_limit">Limit historii na użytkownika</label>
+          <input type="number" id="config-history-limit-per-user" min="1" max="1000" class="form-input" style="max-width:120px">
+        </div>
+
+        <!-- Tryb jednego przycisku — toggle -->
+        <div class="form-group">
+          <div class="config-toggle-row">
+            <button
+              class="toggle-btn"
+              id="config-toggle-one-button-mode-enabled"
+              onclick="this.classList.toggle('active')"
+              type="button"
+              data-i18n-aria-label="admin.config.field.one_button_mode"
+              aria-label="Tryb jednego przycisku"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+            <span class="toggle-label">
+              <span data-i18n="admin.config.field.one_button_mode">Tryb jednego przycisku</span>
+              <span class="toggle-hint" data-i18n="admin.config.field.one_button_mode_hint">(ukrywa zaawansowane opcje sim)</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.public_history_limit">Limit historii publicznej (goście) <span style="font-size:0.8rem;color:#888" data-i18n="admin.config.field.public_history_limit_hint">— ile wpisów widzi niezalogowany użytkownik</span></label>
+          <input type="number" id="config-public-history-limit" min="1" max="200" class="form-input" style="max-width:120px">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.config.field.user_history_limit">Limit historii zalogowanego użytkownika <span style="font-size:0.8rem;color:#888" data-i18n="admin.config.field.user_history_limit_hint">— ile wpisów ładuje frontend</span></label>
+          <input type="number" id="config-user-history-limit" min="1" max="200" class="form-input" style="max-width:120px">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cache postaci (minuty) <span style="font-size:0.8rem;color:#888">— jak długo lista postaci jest cachowana</span></label>
+          <input type="number" id="config-char-cache-ttl-minutes" min="1" max="1440" class="form-input" style="max-width:120px">
+        </div>
+        <button class="btn primary" id="config-save-btn" onclick="saveConfig()" data-i18n="admin.config.save_btn">Zapisz konfigurację</button>
+      </div>
+
+      <!-- Auto-rebuild SimC -->
+      <div class="card" id="scheduler-section" style="margin-top:1rem">
+        <h3 class="card-title" data-i18n="admin.config.scheduler.title">🤖 Auto-rebuild SimC
+          <span style="font-size:0.75rem;font-weight:400;color:#888;margin-left:0.5rem" data-i18n="admin.config.scheduler.subtitle">Polling TACT co N godzin</span>
+        </h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.config.scheduler.desc">
+          Automatycznie wykrywa nowe WoW retail buildy i uruchamia rebuild SimC przez SSH.
+        </p>
+
+        <!-- Status -->
+        <div id="scheduler-status-info" style="font-size:0.85rem;color:#aaa;margin-bottom:1rem;line-height:1.7">
+          <span style="opacity:.5" data-i18n="admin.loading">Ładowanie...</span>
+        </div>
+
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0">
+            <label class="form-check">
+              <input type="checkbox" id="scheduler-enabled">
+              <span data-i18n="admin.config.scheduler.enabled">Włączony</span>
+            </label>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" data-i18n="admin.config.scheduler.interval">Interwał (godziny)</label>
+            <input type="number" id="scheduler-interval-h" class="form-input"
+              min="1" max="168" value="6" style="max-width:100px">
+          </div>
+        </div>
+
+        <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <button class="btn primary"   onclick="saveSchedulerConfig()"  data-i18n="admin.action.save">Zapisz</button>
+          <button class="btn secondary" id="scheduler-trigger-btn" onclick="schedulerTriggerNow()" data-i18n="admin.config.scheduler.check_now">&#128269; Sprawdź teraz</button>
+          <button class="btn secondary" onclick="loadSchedulerConfig()"  data-i18n="admin.action.refresh">&#8635; Odśwież status</button>
+        </div>
+
+        <p id="scheduler-result" class="form-result" style="margin-top:0.75rem"></p>
+      </div>
+
+      <div id="config-toast" class="toast hidden"></div>
+    </section>
+
+    <!-- ========== MAINTENANCE ========== -->
+    <section class="tab-panel" id="tab-maintenance">
+      <div class="panel-header"><h2 data-i18n="admin.tabs.maintenance">Utrzymanie</h2></div>
+      <div class="card">
+        <h3 class="card-title" data-i18n="admin.maintenance.mode_title">Tryb konserwacji</h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.maintenance.mode_desc">Blokuje dostęp użytkowników do <code>/sim</code> z komunikatem.</p>
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <span id="maintenance-status" class="maintenance-status"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="maintenance-toggle">
+            <span data-i18n="admin.maintenance.toggle">Włącz tryb konserwacji</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin.maintenance.field.message">Komunikat dla użytkowników</label>
+          <textarea id="maintenance-message" class="form-textarea" rows="3" data-i18n-placeholder="admin.maintenance.field.message_placeholder" placeholder="Serwer jest tymczasowo niedostępny. Wracamy wkrótce!"></textarea>
+        </div>
+        <button class="btn primary" id="maintenance-save-btn" onclick="saveMaintenance()" data-i18n="admin.action.save">Zapisz</button>
+      </div>
+      <div class="card danger-zone">
+        <h3 class="card-title" data-i18n="admin.maintenance.delete_old_title">Usuwanie starych symulacji</h3>
+        <p style="color:#888;font-size:0.85rem;margin-bottom:1rem" data-i18n="admin.maintenance.delete_old_desc">Usuń symulacje starsze niż podana liczba dni.</p>
+        <div class="toolbar" style="margin-bottom:0">
+          <input type="number" id="delete-days" class="form-input" data-i18n-placeholder="admin.maintenance.field.days_placeholder" placeholder="Dni (np. 30)" min="1" style="max-width:130px">
+          <button class="btn warning" onclick="deleteOldSims()"  data-i18n="admin.maintenance.delete_old_btn">Usuń starsze niż X dni</button>
+          <button class="btn danger"  onclick="deleteAllSims()"  style="margin-left:auto" data-i18n="admin.maintenance.delete_all_btn">Usuń WSZYSTKIE</button>
+        </div>
+        <p id="delete-result" class="form-result" style="margin-top:0.75rem"></p>
+      </div>
+    </section>
+
+    <!-- ========== PLIKI WYNIKÓW ========== -->
+    <section class="tab-panel" id="tab-results">
+      <div class="panel-header">
+        <h2 data-i18n="admin.tabs.results">Pliki wyników</h2>
+        <button class="btn secondary" onclick="loadResultsStats()" style="font-size:0.82rem" data-i18n="admin.action.refresh">&#8635; Odśwież</button>
+      </div>
+
+      <div id="results-stats-loader" style="display:none;padding:1rem;color:#888;font-size:0.85rem" data-i18n="admin.loading">Ładowanie…</div>
+      <div id="results-stats-error" style="display:none;padding:0.75rem 1rem;color:#e55;font-size:0.85rem;background:rgba(238,85,85,.08);border-radius:6px;margin-bottom:0.75rem"></div>
+
+      <!-- Karty statystyk -->
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:1.25rem">
+        <div class="stat-card">
+          <div class="stat-value" id="results-total-count">—</div>
+          <div class="stat-label" data-i18n="admin.results.stat.total">Wszystkich symulacji</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="results-today-count">—</div>
+          <div class="stat-label" data-i18n="admin.stat.today">Dziś</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="results-week-count">—</div>
+          <div class="stat-label" data-i18n="admin.stat.last_7d">Ostatnie 7 dni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="results-month-count">—</div>
+          <div class="stat-label" data-i18n="admin.stat.last_30d">Ostatnie 30 dni</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="results-error-rate-24h">—</div>
+          <div class="stat-label" data-i18n="admin.results.stat.error_rate_24h">Błędy 24h</div>
+        </div>
+      </div>
+
+      <div class="charts-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
+        <!-- Top DPS -->
+        <div class="card" style="padding:0">
+          <div style="padding:0.9rem 1rem 0.5rem;display:flex;justify-content:space-between;align-items:center">
+            <h3 class="card-title" style="margin:0" data-i18n="admin.results.top_dps_title">🏆 Top DPS</h3>
+          </div>
+          <div style="overflow:auto">
+            <table class="data-table" style="width:100%">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th data-i18n="admin.results.col.character">Postać</th>
+                  <th data-i18n="admin.results.col.class_spec">Klasa / Spec</th>
+                  <th data-i18n="admin.results.col.dps">DPS</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="results-top-dps-tbody">
+                <tr><td colspan="5" style="text-align:center;opacity:.5" data-i18n="admin.loading">Ładowanie...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Rozkład klas -->
+        <div class="card">
+          <h3 class="card-title" data-i18n="admin.results.class_dist_title">📊 Rozkład klas</h3>
+          <div id="results-class-dist" style="font-size:0.85rem">
+            <p style="color:#888;opacity:.6" data-i18n="admin.loading">Ładowanie...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== WYSZUKIWARKA ========== -->
+    <section class="tab-panel" id="tab-search">
+      <div class="panel-header"><h2 data-i18n="admin.tabs.search">Wyszukiwarka globalna <span class="badge wip">wkrótce — #62</span></h2></div>
+      <div class="card">
+        <p style="color:#888;font-size:0.85rem" data-i18n="admin.search.desc">Wyszukiwarka <kbd>Ctrl+K</kbd> dostępna z każdej zakładki.</p>
+        <div class="placeholder-block" data-i18n="admin.search.placeholder">🔍 Globalna wyszukiwarka — w trakcie planowania</div>
+      </div>
+    </section>
+
+    <!-- ========== DOKUMENTACJA ========== -->
+    <section class="tab-panel" id="tab-docs">
+      <div class="panel-header">
+        <h2>📚 <span data-i18n="admin.tabs.docs">Dokumentacja</span></h2>
+        <button class="btn secondary" id="docs-copy-btn" onclick="docsCopyRaw()" data-i18n="admin.docs.copy_btn">📋 Kopiuj Markdown</button>
+      </div>
+      <div class="docs-layout">
+        <div class="docs-sidebar" id="docs-file-list"></div>
+        <div class="docs-main" id="docs-content">
+          <div class="docs-welcome">
+            <span class="docs-welcome-icon">📚</span>
+            <p data-i18n="admin.docs.welcome">Wybierz plik z listy po lewej.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== GLOBAL SEARCH MODAL ===== -->
+  <div id="search-modal" class="modal-overlay hidden">
+    <div class="modal search-modal">
+      <input type="text" id="search-input" class="search-modal-input" data-i18n-placeholder="admin.search.modal_placeholder" placeholder="Szukaj symulacji, użytkowników, newsów...">
+      <div id="search-results" class="search-results"><p class="empty" data-i18n="admin.search.modal_hint">Wpisz frazę aby wyszukać.</p></div>
+    </div>
+  </div>
+
+  <!-- ===== USER MODAL ===== -->
+  <div id="user-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+      <h3 data-i18n="admin.users.modal_title">Symulacje użytkownika</h3>
+      <div id="user-sim-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== RESULTS USER MODAL ===== -->
+  <div id="results-user-modal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;align-items:center;justify-content:center">
+    <div class="modal" style="max-width:780px;width:95%;max-height:80vh;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 id="results-user-modal-title" style="margin:0;font-size:1rem" data-i18n="admin.results.user_modal_title">Symulacje użytkownika</h3>
+        <button class="modal-close" onclick="closeResultsUserModal()">×</button>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap">
+        <input type="text" class="toolbar-search" data-i18n-placeholder="admin.results.filter_placeholder" placeholder="Filtruj..." oninput="filterUserSims(this.value)" style="flex:1;min-width:180px">
+        <button class="btn danger btn-sm" onclick="deleteAllUserSimulations()" data-i18n="admin.results.delete_all_user_sims">🗑 Usuń wszystkie</button>
+      </div>
+      <div id="results-user-modal-error" style="display:none;color:#e55;font-size:0.85rem;margin-bottom:0.5rem"></div>
+      <div style="overflow:auto;flex:1">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="min-width:120px" data-i18n="admin.results.col.date">Data</th>
+              <th data-i18n="admin.results.col.character">Postać</th>
+              <th data-i18n="admin.results.col.class_spec">Klasa / Spec</th>
+              <th data-i18n="admin.results.col.dps">DPS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="results-user-sims-tbody">
+            <tr><td colspan="5" style="text-align:center;opacity:.5" data-i18n="admin.loading">Ładowanie...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GENERIC CONFIRM MODAL ===== -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal" style="max-width:420px">
+      <h3 id="confirm-modal-title" data-i18n="admin.modal.confirm_title">Potwierdź</h3>
+      <p id="confirm-modal-message" style="color:#aaa;font-size:0.88rem;margin:0.75rem 0 1.5rem;white-space:pre-line"></p>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+        <button class="btn secondary" id="confirm-modal-cancel" data-i18n="admin.modal.cancel">Anuluj</button>
+        <button class="btn danger"    id="confirm-modal-ok"     data-i18n="admin.modal.confirm_ok">Potwierdź</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast"></div>
+
+  <script src="/admin/i18n.js"></script>
+  <script src="/admin/core.js"></script>
+  <script src="/admin/news.js"></script>
+  <script src="/admin/users.js"></script>
+  <script src="/admin/logs.js"></script>
+  <script src="/admin/audit.js"></script>
+  <script src="/admin/tasks.js"></script>
+  <script src="/admin/appearance.js"></script>
+  <script src="/admin/docs.js"></script>
+  <script src="/admin/traffic.js"></script>
+  <script src="/admin/gdpr.js"></script>
+  <script src="/admin-v2/dashboard.js"></script>
+  <script src="/admin-v2/traffic.js"></script>
+  <script src="/admin-v2/maintenance.js"></script>
+  <script src="/admin-v2/config.js"></script>
+  <script src="/admin-v2/announcement.js"></script>
+  <script src="/admin-v2/tasks.js"></script>
+  <script src="/admin-v2/health.js"></script>
+  <script src="/admin-v2/scheduler.js"></script>
+  <script src="/admin-v2/js-errors.js"></script>
+  <script src="/admin-v2/results.js"></script>
+  <script src="/admin-v2/users.js"></script>
+  <script src="/admin-v2/tabs.js"></script>
+  <script src="/admin-v2/autorefresh.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initAdminI18n === 'function') initAdminI18n();
+      if (typeof startAlertBadgePolling === 'function') startAlertBadgePolling();
+      if (typeof loadJsErrors === 'function') loadJsErrors();
+      if (typeof loadSchedulerConfig === 'function') loadSchedulerConfig();
+    });
+  </script>
+</body>
+</html>

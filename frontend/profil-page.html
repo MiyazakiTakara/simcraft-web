@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — SimCraft Web</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css?v=10" />
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=3"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=3"></script>
+  <script src="/chars.js?v=1"></script>
+  <script src="/history.js?v=1"></script>
+  <script src="/trend.js?v=1"></script>
+  <script src="/session.js?v=1"></script>
+  <script src="/settings.js?v=1"></script>
+  <script src="/favorites.js?v=1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="container" x-data="profilPage()" x-init="init()">
+
+  <div id="site-header"></div>
+
+  <!-- Gate: not logged in -->
+  <div x-show="!sessionId" style="max-width:480px;margin:6rem auto;text-align:center">
+    <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+    <h2 style="margin-bottom:.5rem" x-text="$store.i18n.t('settings.login_required')"></h2>
+    <p style="color:var(--muted);margin-bottom:1.5rem" x-text="$store.i18n.t('settings.login_required_hint')"></p>
+    <a href="/auth/login" class="btn btn-primary btn-lg">Battle.net</a>
+  </div>
+
+  <main x-show="sessionId" style="max-width:1200px;margin:0 auto;padding:1.5rem 1rem">
+
+    <!-- Tabs -->
+    <div class="sim-tabs" style="margin-bottom:1.5rem">
+      <button class="tab" :class="{active: tab==='chars'}"       @click="tab='chars'"            x-text="$store.i18n.t('profile.tab_chars')"></button>
+      <button class="tab" :class="{active: tab==='history'}"    @click="switchTab('history')"    x-text="$store.i18n.t('profile.tab_history')"></button>
+      <button class="tab" :class="{active: tab==='trend'}"      @click="switchTab('trend')"      x-text="'&#128200; ' + $store.i18n.t('profile.tab_trend_label')"></button>
+      <button class="tab" :class="{active: tab==='following'}"  @click="switchTab('following')">&#128101; <span x-text="$store.i18n.t('following.tab_label')"></span></button>
+      <button class="tab" :class="{active: tab==='ustawienia'}" @click="tab='ustawienia'"       x-text="$store.i18n.t('profile.tab_settings')"></button>
+    </div>
+
+    <!-- TAB: CHARACTERS -->
+    <div x-show="tab==='chars'">
+      <h2 style="margin-bottom:1rem" x-text="'&#128100; ' + $store.i18n.t('chars.title')"></h2>
+      <template x-if="loadingChars">
+        <div class="char-grid">
+          <template x-for="i in [1,2,3,4,5,6]" :key="i">
+            <div class="char-card skeleton-card">
+              <div class="char-card-header">
+                <div class="skeleton skeleton-avatar-lg"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:.4rem">
+                  <div class="skeleton skeleton-title" style="width:60%"></div>
+                  <div class="skeleton skeleton-text" style="width:80%"></div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!loadingChars">
+        <div>
+          <div class="char-grid">
+            <template x-for="char in characters" :key="char.id">
+              <div class="char-card" @click="openCharDetails(char)">
+                <div class="char-card-header">
+                  <img class="char-card-avatar" :src="char.avatar || '/static/default_avatar.png'" :alt="char.name"/>
+                  <div class="char-card-info">
+                    <div class="char-card-name" x-text="char.name"></div>
+                    <div class="char-card-meta" x-text="char.realm + ' · ' + $store.i18n.t('chars.level_short') + char.level"></div>
+                    <div class="char-card-meta" :style="{color: classColor(char.class)}" x-text="(char.spec ? char.spec + ' ' : '') + (char.class || '')"></div>
+                  </div>
+                </div>
+                <template x-if="getCharDps(char.name)">
+                  <div>
+                    <div class="char-card-dps" x-text="'⚔️ ' + formatDps(getCharDps(char.name).latest)"></div>
+                    <div class="char-card-dps-small" x-text="getCharDps(char.name).trend"></div>
+                    <div class="char-card-meta" style="margin-top:.4rem"
+                      x-text="getCharDps(char.name).count + ' ' + $store.i18n.t('profile.simulations_count') + ' · ' + formatTime(getCharDps(char.name).lastSim)"
+                    ></div>
+                    <button class="btn btn-accent2 btn-sm" style="margin-top:.5rem"
+                      @click.stop="selectTrendChar(char); switchTab('trend')">&#128200; <span x-text="$store.i18n.t('profile.tab_trend_label')"></span></button>
+                  </div>
+                </template>
+                <template x-if="!getCharDps(char.name)">
+                  <div class="char-card-empty" x-text="$store.i18n.t('history.empty')"></div>
+                </template>
+              </div>
+            </template>
+          </div>
+          <template x-if="characters.length === 0">
+            <div style="text-align:center;padding:3rem;color:var(--muted)">
+              <p x-text="$store.i18n.t('chars.no_chars')"></p>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- TAB: HISTORY -->
+    <div x-show="tab==='history'">
+      <h2 style="margin-bottom:1rem" x-text="'&#128220; ' + $store.i18n.t('history.title')"></h2>
+      <template x-if="loadingHistory">
+        <div class="history-list">
+          <template x-for="i in [1,2,3,4,5]" :key="i">
+            <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+              <div style="flex:1;display:flex;flex-direction:column;gap:.4rem">
+                <div class="skeleton skeleton-title" style="width:45%"></div>
+                <div class="skeleton skeleton-text" style="width:30%"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <div x-show="!loadingHistory">
+        <div x-show="history.length === 0" class="char-card-empty" style="text-align:center;padding:2rem" x-text="$store.i18n.t('history.empty')"></div>
+        <div x-show="history.length > 0" class="history-list" style="max-height:600px;overflow-y:auto">
+          <template x-for="entry in pagedHistory" :key="entry.job_id">
+            <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+              <div style="flex:1;min-width:0" @click="window.open('/result/' + entry.job_id, '_blank')">
+                <div class="history-char">
+                  <span x-text="entry.character_name || 'Addon Export'"></span>
+                  <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                </div>
+                <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+                <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                <div class="history-style" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+                  <span x-text="entry.fight_style"></span>
+                  <template x-if="entry.wow_build">
+                    <span style="background:rgba(0,180,255,.12);color:var(--accent);font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600" x-text="'WoW ' + entry.wow_build"></span>
+                  </template>
+                  <template x-if="entry.one_button_mode">
+                    <span style="background:rgba(255,160,0,.15);color:#ffa000;font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600" x-text="$store.i18n.t('rankings.badge_one_button')"></span>
+                  </template>
+                </div>
+                <!-- Reakcje -->
+                <template x-if="entry.reactions && Object.keys(entry.reactions).length > 0">
+                  <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem" @click.stop>
+                    <template x-for="[key, count] in Object.entries(entry.reactions)" :key="key">
+                      <span style="background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:999px;padding:.1rem .5rem;font-size:.78rem;display:inline-flex;align-items:center;gap:.2rem">
+                        <span x-text="emojiMap[key] || key"></span>
+                        <span style="color:var(--muted)" x-text="count"></span>
+                      </span>
+                    </template>
+                  </div>
+                </template>
+              </div>
+              <div style="display:flex;gap:.3rem;flex-shrink:0">
+                <button class="btn btn-accent2 btn-sm btn-icon"
+                  @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
+                  x-text="copiedJobId === entry.job_id ? '&#10003;' : '&#128279;'"
+                ></button>
+                <a :href="'/result/' + entry.job_id" target="_blank" class="btn btn-ghost btn-sm btn-icon">↗</a>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="pagination" x-show="historyPageCount > 1" style="margin-top:1rem">
+          <button @click="historyPage > 1 && historyPage--">&laquo;</button>
+          <template x-for="p in historyPages()" :key="p">
+            <button :class="{active: historyPage === p}" x-text="p" @click="historyPage = p"></button>
+          </template>
+          <button @click="historyPage < historyPageCount && historyPage++">&raquo;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: DPS TREND -->
+    <div x-show="tab==='trend'">
+      <h2 style="margin-bottom:1rem">&#128200; <span x-text="$store.i18n.t('profile.tab_trend_label')"></span></h2>
+      <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin-bottom:1rem">
+        <div class="form-field">
+          <label x-text="$store.i18n.t('chars.title')"></label>
+          <select class="select" style="min-width:200px" x-model="trendCharName" @change="loadTrend()">
+            <option value="" disabled x-text="$store.i18n.t('settings.select_char')"></option>
+            <template x-for="char in characters" :key="char.name">
+              <option :value="char.name + '|' + char.realm_slug" x-text="char.name + ' (' + char.realm + ')'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-field">
+          <label x-text="$store.i18n.t('sim.fight_style')"></label>
+          <select class="select" style="min-width:160px" x-model="trendFightStyle" @change="loadTrend()">
+            <option>Patchwerk</option>
+            <option>HecticAddCleave</option>
+            <option>LightMovement</option>
+            <option>HeavyMovement</option>
+            <option>CastingPatchwerk</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-md" @click="loadTrend()">&#128260; <span x-text="$store.i18n.t('common.refresh')"></span></button>
+      </div>
+      <div x-show="trendLoading" style="text-align:center;padding:3rem;color:var(--muted)">
+        <span class="spinner" style="width:1.5rem;height:1.5rem"></span>
+      </div>
+      <div x-show="!trendLoading && trendPoints.length === 0 && trendCharName" class="char-card-empty" style="text-align:center;padding:3rem" x-text="$store.i18n.t('char_page.trend_no_data')"></div>
+      <div x-show="!trendLoading && !trendCharName" class="char-card-empty" style="text-align:center;padding:3rem" x-text="$store.i18n.t('settings.select_char')"></div>
+      <div x-show="!trendLoading && trendPoints.length > 0" style="position:relative;width:100%;max-width:860px">
+        <canvas id="trendChartCanvas" height="320"></canvas>
+      </div>
+      <template x-if="!trendLoading && trendPoints.length > 0">
+        <div style="margin-top:1.2rem;overflow-x:auto">
+          <table class="trend-table">
+            <thead><tr>
+              <th x-text="$store.i18n.t('profile.trend_col_num')"></th>
+              <th x-text="$store.i18n.t('result.timeline_time')"></th>
+              <th>DPS</th>
+              <th x-text="$store.i18n.t('following.change')"></th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
+                <tr>
+                  <td class="trend-neutral" x-text="i + 1"></td>
+                  <td x-text="formatTime(pt.timestamp)"></td>
+                  <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
+                  <td>
+                    <span x-show="i > 0" :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
+                      x-text="(pt.dps >= trendPoints[i-1].dps ? '&#9650; +' : '&#9660; ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
+                    ></span>
+                    <span x-show="i === 0" class="trend-neutral">—</span>
+                  </td>
+                  <td><a :href="'/result/' + pt.job_id" target="_blank" class="btn btn-accent2 btn-sm" @click.stop>↗</a></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+
+    <!-- TAB: FOLLOWING -->
+    <div x-show="tab==='following'">
+
+      <div x-show="favLoading" style="text-align:center;padding:4rem;color:var(--muted)">
+        <span class="spinner" style="width:1.5rem;height:1.5rem"></span>
+      </div>
+
+      <div x-show="!favLoading">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+          <h2 style="margin:0;font-size:1.2rem;font-weight:700">&#128101; <span x-text="$store.i18n.t('following.tab_label')"></span></h2>
+          <span style="font-size:.85rem;color:var(--muted)" x-text="favorites.length + ' ' + $store.i18n.t('following.count_label')"></span>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="favorites.length === 0" style="text-align:center;padding:4rem;color:var(--muted)">
+          <div style="font-size:2.5rem;margin-bottom:.75rem">&#128101;</div>
+          <p style="margin:0 0 .25rem" x-text="$store.i18n.t('following.empty_title')"></p>
+          <p style="font-size:.85rem;margin:0" x-text="$store.i18n.t('following.empty_hint')"></p>
+        </div>
+
+        <!-- Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
+          <template x-for="fav in favorites" :key="fav.bnet_id">
+            <div class="card" style="display:flex;flex-direction:column;gap:.75rem;padding:1rem 1.25rem;border-radius:12px;border:1px solid var(--border);background:var(--card-bg);transition:border-color .15s"
+                 @mouseenter="$el.style.borderColor='var(--accent)'" @mouseleave="$el.style.borderColor='var(--border)'">
+
+              <!-- Name + unfollow -->
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:var(--text-base);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" x-text="fav.name || $store.i18n.t('common.unknown')"></div>
+                  <div style="font-size:var(--text-xs);color:var(--muted)" x-text="fav.realm || ''"></div>
+                </div>
+                <button class="btn btn-sm btn-danger" style="flex-shrink:0" @click.stop="removeFavorite(fav.bnet_id)" x-text="'✕ ' + $store.i18n.t('following.unfollow_btn')"></button>
+              </div>
+
+              <!-- Stats -->
+              <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+                <div>
+                  <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em" x-text="$store.i18n.t('char_page.best_dps')"></div>
+                  <div style="font-weight:700;color:var(--accent)" x-text="fav.best_dps ? formatDps(fav.best_dps) : '—'"></div>
+                </div>
+                <div>
+                  <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em" x-text="$store.i18n.t('following.stat_sims')"></div>
+                  <div style="font-weight:700" x-text="fav.sim_count || 0"></div>
+                </div>
+                <div>
+                  <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em" x-text="$store.i18n.t('profile.followers_label')"></div>
+                  <div style="font-weight:700" x-text="(fav.favorites_count || 0) + ' &#128101;'"></div>
+                </div>
+              </div>
+
+              <!-- Following since -->
+              <div style="font-size:var(--text-xs);color:var(--muted)">
+                <span x-text="$store.i18n.t('following.since_label')"></span>
+                <span x-text="formatTime(fav.added_at)"></span>
+              </div>
+
+              <!-- View profile -->
+              <a :href="'/u/' + encodeURIComponent(fav.bnet_id)" target="_blank" class="btn btn-accent2 btn-sm" style="align-self:flex-start" @click.stop x-text="'↗ ' + $store.i18n.t('following.view_profile')"></a>
+
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB: SETTINGS -->
+    <div x-show="tab==='ustawienia'" x-init="tab === 'ustawienia' && initSettings()" class="settings-view">
+      <div x-show="settingsLoading" style="text-align:center;padding:4rem;color:var(--muted)">
+        <span x-text="$store.i18n.t('common.loading')"></span>
+      </div>
+      <div x-show="!settingsLoading && settingsError" class="settings-error-banner">
+        <span x-text="settingsError"></span>
+      </div>
+      <div x-show="!settingsLoading" style="max-width:680px;margin:2rem auto">
+        <h2 style="margin-bottom:1.5rem" x-text="$store.i18n.t('settings.title')"></h2>
+
+        <section class="settings-section">
+          <h3 x-text="$store.i18n.t('settings.section_char')"></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('settings.section_char_hint')"></p>
+          <div class="settings-row">
+            <label x-text="$store.i18n.t('settings.char_name')"></label>
+            <div style="flex:1">
+              <select x-model="form_main_character_name" @change="onCharSelect()" class="settings-input">
+                <option value="" x-text="$store.i18n.t('settings.select_char')"></option>
+                <template x-for="ch in characters" :key="ch.id">
+                  <option :value="ch.name" x-text="ch.name + ' - ' + ch.realm + ' (' + ch.level + ')'"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section" x-show="bnetId && !form_profile_private">
+          <h3>&#127760; <span x-text="$store.i18n.t('following.public_profile')"></span></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('following.public_profile_hint')"></p>
+          <div style="display:flex;align-items:center;gap:.6rem;margin-top:.25rem">
+            <code style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .75rem;font-size:.82rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              x-text="window.location.origin + '/u/' + bnetId"
+            ></code>
+            <button class="btn btn-ghost btn-sm" @click="copyProfileUrl()" x-text="profileUrlCopied ? '&#10004; ' + $store.i18n.t('common.copied') : '&#128203; ' + $store.i18n.t('common.copy')" :style="profileUrlCopied ? 'color:var(--accent)' : ''"></button>
+            <a :href="'/u/' + bnetId" target="_blank" class="btn btn-accent2 btn-sm">↗ <span x-text="$store.i18n.t('following.open_label')"></span></a>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 x-text="$store.i18n.t('settings.section_privacy')"></h3>
+          <div class="settings-toggle-row">
+            <div>
+              <div class="settings-toggle-label" x-text="$store.i18n.t('settings.private_profile')"></div>
+              <div class="settings-hint" x-text="$store.i18n.t('settings.private_profile_hint')"></div>
+            </div>
+            <button class="toggle-btn" :class="{ active: form_profile_private }" @click="form_profile_private = !form_profile_private" :aria-pressed="form_profile_private">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+          <div x-show="form_profile_private" class="settings-private-banner">
+            <span>🔒</span>
+            <span x-text="$store.i18n.t('settings.private_active_info')"></span>
+          </div>
+        </section>
+
+        <section class="settings-section" :style="form_profile_private ? 'opacity:0.5;pointer-events:none' : ''">
+          <h3 x-text="$store.i18n.t('settings.char_privacy')"></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('settings.char_privacy_hint')"></p>
+          <template x-if="characters.length > 0">
+            <div style="display:flex;flex-direction:column;gap:.4rem;max-height:300px;overflow-y:auto">
+              <template x-for="ch in characters" :key="ch.id">
+                <div class="char-privacy-row">
+                  <div class="char-privacy-row-info">
+                    <span class="char-name-text" x-text="ch.name"></span>
+                    <span class="char-realm-text" x-text="'- ' + ch.realm"></span>
+                  </div>
+                  <button class="btn btn-sm" :class="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? 'btn-danger' : 'btn-accent2'"
+                    @click="toggleCharPrivacy(ch, $event)"
+                    x-text="charPrivacies[ch.name + '|' + (ch.realm_slug || ch.realm)] ? $store.i18n.t('settings.char_private') : $store.i18n.t('settings.char_public')"
+                  ></button>
+                </div>
+              </template>
+            </div>
+          </template>
+        </section>
+
+        <section class="settings-section">
+          <h3 x-text="$store.i18n.t('settings.section_ui')"></h3>
+          <div class="settings-row" style="align-items:center">
+            <label x-text="$store.i18n.t('settings.language')"></label>
+            <div style="display:flex;gap:.4rem">
+              <button class="seg-btn" :class="{ active: $store.i18n.lang === 'pl' }" @click="$store.i18n.setLang('pl')" x-text="$store.i18n.t('lang.pl')"></button>
+              <button class="seg-btn" :class="{ active: $store.i18n.lang === 'en' }" @click="$store.i18n.setLang('en')" x-text="$store.i18n.t('lang.en')"></button>
+            </div>
+          </div>
+          <div class="settings-row" style="align-items:center;margin-top:.75rem">
+            <label x-text="$store.i18n.t('settings.theme')"></label>
+            <div style="display:flex;gap:.4rem">
+              <button class="seg-btn" :class="{ active: theme === 'dark' }" @click="setTheme('dark')" x-text="$store.i18n.t('settings.theme_dark')"></button>
+              <button class="seg-btn" :class="{ active: theme === 'light' }" @click="setTheme('light')" x-text="$store.i18n.t('settings.theme_light')"></button>
+            </div>
+          </div>
+        </section>
+
+        <div style="display:flex;align-items:center;gap:1rem;margin-top:2rem">
+          <button class="btn btn-primary btn-lg" :disabled="saving" @click="save()"
+            x-text="saving ? $store.i18n.t('settings.saving') : $store.i18n.t('settings.save')"
+          ></button>
+          <span x-show="saveMsg" x-text="saveMsg" :class="saveMsgOk ? 'settings-ok' : 'settings-err'"></span>
+        </div>
+
+        <!-- GDPR: Moje dane -->
+        <section class="settings-section" style="margin-top:2.5rem">
+          <h3>&#128230; <span x-text="$store.i18n.t('gdpr.my_data_title')"></span></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('gdpr.my_data_hint')"></p>
+          <div style="margin-top:.75rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-md" :disabled="gdprExporting"
+              @click="gdprExport()"
+              x-text="gdprExporting ? $store.i18n.t('gdpr.exporting') : $store.i18n.t('gdpr.export_btn')"
+            ></button>
+            <span x-show="gdprExportMsg" x-text="gdprExportMsg"
+              :style="gdprExportOk ? 'color:var(--accent)' : 'color:#f44'"
+              style="font-size:.85rem"
+            ></span>
+          </div>
+        </section>
+
+        <!-- GDPR: Strefa niebezpieczna -->
+        <section class="settings-section" style="margin-top:1.5rem;border-color:rgba(220,50,50,.35);background:rgba(220,50,50,.04)">
+          <h3 style="color:#e53935">&#9888;&#65039; <span x-text="$store.i18n.t('gdpr.danger_zone_title')"></span></h3>
+          <p class="settings-hint" x-text="$store.i18n.t('gdpr.danger_zone_hint')"></p>
+          <button class="btn btn-danger btn-md" style="margin-top:.75rem" @click="deleteAccountModal = true">&#128465;&#65039; <span x-text="$store.i18n.t('gdpr.delete_account_btn')"></span></button>
+        </section>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: usunięcie konta -->
+  <template x-teleport="body">
+    <div x-show="deleteAccountModal"
+      style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:1rem"
+      @keydown.escape.window="deleteAccountModal = false">
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:2rem;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+        <h3 style="margin:0 0 .75rem;color:#e53935">&#9888;&#65039; <span x-text="$store.i18n.t('gdpr.confirm_delete_title')"></span></h3>
+        <p style="font-size:.88rem;color:var(--muted);margin-bottom:1.25rem" x-html="$store.i18n.t('gdpr.confirm_delete_hint')"></p>
+        <input
+          class="settings-input"
+          style="width:100%;margin-bottom:1rem"
+          :placeholder="$store.i18n.t('gdpr.confirm_delete_placeholder')"
+          x-model="deleteAccountConfirm"
+          @keydown.enter="deleteAccountConfirm === $store.i18n.t('gdpr.confirm_delete_word') && gdprDeleteAccount()"
+        />
+        <div style="display:flex;gap:.75rem;justify-content:flex-end">
+          <button class="btn btn-ghost btn-md" @click="deleteAccountModal = false; deleteAccountConfirm = ''" x-text="$store.i18n.t('common.cancel')"></button>
+          <button class="btn btn-danger btn-md"
+            :disabled="deleteAccountConfirm !== $store.i18n.t('gdpr.confirm_delete_word') || gdprDeleting"
+            @click="gdprDeleteAccount()"
+            x-text="gdprDeleting ? $store.i18n.t('gdpr.deleting') : '&#128465;&#65039; ' + $store.i18n.t('gdpr.delete_account_btn')"
+          ></button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div id="site-footer"></div>
+</div>
+
+<script>
+const EMOJI_MAP = {"fire": "🔥", "strong": "💪", "sad": "😢", "skull": "💀", "rofl": "🤣"};
+
+function profilPage() {
+  function injectMixins(target, ...mixins) {
+    for (const mixin of mixins) {
+      for (const key of Object.keys(mixin)) {
+        if (!(key in target)) {
+          const desc = Object.getOwnPropertyDescriptor(mixin, key);
+          if (desc) Object.defineProperty(target, key, desc);
+        }
+      }
+    }
+    return target;
+  }
+
+  const state = {
+    sessionId:      localStorage.getItem('simcraft_session'),
+    tab:            'chars',
+    characters:     [],
+    loadingChars:   false,
+    errorChars:     null,
+    history:        [],
+    loadingHistory: false,
+    historyPage:    1,
+    historyPerPage: 10,
+    spellSort:      'total_dmg',
+    copiedJobId:    null,
+    bnetId:         null,
+    theme:          localStorage.getItem('simcraft_theme') || 'dark',
+    favorites:      [],
+    favLoading:     false,
+    settingsLoading:          false,
+    settingsError:            null,
+    saving:                   false,
+    saveMsg:                  '',
+    saveMsgOk:                true,
+    profileUrlCopied:         false,
+    form_main_character_name: '',
+    form_main_character_realm:'',
+    form_profile_private:     false,
+    charPrivacies:            {},
+    emojiMap:                 EMOJI_MAP,
+
+    // GDPR state
+    gdprExporting:        false,
+    gdprExportMsg:        '',
+    gdprExportOk:         true,
+    deleteAccountModal:   false,
+    deleteAccountConfirm: '',
+    gdprDeleting:         false,
+
+    formatDps(v)                 { return Utils.formatDps(v); },
+    formatTime(ts)               { return Utils.formatTime(ts); },
+    getShareUrl(jobId)           { return Utils.getShareUrl(jobId); },
+    classColor(c)                { return Utils.classColor(c); },
+    copyToClipboard(text, jobId) { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
+
+    get historyPageCount() {
+      return Math.max(1, Math.ceil((this.history || []).length / this.historyPerPage));
+    },
+    get pagedHistory() {
+      const start = (this.historyPage - 1) * this.historyPerPage;
+      return (this.history || []).slice(start, start + this.historyPerPage);
+    },
+    historyPages() {
+      return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
+    },
+
+    setTheme(t) {
+      this.theme = t;
+      localStorage.setItem('simcraft_theme', t);
+      document.documentElement.setAttribute('data-theme', t);
+    },
+
+    copyProfileUrl() {
+      if (!this.bnetId) return;
+      const url = window.location.origin + '/u/' + this.bnetId;
+      navigator.clipboard.writeText(url).then(() => {
+        this.profileUrlCopied = true;
+        setTimeout(() => { this.profileUrlCopied = false; }, 2000);
+      });
+    },
+
+    // --- GDPR ---
+    async gdprExport() {
+      if (!this.sessionId || this.gdprExporting) return;
+      this.gdprExporting = true;
+      this.gdprExportMsg = '';
+      try {
+        const res = await fetch(`/api/user/export?session=${encodeURIComponent(this.sessionId)}`);
+        if (res.status === 429) {
+          const data = await res.json().catch(() => ({}));
+          this.gdprExportMsg = data.detail || Alpine.store('i18n').t('gdpr.export_throttle');
+          this.gdprExportOk = false;
+          return;
+        }
+        if (!res.ok) throw new Error('server error');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'simcraft-data-export.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        this.gdprExportMsg = Alpine.store('i18n').t('gdpr.export_success');
+        this.gdprExportOk = true;
+        setTimeout(() => { this.gdprExportMsg = ''; }, 3000);
+      } catch (e) {
+        this.gdprExportMsg = Alpine.store('i18n').t('gdpr.export_error');
+        this.gdprExportOk = false;
+      } finally {
+        this.gdprExporting = false;
+      }
+    },
+
+    async gdprDeleteAccount() {
+      const confirmWord = Alpine.store('i18n').t('gdpr.confirm_delete_word');
+      if (this.deleteAccountConfirm !== confirmWord || this.gdprDeleting) return;
+      this.gdprDeleting = true;
+      try {
+        const res = await fetch(`/api/user/account?session=${encodeURIComponent(this.sessionId)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmation: confirmWord }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.detail || Alpine.store('i18n').t('gdpr.delete_error'));
+          return;
+        }
+        localStorage.removeItem('simcraft_session');
+        localStorage.removeItem('simcraft_bnet_id');
+        window.location.href = '/?deleted=1';
+      } catch (e) {
+        alert(Alpine.store('i18n').t('errors.network'));
+      } finally {
+        this.gdprDeleting = false;
+      }
+    },
+    // --- koniec GDPR ---
+
+    switchTab(name) {
+      this.tab = name;
+      history.replaceState(null, '', '#' + name);
+      if (name === 'history'   && this.history.length === 0) this.loadHistory();
+      if (name === 'trend')    this.initTrendTab();
+      if (name === 'following') this.loadFavorites();
+    },
+
+    async loadFavorites() {
+      if (!this.sessionId) return;
+      this.favLoading = true;
+      try {
+        const r = await fetch(`/api/favorites?session=${encodeURIComponent(this.sessionId)}`);
+        if (r.ok) {
+          const data = await r.json();
+          this.favorites = data.favorites || [];
+        }
+      } catch(e) { console.error('loadFavorites', e); }
+      finally { this.favLoading = false; }
+    },
+
+    async removeFavorite(bnetId) {
+      if (!this.sessionId) return;
+      try {
+        await fetch(`/api/favorites/${encodeURIComponent(bnetId)}?session=${encodeURIComponent(this.sessionId)}`, { method: 'DELETE' });
+        this.favorites = this.favorites.filter(f => f.bnet_id !== bnetId);
+      } catch(e) {}
+    },
+
+    _applyHash() {
+      const hash = window.location.hash.slice(1);
+      const validTabs = ['chars', 'history', 'trend', 'following', 'ustawienia'];
+      if (validTabs.includes(hash)) this.switchTab(hash);
+    },
+
+    init() {
+      document.documentElement.setAttribute('data-theme', this.theme === 'light' ? 'light' : 'dark');
+      if (!this.sessionId) return;
+      this._applyHash();
+      window.addEventListener('hashchange', () => this._applyHash());
+      this.loadCharacters();
+      this.checkFirstLogin();
+    },
+  };
+
+  const settingsMixinObj = typeof window.settingsMixin === 'function' ? window.settingsMixin() : {};
+  injectMixins(state, CharsMixin, HistoryMixin, TrendMixin, SessionMixin, settingsMixinObj);
+
+  return state;
+}
+</script>
+</body>
+</html>

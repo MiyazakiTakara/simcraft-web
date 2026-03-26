@@ -1,0 +1,14 @@
+# Aider
+.aider*
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# Results
+results/
+
+# Environment
+.env
+
+# Debug files
+DEBUG_SETTINGS_VIEW.md

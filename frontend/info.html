@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Informacje — SimCraft Web</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta name="description" content="Informacje o aplikacji SimCraft Web — źródła danych, RODO, prywatność."/>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css?v=10"/>
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=2"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=2"></script>
+  <script src="/partials.js?v=5"></script>
+</head>
+<body>
+<div x-data="{}" class="container">
+
+  <div id="site-header"></div>
+
+  <div style="max-width:860px;margin:0 auto;padding:2rem 1rem">
+
+    <!-- Nagłówek -->
+    <div style="text-align:center;margin-bottom:3rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">⚔️</div>
+      <h1 style="margin:0 0 .5rem">SimCraft Web</h1>
+      <p style="color:var(--muted);font-size:1rem;margin:0" x-text="$store.i18n.t('info.subtitle')"></p>
+    </div>
+
+    <!-- O aplikacji -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 1rem;font-size:1.1rem" x-text="$store.i18n.t('info.about_title')"></h2>
+      <p style="color:var(--muted);line-height:1.7;margin:0" x-text="$store.i18n.t('info.about_body')"></p>
+    </section>
+
+    <!-- Źródła danych -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 1rem;font-size:1.1rem" x-text="$store.i18n.t('info.sources_title')"></h2>
+      <ul style="color:var(--muted);line-height:1.9;margin:0;padding-left:1.4rem">
+        <li>
+          <strong style="color:var(--text)">Blizzard Battle.net API</strong>
+          — <span x-text="$store.i18n.t('info.sources_bnet')"></span>
+        </li>
+        <li>
+          <strong style="color:var(--text)">SimulationCraft (simc)</strong>
+          — <span x-text="$store.i18n.t('info.sources_simc')"></span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Co zapisujemy -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 1rem;font-size:1.1rem" x-text="$store.i18n.t('info.stored_title')"></h2>
+      <ul style="color:var(--muted);line-height:1.9;margin:0;padding-left:1.4rem">
+        <template x-for="item in $store.i18n.t('info.stored_items')" :key="item">
+          <li x-text="item"></li>
+        </template>
+      </ul>
+    </section>
+
+    <!-- Dane wrażliwe -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 1rem;font-size:1.1rem" x-text="$store.i18n.t('info.sensitive_title')"></h2>
+      <p style="color:var(--muted);line-height:1.7;margin:0 0 .8rem" x-text="$store.i18n.t('info.sensitive_body1')"></p>
+      <p style="color:var(--muted);line-height:1.7;margin:0" x-text="$store.i18n.t('info.sensitive_body2')"></p>
+    </section>
+
+    <!-- Prawa RODO -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 1rem;font-size:1.1rem" x-text="$store.i18n.t('info.gdpr_title')"></h2>
+      <ul style="color:var(--muted);line-height:1.9;margin:0 0 1rem;padding-left:1.4rem">
+        <li>
+          <strong style="color:var(--text)" x-text="$store.i18n.t('info.gdpr_art15_label')"></strong>
+          — <span x-text="$store.i18n.t('info.gdpr_art15_desc')"></span>
+        </li>
+        <li>
+          <strong style="color:var(--text)" x-text="$store.i18n.t('info.gdpr_art17_label')"></strong>
+          — <span x-text="$store.i18n.t('info.gdpr_art17_desc')"></span>
+        </li>
+      </ul>
+      <p style="color:var(--muted);font-size:.9rem;margin:0">
+        <span x-text="$store.i18n.t('info.gdpr_settings_prefix')"></span>
+        <a href="/" style="color:var(--accent)" x-text="$store.i18n.t('info.gdpr_settings_link')"></a>.
+      </p>
+    </section>
+
+    <!-- Kontakt -->
+    <section style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem">
+      <h2 style="margin:0 0 .75rem;font-size:1.1rem" x-text="$store.i18n.t('info.contact_title')"></h2>
+      <p style="color:var(--muted);line-height:1.7;margin:0">
+        <span x-text="$store.i18n.t('info.contact_body')"></span>
+        <a href="https://github.com/MiyazakiTakara/simcraft-web/issues" target="_blank" rel="noopener" style="color:var(--accent)">GitHub Issues</a>.
+      </p>
+    </section>
+
+    <div style="text-align:center;color:var(--muted);font-size:.8rem;margin-top:2rem">
+      SimCraft Web · Not affiliated with Blizzard Entertainment ·
+      Powered by <a href="https://www.simulationcraft.org" target="_blank" rel="noopener" style="color:var(--muted)">SimulationCraft</a>
+    </div>
+
+  </div>
+
+  <div id="site-footer"></div>
+
+</div>
+</body>
+</html>

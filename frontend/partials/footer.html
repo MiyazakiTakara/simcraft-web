@@ -1,0 +1,49 @@
+<footer style="border-top:1px solid var(--border);margin-top:4rem;padding:2rem 0 1.5rem"
+  x-data="{
+    year: new Date().getFullYear(),
+    appearance: { emoji: '⚔️', header_title: 'SimCraft Web' },
+    init() {
+      const sync = () => {
+        const src = window.__alpineApp?.appearance || window.__appearance;
+        if (src) this.appearance = src;
+      };
+      sync();
+      setInterval(sync, 500);
+    }
+  }"
+>
+  <div style="max-width:1600px;margin:0 auto;padding:0 1rem;display:flex;flex-direction:column;align-items:center;gap:1rem">
+
+    <!-- Logo -->
+    <div style="font-size:1.1rem;font-weight:700;color:var(--accent)" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
+
+    <!-- Linki nawigacyjne -->
+    <nav style="display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;font-size:.88rem">
+      <a href="/" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        🏠 <span x-text="$store?.i18n?.t('nav.home') || 'Strona główna'">Strona główna</span>
+      </a>
+      <a href="/rankings" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        🏆 <span x-text="$store?.i18n?.t('nav.rankings') || 'Rankingi'">Rankingi</span>
+      </a>
+      <a href="/info" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        ℹ️ <span x-text="$store?.i18n?.t('nav.info') || 'Informacje'">Informacje</span>
+      </a>
+      <a href="https://github.com/MiyazakiTakara/simcraft-web" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        🐙 GitHub
+      </a>
+      <a href="https://www.simulationcraft.org" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        ⚙️ SimulationCraft
+      </a>
+    </nav>
+
+    <!-- Copyright -->
+    <div style="font-size:.78rem;color:var(--muted);text-align:center;line-height:1.6">
+      <span x-text="'© ' + year + ' ' + appearance.header_title">© 2026 SimCraft Web</span>
+      <span style="opacity:.5"> · </span>
+      <span style="opacity:.7">Powered by <a href="https://www.simulationcraft.org" target="_blank" rel="noopener" style="color:var(--muted)">SimulationCraft</a></span>
+      <span style="opacity:.5"> · </span>
+      <span style="opacity:.7">Not affiliated with Blizzard Entertainment</span>
+    </div>
+
+  </div>
+</footer>

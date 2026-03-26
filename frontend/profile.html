@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — SimCraft Web</title>
+  <meta property="og:type"        content="profile" />
+  <meta property="og:site_name"   content="SimCraft Web" />
+  <meta property="og:title"       content="Profile — SimCraft Web" />
+  <meta property="og:description" content="SimCraft Web player profile" />
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css?v=10" />
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=3"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=3"></script>
+  <style>
+    .char-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: border-color .15s, transform .12s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .char-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .char-card-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .char-card-avatar-fallback {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      flex-shrink: 0;
+    }
+    .chars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: .75rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container" x-data="profilePage()" x-init="init()">
+
+  <div id="site-header"></div>
+
+  <div style="max-width:960px;margin:0 auto">
+
+    <div x-show="loading" style="text-align:center;padding:6rem;color:var(--muted)">
+      <span class="spinner" style="width:2rem;height:2rem"></span>
+    </div>
+
+    <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
+      <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+      <h2 style="margin-bottom:.5rem" x-text="$store.i18n.t('profile.not_found')"></h2>
+      <p style="color:var(--muted)" x-text="$store.i18n.t('profile.not_found_desc')"></p>
+      <a href="/" class="btn btn-primary" style="margin-top:1.5rem" x-text="$store.i18n.t('profile.not_found_cta')"></a>
+    </div>
+
+    <div x-show="!loading && !notFound">
+
+      <!-- Hero -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <h1 style="font-size:var(--text-3xl);font-weight:800;color:var(--text)"
+              x-text="profile.name || $store.i18n.t('common.unknown')"></h1>
+          <div style="color:var(--muted);font-size:var(--text-base)" x-text="profile.realm || ''"></div>
+          <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em" x-text="$store.i18n.t('profile.best_dps')"></div>
+              <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)"
+                   x-text="formatDps(profile.best_dps)"></div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em" x-text="$store.i18n.t('profile.sim_count')"></div>
+              <div style="font-size:var(--text-2xl);font-weight:800" x-text="profile.sim_count"></div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em" x-text="$store.i18n.t('profile.followers')"></div>
+              <div style="font-size:var(--text-2xl);font-weight:800;color:var(--accent)" x-text="(profile.favorites_count || 0) + ' 👥'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Follow button -->
+        <div x-show="sessionId && !isOwnProfile" style="padding-top:.5rem">
+          <button
+            class="btn btn-lg"
+            :class="isFavorite ? 'btn-danger' : 'btn-ghost'"
+            @click="toggleFavorite()"
+            :disabled="favLoading"
+            x-text="isFavorite ? $store.i18n.t('profile.following') : $store.i18n.t('profile.follow')"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="sim-tabs" style="margin-bottom:1.5rem">
+        <button class="tab" :class="{active: tab==='characters'}" @click="tab='characters'" x-text="'\u{1F464} ' + $store.i18n.t('profile.tab_characters')"></button>
+        <button class="tab" :class="{active: tab==='history'}"    @click="tab='history'"    x-text="'\u{1F4DC} ' + $store.i18n.t('profile.tab_history')"></button>
+        <button class="tab" :class="{active: tab==='trend'}"      @click="tab='trend'"      x-text="'\u{1F4C8} ' + $store.i18n.t('profile.tab_trend')"></button>
+      </div>
+
+      <!-- TAB: CHARACTERS -->
+      <template x-if="tab==='characters'">
+        <div>
+          <div x-show="!profile.characters || profile.characters.length === 0"
+               style="text-align:center;padding:3rem;color:var(--muted)"
+               x-text="$store.i18n.t('profile.no_characters')">
+          </div>
+          <div class="chars-grid">
+            <template x-for="ch in profile.characters" :key="ch.name + ch.realm">
+              <a class="char-card" :href="'/u/' + encodeURIComponent(targetBnetId) + '/character/' + encodeURIComponent(ch.realm) + '/' + encodeURIComponent(ch.name)">
+                <div class="char-card-avatar-fallback" :style="{borderColor: classColor(ch.class)}">
+                  <span x-text="classEmoji(ch.class)"></span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:700;font-size:var(--text-base)" x-text="ch.name"></div>
+                  <div style="font-size:var(--text-sm);color:var(--muted)" x-text="(ch.spec ? ch.spec + ' ' : '') + ch.class"
+                       :style="{color: classColor(ch.class)}"></div>
+                  <div style="font-size:var(--text-xs);color:var(--muted)" x-text="ch.realm"></div>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-size:var(--text-sm);font-weight:700;color:var(--accent)" x-text="formatDps(ch.best_dps)"></div>
+                  <div style="font-size:var(--text-xs);color:var(--muted)" x-text="ch.sim_count + ' ' + $store.i18n.t('profile.sim_suffix')"></div>
+                </div>
+              </a>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- TAB: HISTORY -->
+      <template x-if="tab==='history'">
+        <div>
+          <div x-show="!profile.history || profile.history.length === 0"
+               style="text-align:center;padding:3rem;color:var(--muted)"
+               x-text="$store.i18n.t('profile.no_simulations')">
+          </div>
+          <div class="history-list" style="max-height:600px;overflow-y:auto">
+            <template x-for="entry in pagedHistory" :key="entry.job_id">
+              <div class="history-item"
+                   style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;cursor:pointer"
+                   @click="window.open('/result/' + entry.job_id, '_blank')">
+                <div style="flex:1;min-width:0">
+                  <div class="history-char">
+                    <span x-text="entry.character_name"></span>
+                    <span x-show="entry.character_class"
+                          :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}"
+                          x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                  </div>
+                  <div class="history-dps"  x-text="formatDps(entry.dps)"></div>
+                  <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                  <div class="history-style" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+                    <span x-text="entry.fight_style"></span>
+                    <template x-if="entry.wow_build">
+                      <span style="background:rgba(0,180,255,.12);color:var(--accent);font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600" x-text="'WoW ' + entry.wow_build"></span>
+                    </template>
+                    <template x-if="entry.one_button_mode">
+                      <span style="background:rgba(255,160,0,.15);color:#ffa000;font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600" x-text="$store.i18n.t('rankings.badge_one_button')"></span>
+                    </template>
+                  </div>
+                </div>
+                <a :href="'/result/' + entry.job_id" target="_blank"
+                   class="btn btn-accent2 btn-sm btn-icon" @click.stop
+                   :title="$store.i18n.t('result.full_result')">↗</a>
+              </div>
+            </template>
+          </div>
+          <div class="pagination" x-show="pageCount > 1" style="margin-top:1rem">
+            <button @click="page > 1 && page--">&laquo;</button>
+            <template x-for="p in pages()" :key="p">
+              <button :class="{active: page === p}" x-text="p" @click="page = p"></button>
+            </template>
+            <button @click="page < pageCount && page++">&raquo;</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- TAB: TREND -->
+      <template x-if="tab==='trend'">
+        <div>
+          <div style="display:flex;gap:.75rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
+            <div class="form-field">
+              <label x-text="$store.i18n.t('profile.trend_character')"></label>
+              <select class="select" style="min-width:200px" x-model="trendChar" @change="buildTrend()">
+                <template x-for="ch in trendChars" :key="ch">
+                  <option :value="ch" x-text="ch"></option>
+                </template>
+              </select>
+            </div>
+            <div class="form-field">
+              <label x-text="$store.i18n.t('profile.trend_fight_style')"></label>
+              <select class="select" style="min-width:160px" x-model="trendStyle" @change="buildTrend()">
+                <option>Patchwerk</option>
+                <option>HecticAddCleave</option>
+                <option>LightMovement</option>
+                <option>HeavyMovement</option>
+                <option>CastingPatchwerk</option>
+              </select>
+            </div>
+          </div>
+
+          <div x-show="trendPoints.length === 0" style="text-align:center;padding:3rem;color:var(--muted)"
+               x-text="$store.i18n.t('profile.trend_no_data')">
+          </div>
+
+          <template x-if="trendPoints.length > 0">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+              <div style="min-width:0">
+                <canvas id="trendCanvas" style="width:100%;height:260px"></canvas>
+              </div>
+              <div style="min-width:0;overflow-x:auto;max-height:320px;overflow-y:auto">
+                <table class="trend-table" style="width:100%">
+                  <thead>
+                    <tr>
+                      <th x-text="$store.i18n.t('profile.trend_col_num')"></th>
+                      <th x-text="$store.i18n.t('profile.trend_col_date')"></th>
+                      <th x-text="$store.i18n.t('profile.trend_col_dps')"></th>
+                      <th x-text="$store.i18n.t('profile.trend_col_change')"></th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="(pt, i) in trendPoints" :key="pt.job_id">
+                      <tr>
+                        <td class="trend-neutral" x-text="i + 1"></td>
+                        <td x-text="formatTime(pt.created_at)"></td>
+                        <td style="font-weight:600" x-text="formatDps(pt.dps)"></td>
+                        <td>
+                          <span x-show="i > 0"
+                            :class="pt.dps >= trendPoints[i-1].dps ? 'trend-up' : 'trend-down'"
+                            x-text="(pt.dps >= trendPoints[i-1].dps ? '&#9650; +' : '&#9660; ') + formatDps(Math.abs(pt.dps - trendPoints[i-1].dps))"
+                          ></span>
+                          <span x-show="i === 0" class="trend-neutral">—</span>
+                        </td>
+                        <td>
+                          <a :href="'/result/' + pt.job_id" target="_blank"
+                             class="btn btn-accent2 btn-sm" @click.stop>↗</a>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+</div>
+
+<script>
+const CLASS_EMOJI_PROFILE = {
+  'Warrior':'⚔️','Paladin':'🔰','Hunter':'🏹','Rogue':'🗡️','Priest':'✝️',
+  'Death Knight':'☠️','Shaman':'⚡','Mage':'🔮','Warlock':'🐹','Monk':'🥊',
+  'Druid':'🌿','Demon Hunter':'👀','Evoker':'🐲',
+};
+
+function profilePage() {
+  return {
+    loading:     true,
+    notFound:    false,
+    profile:     { name: '', realm: '', history: [], characters: [], best_dps: 0, sim_count: 0, favorites_count: 0 },
+    tab:         'characters',
+    page:        1,
+    perPage:     20,
+    trendChar:   '',
+    trendStyle:  'Patchwerk',
+    trendChars:  [],
+    trendPoints: [],
+    trendChart:  null,
+    sessionId:   localStorage.getItem('simcraft_session'),
+    bnetId:      null,
+    targetBnetId: null,
+    isFavorite:  false,
+    favLoading:  false,
+
+    get isOwnProfile() {
+      return this.bnetId && this.targetBnetId && this.bnetId === this.targetBnetId;
+    },
+    get pagedHistory() {
+      const start = (this.page - 1) * this.perPage;
+      return (this.profile.history || []).slice(start, start + this.perPage);
+    },
+    get pageCount() {
+      return Math.max(1, Math.ceil((this.profile.history || []).length / this.perPage));
+    },
+    pages() { return Array.from({ length: this.pageCount }, (_, i) => i + 1); },
+
+    formatDps(v)  { return Utils.formatDps(v); },
+    formatTime(v) { return Utils.formatTime(v); },
+    classColor(c) { return Utils.classColor(c); },
+    classEmoji(c) { return CLASS_EMOJI_PROFILE[c] || '⚔️'; },
+
+    async init() {
+      const parts          = window.location.pathname.split('/');
+      this.targetBnetId    = decodeURIComponent(parts[2] || '');
+      if (!this.targetBnetId) { this.notFound = true; this.loading = false; return; }
+
+      if (this.sessionId) {
+        try {
+          const r = await fetch(`/auth/session/info?session=${encodeURIComponent(this.sessionId)}`);
+          if (r.ok) { const d = await r.json(); this.bnetId = d.bnet_id || null; }
+        } catch(e) {}
+      }
+
+      try {
+        const res = await fetch(`/api/profile/${encodeURIComponent(this.targetBnetId)}`);
+        if (!res.ok) { this.notFound = true; this.loading = false; return; }
+        this.profile   = await res.json();
+        document.title = `${this.profile.name || Alpine.store('i18n').t('profile.title')} — SimCraft Web`;
+
+        const chars     = [...new Set((this.profile.history || []).map(h => h.character_name))];
+        this.trendChars = chars;
+        this.trendChar  = chars[0] || '';
+        this.buildTrend();
+
+        if (this.sessionId && !this.isOwnProfile) {
+          try {
+            const fr = await fetch(`/api/favorites/check/${encodeURIComponent(this.targetBnetId)}?session=${encodeURIComponent(this.sessionId)}`);
+            if (fr.ok) { const fd = await fr.json(); this.isFavorite = fd.is_favorite; }
+          } catch(e) {}
+        }
+      } catch(e) {
+        this.notFound = true;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async toggleFavorite() {
+      if (!this.sessionId || this.favLoading) return;
+      this.favLoading = true;
+      const method = this.isFavorite ? 'DELETE' : 'POST';
+      try {
+        const res = await fetch(`/api/favorites/${encodeURIComponent(this.targetBnetId)}?session=${encodeURIComponent(this.sessionId)}`, { method });
+        if (res.ok) {
+          this.isFavorite = !this.isFavorite;
+          this.profile.favorites_count = (this.profile.favorites_count || 0) + (this.isFavorite ? 1 : -1);
+        }
+      } catch(e) {}
+      finally { this.favLoading = false; }
+    },
+
+    buildTrend() {
+      this.trendPoints = (this.profile.history || [])
+        .filter(h => h.character_name === this.trendChar && h.fight_style === this.trendStyle)
+        .slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      this.$nextTick(() => this.renderChart());
+    },
+
+    renderChart() {
+      if (typeof Chart === 'undefined') return;
+      const canvas = document.getElementById('trendCanvas');
+      if (!canvas) return;
+      if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
+      if (!this.trendPoints.length) return;
+      this.trendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: this.trendPoints.map(p => this.formatTime(p.created_at)),
+          datasets: [{ label: 'DPS', data: this.trendPoints.map(p => p.dps),
+            borderColor: '#c89a3c', backgroundColor: 'rgba(200,154,60,.15)',
+            fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#c89a3c',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#8888aa', maxRotation: 30 }, grid: { color: '#2e3040' } },
+            y: { ticks: { color: '#8888aa', callback: v => this.formatDps(v) }, grid: { color: '#2e3040' } },
+          },
+        },
+      });
+    },
+  };
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</body>
+</html>

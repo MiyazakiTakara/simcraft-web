@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SimCraft Web</title>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css?v=10" />
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=3"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    .char-page { max-width: 1100px; margin: 0 auto; }
+    .char-hero-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1.75rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .char-avatar { width: 110px; height: 110px; border-radius: 14px; object-fit: cover; flex-shrink: 0; border: 3px solid var(--border); }
+    .char-avatar-fallback {
+      width: 110px; height: 110px; border-radius: 14px; background: var(--bg); border: 3px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 3.2rem; flex-shrink: 0;
+    }
+    .char-hero-info { flex: 1; min-width: 0; }
+    .char-hero-name { font-size: var(--text-3xl); font-weight: 800; margin: 0 0 .3rem; line-height: 1.1; }
+    .char-hero-sub  { font-size: var(--text-sm); color: var(--muted); margin-bottom: .6rem; }
+    .char-badges    { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .char-badge     { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: .2rem .75rem; font-size: var(--text-xs); color: var(--muted); }
+    .char-hero-stats      { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .char-hero-stat-label { font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .char-hero-stat-val   { font-size: var(--text-2xl); font-weight: 800; line-height: 1.2; }
+    .armory-link {
+      font-size: var(--text-xs); color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); border-radius: 6px; padding: .25rem .65rem;
+      transition: color .15s, border-color .15s; white-space: nowrap;
+    }
+    .armory-link:hover { color: var(--accent); border-color: var(--accent); }
+    .char-row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .char-row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    @media (max-width: 760px) { .char-row2, .char-row3 { grid-template-columns: 1fr; } }
+    .char-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .panel-title { font-size: var(--text-base); font-weight: 700; margin: 0 0 .9rem; display: flex; align-items: center; gap: .4rem; }
+    .panel-title-sub { font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+    .stats-list { display: flex; flex-direction: column; gap: .4rem; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: .3rem .5rem; border-radius: 6px; transition: background .1s; }
+    .stat-row:hover { background: var(--bg); }
+    .stat-name { font-size: var(--text-sm); color: var(--muted); }
+    .stat-val  { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+    .stat-divider { border: none; border-top: 1px solid var(--border); margin: .4rem 0; }
+    .talents-box { margin-top: .9rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; }
+    .talents-str { font-family: monospace; font-size: .75rem; color: var(--muted); word-break: break-all; display: block; margin-bottom: .5rem; }
+    .talents-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .2rem .8rem; }
+    .item-compact { display: flex; align-items: center; gap: .45rem; min-width: 0; padding: .2rem 0; }
+    .item-compact-name { font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); text-decoration: none; }
+    .item-compact-name:hover { color: var(--accent); }
+    .item-compact-ilvl { font-size: .72rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+    .history-scroll { max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: .3rem; }
+    .hist-item { display: flex; justify-content: space-between; align-items: center; padding: .45rem .65rem; border-radius: 7px; cursor: pointer; transition: background .1s; gap: .5rem; }
+    .hist-item:hover { background: var(--bg); }
+    .hist-meta  { font-size: var(--text-xs); color: var(--muted); margin-top: .1rem; display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+    .hist-arrow { color: var(--muted); font-size: var(--text-sm); flex-shrink: 0; }
+    .ob-badge { background: rgba(255,160,0,.15); color: #ffa000; font-size: .65rem; padding: .05rem .3rem; border-radius: 3px; font-weight: 700; flex-shrink: 0; }
+    .filter-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    #trendCanvasWrap { position: relative; height: 300px; }
+    .trend-legend { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: .5rem; font-size: var(--text-xs); color: var(--muted); }
+    .trend-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .25rem; vertical-align: middle; }
+  </style>
+</head>
+<body>
+<div class="container" x-data="characterPage()" x-init="init()">
+
+  <div id="site-header"></div>
+
+  <div class="char-page">
+
+    <div x-show="loading" style="text-align:center;padding:6rem;color:var(--muted)">
+      <span class="spinner" style="width:2rem;height:2rem"></span>
+    </div>
+
+    <div x-show="!loading && notFound" style="text-align:center;padding:6rem">
+      <div style="font-size:3rem;margin-bottom:1rem">⚔️</div>
+      <h2 x-text="$store.i18n.t('char_page.not_found')"></h2>
+      <p style="color:var(--muted)" x-text="$store.i18n.t('char_page.not_found_desc')"></p>
+      <a href="javascript:history.back()" class="btn btn-primary" style="margin-top:1.5rem"
+         x-text="$store.i18n.t('common.back')"></a>
+    </div>
+
+    <div x-show="!loading && !notFound">
+
+      <div style="font-size:var(--text-sm);color:var(--muted);margin-bottom:1rem">
+        <a :href="'/u/' + encodeURIComponent(bnetId)" style="color:var(--muted);text-decoration:none" x-text="'@' + bnetId"></a>
+        <span style="margin:0 .35rem;opacity:.5">/</span>
+        <span x-text="char.name"></span>
+      </div>
+
+      <!-- HERO -->
+      <div class="char-hero-card">
+        <template x-if="avatarOk && avatarUrl">
+          <img class="char-avatar" :src="avatarUrl" @error="avatarOk = false"
+               :alt="char.name" :style="{borderColor: classColor(char.class)}" />
+        </template>
+        <template x-if="!avatarOk || !avatarUrl">
+          <div class="char-avatar-fallback" :style="{borderColor: classColor(char.class)}">
+            <span x-text="classEmoji(char.class)"></span>
+          </div>
+        </template>
+        <div class="char-hero-info">
+          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.2rem">
+            <h1 class="char-hero-name" x-text="char.name"></h1>
+            <a class="armory-link" :href="armoryUrl()" target="_blank" rel="noopener"
+               x-text="$store.i18n.t('char_page.armory')"></a>
+          </div>
+          <div class="char-hero-sub" x-text="char.realm"></div>
+          <div class="char-badges">
+            <span class="char-badge"
+                  :style="{color: classColor(char.class), borderColor: classColor(char.class) + '55'}"
+                  x-text="(char.spec ? char.spec + ' ' : '') + (char.class || '')"></span>
+            <span x-show="char.avg_ilvl" class="char-badge" style="color:var(--accent)"
+                  x-text="'\u2b50 ilvl ' + char.avg_ilvl"></span>
+          </div>
+          <div class="char-hero-stats">
+            <div>
+              <div class="char-hero-stat-label" x-text="$store.i18n.t('char_page.best_dps')"></div>
+              <div class="char-hero-stat-val" style="color:var(--accent)" x-text="formatDps(char.best_dps)"></div>
+            </div>
+            <div>
+              <div class="char-hero-stat-label" x-text="$store.i18n.t('char_page.sim_count')"></div>
+              <div class="char-hero-stat-val" x-text="char.sim_count"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RZĄD 2 -->
+      <div class="char-row2">
+        <div class="char-panel">
+          <template x-if="char.stats && Object.keys(char.stats).length > 0">
+            <div>
+              <div class="panel-title">
+                <span x-text="$store.i18n.t('char_page.stats_title')"></span>
+                <span class="panel-title-sub" x-text="$store.i18n.t('char_page.stats_subtitle')"></span>
+              </div>
+              <div class="stats-list">
+                <template x-for="[key, val] in primaryStats()" :key="key">
+                  <div class="stat-row">
+                    <span class="stat-name" x-text="statLabel(key)"></span>
+                    <span class="stat-val"  x-text="formatStatInt(val)"></span>
+                  </div>
+                </template>
+                <hr class="stat-divider" />
+                <template x-for="[key, val] in secondaryStats()" :key="key">
+                  <div class="stat-row">
+                    <span class="stat-name" x-text="statLabel(key)"></span>
+                    <span class="stat-val"  x-text="formatStatInt(val)"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+          <template x-if="!char.stats || Object.keys(char.stats).length === 0">
+            <div style="color:var(--muted);font-size:var(--text-sm)" x-text="$store.i18n.t('char_page.no_stats')"></div>
+          </template>
+          <template x-if="char.talents">
+            <div class="talents-box">
+              <div class="panel-title" style="margin:0 0 .5rem" x-text="$store.i18n.t('char_page.talents_title')"></div>
+              <span class="talents-str" x-text="char.talents"></span>
+              <div class="talents-actions">
+                <button class="btn btn-sm btn-ghost" @click="copyTalents()"
+                        x-text="copiedTalents ? $store.i18n.t('result.talents_copied') : $store.i18n.t('result.talents_copy')"></button>
+                <button class="btn btn-sm btn-ghost" @click="copyTalentsForGame()"
+                        style="border-color:var(--accent2);color:var(--accent2)"
+                        x-text="copiedTalentsGame ? ($store.i18n.t('result.talents_copied') + '!') : '\ud83c\udfae Import in-game'"></button>
+              </div>
+              <template x-if="copiedTalentsGame">
+                <div style="margin-top:.4rem;font-size:.78rem;color:var(--muted);padding:.35rem .6rem;background:var(--surface,var(--bg));border-radius:6px;border:1px solid var(--border)"
+                     x-text="$store.i18n.t('result.talents_hint')"></div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <div class="char-panel">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+            <div class="panel-title" style="margin:0" x-text="$store.i18n.t('char_page.equipment_title')"></div>
+            <span x-show="char.items && char.items.length"
+                  style="font-size:.78rem;color:var(--muted)"
+                  x-text="'(' + (char.items||[]).length + ' ' + $store.i18n.t('char_page.slots_count').replace('{{n}}','').trim() + ')'"></span>
+          </div>
+          <template x-if="char.items && char.items.length > 0">
+            <div class="items-grid">
+              <template x-for="item in char.items" :key="item.slot">
+                <div class="item-compact">
+                  <template x-if="item.id">
+                    <a :href="'https://www.wowhead.com/item=' + item.id" target="_blank" rel="noopener"
+                       style="display:inline-flex;flex-shrink:0;width:22px;height:22px;border-radius:3px;overflow:hidden;border:1px solid var(--border);text-decoration:none">
+                      <img :src="'/api/icon-by-item/' + item.id" :alt="item.name"
+                           style="width:100%;height:100%;object-fit:cover;display:block"
+                           @error="$el.style.opacity='.2'" loading="lazy" />
+                    </a>
+                  </template>
+                  <template x-if="!item.id">
+                    <div style="width:22px;height:22px;flex-shrink:0;border-radius:3px;background:var(--bg);border:1px solid var(--border)"></div>
+                  </template>
+                  <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:.35rem">
+                    <a class="item-compact-name"
+                       :href="item.id ? 'https://www.wowhead.com/item=' + item.id : '#'"
+                       target="_blank" rel="noopener"
+                       x-text="item.name || '\u2014'"></a>
+                    <span x-show="item.item_level > 0" class="item-compact-ilvl" x-text="item.item_level"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+          <template x-if="!char.items || char.items.length === 0">
+            <div style="color:var(--muted);font-size:var(--text-sm)" x-text="$store.i18n.t('char_page.no_equipment')"></div>
+          </template>
+        </div>
+      </div>
+
+      <!-- RZĄD 3 -->
+      <div class="char-row3">
+
+        <!-- DPS Trend -->
+        <div class="char-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+            <div class="panel-title" style="margin:0" x-text="$store.i18n.t('char_page.dps_trend')"></div>
+            <div class="filter-row">
+              <label style="font-size:var(--text-xs);color:var(--muted)" x-text="$store.i18n.t('sim.fight_style')"></label>
+              <select class="select" style="font-size:var(--text-xs);padding:.2rem .5rem;min-width:130px"
+                      x-model="filterStyle" @change="buildTrend()">
+                <option value="" x-text="$store.i18n.t('history.filter_all')"></option>
+                <option>Patchwerk</option>
+                <option>HecticAddCleave</option>
+                <option>LightMovement</option>
+                <option>HeavyMovement</option>
+                <option>CastingPatchwerk</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Legenda widoczna gdy są 1-button punkty -->
+          <div x-show="trendHasOneButton" class="trend-legend">
+            <span><span class="trend-legend-dot" style="background:#c89a3c"></span><span x-text="legendNormal()"></span></span>
+            <span><span class="trend-legend-dot" style="background:#ffa000"></span><span x-text="legendOneButton()"></span></span>
+          </div>
+
+          <div x-show="trendPoints.length < 2"
+               style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:var(--text-sm)">
+            <span x-text="$store.i18n.t('char_page.trend_no_data')"></span><br>
+            <span style="font-size:var(--text-xs)" x-text="$store.i18n.t('char_page.trend_no_data_hint')"></span>
+          </div>
+
+          <div id="trendCanvasWrap" x-show="trendPoints.length >= 2" style="display:none">
+            <canvas id="charTrendCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Historia -->
+        <div class="char-panel">
+          <div class="panel-title" x-text="$store.i18n.t('char_page.history_title')"></div>
+          <div class="history-scroll">
+            <template x-for="entry in filteredHistory" :key="entry.job_id">
+              <div class="hist-item" @click="window.open('/result/' + entry.job_id, '_blank')">
+                <div style="min-width:0;flex:1">
+                  <div style="font-weight:700;font-size:var(--text-sm);" :style="{ color: entry.one_button_mode ? '#ffa000' : 'var(--accent)' }" x-text="formatDps(entry.dps)"></div>
+                  <div class="hist-meta">
+                    <span x-text="entry.fight_style + ' \u00b7 ' + formatTime(entry.created_at)"></span>
+                    <span x-show="!!entry.one_button_mode" class="ob-badge" x-text="$store.i18n.t('rankings.badge_one_button')"></span>
+                  </div>
+                </div>
+                <span class="hist-arrow">↗</span>
+              </div>
+            </template>
+            <div x-show="filteredHistory.length === 0"
+                 style="text-align:center;padding:2rem 0;color:var(--muted);font-size:var(--text-sm)"
+                 x-text="$store.i18n.t('char_page.no_sims')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+</div>
+
+<script>
+const STAT_LABELS = {
+  strength:'Strength', agility:'Agility', stamina:'Stamina', intellect:'Intellect',
+  crit:'Crit Strike', haste:'Haste', mastery:'Mastery', versatility:'Versatility',
+  spell_power:'Spell Power', attack_power:'Attack Power', armor:'Armor',
+  dodge:'Dodge', parry:'Parry', block:'Block',
+};
+const STAT_PRIMARY   = ['strength','agility','intellect','stamina'];
+const STAT_SECONDARY = ['crit','haste','mastery','versatility','spell_power','attack_power','armor','dodge','parry','block'];
+const CLASS_EMOJI = {
+  'Warrior':'⚔️','Paladin':'🔰','Hunter':'🏹','Rogue':'🗡️','Priest':'✝️',
+  'Death Knight':'☠️','Shaman':'⚡','Mage':'🔮','Warlock':'👹','Monk':'🥊',
+  'Druid':'🌿','Demon Hunter':'👀','Evoker':'🐲',
+};
+
+const COLOR_NORMAL    = '#c89a3c';
+const COLOR_ONE_BTN   = '#ffa000';
+const COLOR_NORMAL_BG = 'rgba(200,154,60,.10)';
+const COLOR_OB_BG     = 'rgba(255,160,0,.10)';
+
+function characterPage() {
+  return {
+    loading:           true,
+    notFound:          false,
+    char:              {},
+    bnetId:            '',
+    realm:             '',
+    name:              '',
+    avatarOk:          true,
+    avatarUrl:         '',
+    filterStyle:       '',
+    trendPoints:       [],
+    trendHasOneButton: false,
+    trendChart:        null,
+    copiedTalents:     false,
+    copiedTalentsGame: false,
+
+    get filteredHistory() {
+      const h = this.char.history || [];
+      if (!this.filterStyle) return h;
+      return h.filter(x => x.fight_style === this.filterStyle);
+    },
+
+    t(key) {
+      return (window.Alpine && Alpine.store('i18n')) ? Alpine.store('i18n').t(key) : key;
+    },
+
+    legendNormal() {
+      const v = this.t('chart.legend_normal');
+      return (v && v !== 'chart.legend_normal') ? v : 'Normal';
+    },
+
+    legendOneButton() {
+      const v = this.t('chart.legend_one_button');
+      return (v && v !== 'chart.legend_one_button') ? v : '1-Button';
+    },
+
+    formatDps(v)  { return Utils.formatDps(v); },
+    formatTime(v) { return Utils.formatTime(v); },
+    classColor(c) { return Utils.classColor(c); },
+    classEmoji(c) { return CLASS_EMOJI[c] || '⚔️'; },
+
+    formatStatInt(v) {
+      if (v == null || v === 0) return '—';
+      return Math.round(Number(v)).toLocaleString('pl-PL');
+    },
+
+    statLabel(k) {
+      const i18nVal = this.t('stats.' + k);
+      if (i18nVal && i18nVal !== 'stats.' + k) return i18nVal;
+      return STAT_LABELS[k] || k;
+    },
+
+    primaryStats() {
+      if (!this.char.stats) return [];
+      return STAT_PRIMARY.filter(k => this.char.stats[k] != null && this.char.stats[k] > 0).map(k => [k, this.char.stats[k]]);
+    },
+    secondaryStats() {
+      if (!this.char.stats) return [];
+      return STAT_SECONDARY.filter(k => this.char.stats[k] != null && this.char.stats[k] > 0).map(k => [k, this.char.stats[k]]);
+    },
+
+    armoryUrl() {
+      return `https://worldofwarcraft.blizzard.com/en-gb/character/eu/${this.realm}/${this.name}`;
+    },
+
+    async copyTalents() {
+      try { await navigator.clipboard.writeText(this.char.talents); this.copiedTalents = true; setTimeout(() => this.copiedTalents = false, 2000); } catch(e) {}
+    },
+    async copyTalentsForGame() {
+      try { await navigator.clipboard.writeText(this.char.talents); this.copiedTalentsGame = true; setTimeout(() => this.copiedTalentsGame = false, 4000); } catch(e) {}
+    },
+
+    buildTrend() {
+      const style = this.filterStyle;
+      const pts = (this.char.history || [])
+        .filter(h => !style || h.fight_style === style)
+        .slice()
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      this.trendPoints = pts;
+      this.trendHasOneButton = pts.some(p => !!p.one_button_mode);
+      if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
+      if (pts.length >= 2) requestAnimationFrame(() => this.renderChart());
+    },
+
+    renderChart() {
+      const canvas = document.getElementById('charTrendCanvas');
+      if (!canvas) return;
+      const wrap = document.getElementById('trendCanvasWrap');
+      const w = (wrap && wrap.offsetWidth > 0) ? wrap.offsetWidth : 600;
+      canvas.width = w; canvas.height = 300;
+      if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
+
+      const pts = this.trendPoints;
+      const labels = pts.map(p => this.formatTime(p.created_at));
+
+      const normalData = pts.map(p => p.one_button_mode ? null : p.dps);
+      const obData     = pts.map(p => p.one_button_mode ? p.dps : null);
+
+      const hasOb = this.trendHasOneButton;
+
+      this.trendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: this.legendNormal(),
+              data: normalData,
+              borderColor: COLOR_NORMAL,
+              backgroundColor: COLOR_NORMAL_BG,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              pointBackgroundColor: COLOR_NORMAL,
+              spanGaps: false,
+            },
+            {
+              label: this.legendOneButton(),
+              data: obData,
+              borderColor: COLOR_ONE_BTN,
+              backgroundColor: COLOR_OB_BG,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: COLOR_ONE_BTN,
+              pointStyle: 'rectRot',
+              spanGaps: false,
+              hidden: !hasOb,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#8888aa', maxRotation: 30, font: { size: 11 } }, grid: { color: '#2e3040' } },
+            y: { ticks: { color: '#8888aa', callback: v => this.formatDps(v), font: { size: 11 } }, grid: { color: '#2e3040' } },
+          },
+        },
+      });
+    },
+
+    async init() {
+      const parts = window.location.pathname.split('/');
+      this.bnetId = decodeURIComponent(parts[2] || '');
+      this.realm  = decodeURIComponent(parts[4] || '');
+      this.name   = decodeURIComponent(parts[5] || '');
+
+      if (!this.realm || !this.name) { this.notFound = true; this.loading = false; return; }
+
+      this.avatarUrl = `https://render.worldofwarcraft.com/eu/character/${encodeURIComponent(this.realm)}/${encodeURIComponent(this.name.toLowerCase())}-main-raw.png`;
+      const img = new Image();
+      img.onerror = () => { this.avatarOk = false; };
+      img.src = this.avatarUrl;
+
+      try {
+        const res = await fetch(`/api/character/${encodeURIComponent(this.realm)}/${encodeURIComponent(this.name)}?bnet_id=${encodeURIComponent(this.bnetId)}`);
+        if (!res.ok) { this.notFound = true; this.loading = false; return; }
+        this.char = await res.json();
+        document.title = `${this.char.name} \u2014 SimCraft`;
+      } catch(e) {
+        this.notFound = true;
+      } finally {
+        this.loading = false;
+      }
+
+      if (!this.notFound) this.buildTrend();
+    },
+  };
+}
+</script>
+</body>
+</html>

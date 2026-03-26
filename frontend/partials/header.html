@@ -1,0 +1,159 @@
+<header class="header" x-data="header()" x-init="init()">
+
+  <!-- Desktop: logo -->
+  <div class="header-logo" style="cursor:pointer" @click="goHome()" x-text="appearance.emoji + ' ' + appearance.header_title">⚔️ SimCraft Web</div>
+
+  <!-- Desktop nav -->
+  <nav class="header-nav-desktop" style="display:flex;align-items:center;gap:.5rem">
+
+    <a href="/rankings" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">🏆 <span x-text="$store.i18n.t('nav.rankings')">Rankings</span></a>
+
+    <a href="/vault" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem">🏖️ <span x-text="$store.i18n.t('nav.vault')">Great Vault</span></a>
+
+    <template x-if="sessionId">
+      <a href="/sim" class="btn btn-ghost" style="font-size:.85rem;padding:.4rem .8rem" x-text="$store.i18n.t('header.simulations')"></a>
+    </template>
+
+    <!-- Język -->
+    <div style="display:flex;gap:.2rem">
+      <template x-for="lang in ['pl','en']" :key="lang">
+        <button
+          @click="$store.i18n.setLang(lang)"
+          :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.8rem', padding: '.2rem .35rem'}"
+          x-text="lang.toUpperCase()"
+        ></button>
+      </template>
+    </div>
+
+    <!-- Theme -->
+    <button class="theme-toggle" @click="toggleTheme()" :title="theme === 'dark' ? $store.i18n.t('header.theme_to_light') : $store.i18n.t('header.theme_to_dark')">
+      <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
+    </button>
+
+    <!-- Zalogowany: dropdown -->
+    <template x-if="sessionId">
+      <div style="position:relative" x-data="{open:false}" @click.outside="open=false">
+        <button
+          @click="open=!open"
+          class="header-badge"
+          style="cursor:pointer;display:flex;align-items:center;gap:.35rem;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.35rem .7rem;font-size:.85rem"
+        >
+          <template x-if="mainChar">
+            <span>⚔️ <span x-text="mainChar.name"></span></span>
+          </template>
+          <template x-if="!mainChar">
+            <span x-text="$store.i18n.t('header.account')"></span>
+          </template>
+          <span style="font-size:.65rem;opacity:.6" x-text="open ? '▴' : '▾'"></span>
+        </button>
+        <div x-show="open" x-cloak
+          style="position:absolute;right:0;top:calc(100% + 6px);background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:190px;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden">
+
+          <!-- Public profile — top, accent background -->
+          <template x-if="bnetId">
+            <button @click="goProfile()"
+              style="display:block;width:100%;text-align:left;border:none;padding:.65rem 1rem;cursor:pointer;font-size:.88rem;background:rgba(200,154,60,.10);color:var(--accent);font-weight:600;border-bottom:1px solid var(--border)"
+              onmouseover="this.style.background='rgba(200,154,60,.2)'" onmouseout="this.style.background='rgba(200,154,60,.10)'">
+              🌐 <span x-text="$store.i18n.t('header.public_profile')"></span>
+            </button>
+          </template>
+
+          <a href="/profil#chars"     class="header-dropdown-link">👤 <span x-text="$store.i18n.t('header.characters')"></span></a>
+          <a href="/profil#history"   class="header-dropdown-link">📜 <span x-text="$store.i18n.t('header.history')"></span></a>
+          <a href="/profil#ulubione"  class="header-dropdown-link">⭐ <span x-text="$store.i18n.t('header.favorites')"></span></a>
+          <a href="/profil#ustawienia" class="header-dropdown-link">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></a>
+
+          <div class="mobile-menu-divider"></div>
+          <button @click="logout()" class="header-dropdown-link" style="color:#f66">🚩 <span x-text="$store.i18n.t('header.logout')"></span></button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Niezalogowany -->
+    <template x-if="!sessionId">
+      <a href="/auth/login" class="btn btn-login" style="font-size:.88rem;padding:.45rem 1.1rem" x-text="$store.i18n.t('header.login')"></a>
+    </template>
+
+  </nav>
+
+  <!-- Mobile: hamburger button -->
+  <button
+    class="header-hamburger"
+    @click="$dispatch('toggle-mobile-menu')"
+    aria-label="Menu"
+    style="display:none;background:none;border:1px solid var(--border);border-radius:6px;padding:.35rem .55rem;cursor:pointer;color:var(--text);font-size:1.2rem;line-height:1"
+  >☰</button>
+
+  <!-- Mobile menu dropdown -->
+  <div
+    class="header-mobile-menu"
+    x-data="{open: false}"
+    @toggle-mobile-menu.window="open = !open"
+    @click.outside="open = false"
+    x-show="open"
+    x-cloak
+    x-transition:enter="transition-mobile-enter"
+    x-transition:enter-start="mobile-menu-hidden"
+    x-transition:enter-end="mobile-menu-visible"
+    x-transition:leave="transition-mobile-leave"
+    x-transition:leave-start="mobile-menu-visible"
+    x-transition:leave-end="mobile-menu-hidden"
+    style="display:none"
+  >
+    <a href="/" class="mobile-menu-item" x-text="$store.i18n.t('nav.home')">Home</a>
+    <a href="/rankings" class="mobile-menu-item">🏆 <span x-text="$store.i18n.t('nav.rankings')">Rankings</span></a>
+    <a href="/vault" class="mobile-menu-item">🏖️ <span x-text="$store.i18n.t('nav.vault')">Great Vault</span></a>
+
+    <template x-if="sessionId">
+      <a href="/sim" class="mobile-menu-item" x-text="$store.i18n.t('header.simulations')"></a>
+    </template>
+
+    <div class="mobile-menu-divider"></div>
+
+    <!-- Język + theme w jednej linii -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem">
+      <div style="display:flex;gap:.4rem">
+        <template x-for="lang in ['pl','en']" :key="lang">
+          <button
+            @click="$store.i18n.setLang(lang)"
+            :style="{fontWeight: $store.i18n.lang === lang ? '700' : '400', opacity: $store.i18n.lang === lang ? '1' : '0.45', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '.85rem', padding: '.2rem .4rem'}"
+            x-text="lang.toUpperCase()"
+          ></button>
+        </template>
+      </div>
+      <button class="theme-toggle" @click="toggleTheme()">
+        <span x-text="theme === 'dark' ? '☀️' : '🌙'"></span>
+      </button>
+    </div>
+
+    <template x-if="sessionId">
+      <div>
+        <div class="mobile-menu-divider"></div>
+        <template x-if="mainChar">
+          <div style="padding:.4rem 1rem;font-size:.8rem;color:var(--muted)">⚔️ <span x-text="mainChar.name"></span></div>
+        </template>
+
+        <!-- Public profile — accent background -->
+        <template x-if="bnetId">
+          <button @click="goProfile()"
+            style="display:block;width:100%;text-align:left;border:none;padding:.65rem 1rem;cursor:pointer;font-size:.88rem;background:rgba(200,154,60,.10);color:var(--accent);font-weight:600;border-bottom:1px solid var(--border)"
+            onmouseover="this.style.background='rgba(200,154,60,.2)'" onmouseout="this.style.background='rgba(200,154,60,.10)'">
+            🌐 <span x-text="$store.i18n.t('header.public_profile')"></span>
+          </button>
+        </template>
+
+        <a href="/profil#chars"      class="mobile-menu-item">👤 <span x-text="$store.i18n.t('header.characters')"></span></a>
+        <a href="/profil#history"    class="mobile-menu-item">📜 <span x-text="$store.i18n.t('header.history')"></span></a>
+        <a href="/profil#ulubione"   class="mobile-menu-item">⭐ <span x-text="$store.i18n.t('header.favorites')"></span></a>
+        <a href="/profil#ustawienia" class="mobile-menu-item">⚙️ <span x-text="$store.i18n.t('header.settings')"></span></a>
+        <div class="mobile-menu-divider"></div>
+        <button class="mobile-menu-item" style="color:#f66" @click="logout()">🚩 <span x-text="$store.i18n.t('header.logout')"></span></button>
+      </div>
+    </template>
+
+    <template x-if="!sessionId">
+      <a href="/auth/login" class="mobile-menu-item" style="color:var(--accent2);font-weight:700" x-text="$store.i18n.t('header.login')"></a>
+    </template>
+  </div>
+
+</header>

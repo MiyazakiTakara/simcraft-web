@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Symulacje — SimCraft Web</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('simcraft_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <script>var whTooltips = {colorLinks: false, iconizeLinks: false, renameLinks: false};</script>
+  <script src="https://wow.zamimg.com/js/tooltips.js"></script>
+  <link rel="stylesheet" href="/style.css?v=11" />
+  <script src="/i18n.js?v=1"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="/utils.js?v=3"></script>
+  <script src="/api.js?v=3"></script>
+  <script src="/header.js?v=1"></script>
+  <script src="/partials.js?v=6"></script>
+  <script src="/result-panel.js?v=9"></script>
+  <script src="/sim.js?v=4"></script>
+  <script src="/chars.js?v=1"></script>
+  <script src="/history.js?v=1"></script>
+  <script src="/trend.js?v=1"></script>
+  <script src="/session.js?v=1"></script>
+</head>
+<body>
+
+<!-- ===== MAINTENANCE OVERLAY (hidden by default via [hidden] attr) ===== -->
+<div id="maintenance-overlay" hidden
+  style="position:fixed;inset:0;z-index:9999;background:var(--bg,#0e0e14);flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:2rem;text-align:center">
+  <div style="font-size:4rem">🚧</div>
+  <h1 style="font-size:1.6rem;font-weight:700;color:var(--text,#f0f0f0);margin:0">Serwer jest tymczasowo niedostępny</h1>
+  <p id="maintenance-overlay-msg" style="font-size:1rem;color:var(--muted,#888);max-width:480px;margin:0">Trwają prace konserwacyjne. Wróć za chwilę.</p>
+  <a href="/" style="margin-top:.5rem;padding:.6rem 1.4rem;background:var(--accent,#7c6af7);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.95rem">← Wróć na stronę główną</a>
+</div>
+
+<div class="container" x-data="simPage()" x-init="init()">
+
+  <div id="site-header"></div>
+
+  <main id="sim-main" style="max-width:1200px;margin:0 auto;padding:1.5rem 1rem">
+    <div class="grid">
+
+      <!-- Lewa: lista postaci -->
+      <div class="panel">
+        <h2 x-text="$store.i18n.t('chars.title')"></h2>
+
+        <template x-if="!sessionId">
+          <div style="text-align:center;padding:2rem 1rem;color:var(--muted)">
+            <div style="font-size:2.5rem;margin-bottom:.5rem">🔒</div>
+            <p style="font-size:var(--text-base);margin-bottom:.8rem">Zaloguj się przez Battle.net, żeby widzieć swoje postacie.</p>
+            <a href="/auth/login" class="btn btn-primary">Zaloguj przez Battle.net</a>
+          </div>
+        </template>
+
+        <template x-if="sessionId && loadingChars">
+          <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
+            <template x-for="i in [1,2,3,4,5]" :key="i">
+              <div style="display:flex;align-items:center;gap:.6rem">
+                <div class="skeleton skeleton-avatar"></div>
+                <div style="flex:1">
+                  <div class="skeleton skeleton-text" style="width:60%"></div>
+                  <div class="skeleton skeleton-text" style="width:40%"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="sessionId && errorChars">
+          <p style="color:#f66;font-size:var(--text-sm)" x-text="errorChars"></p>
+        </template>
+
+        <template x-if="sessionId && !loadingChars && !errorChars && characters.length === 0">
+          <div style="text-align:center;padding:1.5rem 1rem;color:var(--muted)">
+            <div style="font-size:2rem;margin-bottom:.5rem">👤</div>
+            <p style="font-size:var(--text-base);margin-bottom:.3rem" x-text="$store.i18n.t('chars.no_chars_account')"></p>
+            <p style="font-size:var(--text-sm)" x-text="$store.i18n.t('chars.no_chars_hint')"></p>
+          </div>
+        </template>
+
+        <template x-if="sessionId && !loadingChars && characters.length">
+          <div>
+            <input class="search" :placeholder="$store.i18n.t('chars.filter_placeholder')" x-model="charFilter"/>
+            <div class="char-list">
+              <template x-for="ch in filteredChars" :key="ch.id">
+                <div class="char-item" :class="{active: selectedChar && selectedChar.id === ch.id}" @click="selectChar(ch)">
+                  <img class="char-avatar" :src="ch.avatar || '/static/default_avatar.png'" :alt="ch.name"/>
+                  <div>
+                    <div class="char-name" x-text="ch.name"></div>
+                    <div class="char-meta">
+                      <span x-text="ch.realm + ' \xb7 ' + $store.i18n.t('chars.level_short') + ch.level"></span>
+                      <span x-show="ch.class" :style="{color: classColor(ch.class), fontWeight: '600'}" x-text="' \xb7 ' + (ch.spec ? ch.spec + ' ' : '') + ch.class"></span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Środek: konfiguracja + wynik -->
+      <div>
+        <div class="panel" style="margin-bottom:1rem">
+          <h2 x-text="$store.i18n.t('sim.title')"></h2>
+          <div class="sim-tabs">
+            <button class="tab" :class="{active: simMode==='addon'}" @click="simMode='addon'" x-text="'\ud83d\udccb ' + $store.i18n.t('sim.mode_addon')"></button>
+            <button class="tab" :class="{active: simMode==='armory'}" @click="simMode='armory'" x-text="'\ud83c\udf10 ' + $store.i18n.t('sim.mode_armory')"></button>
+          </div>
+
+          <template x-if="simMode==='addon'">
+            <textarea class="addon-box" :placeholder="$store.i18n.t('sim.addon_placeholder')" x-model="addonText"></textarea>
+          </template>
+          <template x-if="simMode==='armory'">
+            <div style="margin-bottom:.8rem">
+              <template x-if="selectedChar">
+                <p style="font-size:var(--text-base)">
+                  <span x-text="$store.i18n.t('sim.selected_char') + ': '"></span>
+                  <strong x-text="selectedChar.name + ' \u2013 ' + selectedChar.realm"></strong>
+                  <span x-show="selectedChar.class" :style="{color: classColor(selectedChar.class)}" x-text="' \xb7 ' + (selectedChar.spec ? selectedChar.spec + ' ' : '') + selectedChar.class"></span>
+                </p>
+              </template>
+              <template x-if="!selectedChar && characters.length">
+                <p style="font-size:var(--text-sm);color:var(--muted)" x-text="'\u2190 ' + $store.i18n.t('sim.select_char_hint')"></p>
+              </template>
+              <template x-if="!selectedChar && !characters.length && sessionId">
+                <p style="font-size:var(--text-sm);color:var(--muted)" x-text="$store.i18n.t('sim.no_chars_use_addon')"></p>
+              </template>
+            </div>
+          </template>
+
+          <div class="sim-options">
+            <div class="sim-option">
+              <label x-text="$store.i18n.t('sim.fight_style')"></label>
+              <select x-model="simOptions.fight_style">
+                <option value="Patchwerk">Patchwerk</option>
+                <option value="HecticAddCleave">HecticAddCleave</option>
+                <option value="LightMovement">LightMovement</option>
+                <option value="HeavyMovement">HeavyMovement</option>
+              </select>
+            </div>
+            <div class="sim-option" x-show="!oneButtonMode">
+              <label x-text="$store.i18n.t('sim.iterations')"></label>
+              <input type="number" x-model.number="simOptions.iterations" min="100" max="10000" step="100"/>
+            </div>
+            <div class="sim-option" x-show="!oneButtonMode">
+              <label x-text="$store.i18n.t('sim.target_error')"></label>
+              <input type="number" x-model.number="simOptions.target_error" min="0.1" max="5" step="0.1"/>
+            </div>
+            <!-- Przycisk toggle 1-Button widoczny TYLKO gdy globalnie włączony (oneButtonMode=true) -->
+            <div class="sim-option" style="grid-column:1/-1" x-show="oneButtonMode">
+              <div class="settings-toggle-row" style="justify-content:flex-start;gap:.75rem">
+                <button
+                  class="toggle-btn"
+                  :class="{active: simOptions.one_button_mode}"
+                  @click="simOptions.one_button_mode = !simOptions.one_button_mode"
+                  type="button"
+                >
+                  <span class="toggle-knob"></span>
+                </button>
+                <div>
+                  <span class="settings-toggle-label">One-Button Mode</span>
+                  <span style="font-size:.75rem;color:var(--muted);font-weight:400;margin-left:.4rem">(optimal_raid_action_list)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" @click="startSim()" :disabled="loadingSim">
+            <span x-show="loadingSim" class="spinner"></span>
+            <span x-show="!loadingSim" x-text="'\u25b6 ' + $store.i18n.t('sim.run_sim') + ' (\u2694\ufe0f DPS)'"></span>
+          </button>
+
+          <p x-show="job && job.status === 'running'" style="margin-top:.6rem;font-size:var(--text-sm);color:var(--muted)">
+            <span x-text="$store.i18n.t('sim.running') + ' (job: '"></span><span x-text="job?.id?.slice(0,8)"></span><span>&#8230;)</span>
+          </p>
+
+          <!-- Baner rebuildu SimC -->
+          <template x-if="rebuildBanner">
+            <div style="margin-top:.7rem;background:rgba(255,180,0,.12);border:1px solid rgba(255,180,0,.4);border-radius:8px;padding:.65rem .9rem;display:flex;align-items:flex-start;gap:.6rem">
+              <span style="font-size:1.1rem;flex-shrink:0">🔧</span>
+              <div>
+                <div style="font-weight:600;font-size:.88rem;color:#ffb400" x-text="rebuildBanner.message"></div>
+                <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem" x-text="'Uruchomiono przez: ' + (rebuildBanner.triggered_by || 'system')"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Wynik — ResultPanel z SSR-wstrzykniętym szablonem -->
+        <template x-if="simResult && job">
+          <div class="panel"
+            x-data="ResultPanel(job.id, {showReactions: false, showFooter: false, showChart: false})"
+            x-init="init()">
+
+            <!-- Tooltip portal -->
+            <div
+              x-show="activeTooltip && tooltipCache[activeTooltip] !== undefined"
+              :style="`position:fixed;left:${tooltipX}px;top:${tooltipY}px;z-index:99999;pointer-events:none`"
+              class="wh-tooltip"
+              style="display:none"
+            >
+              <template x-if="activeTooltip && tooltipCache[activeTooltip] === 'loading'">
+                <div class="wh-tooltip-loading">Loading&#8230;</div>
+              </template>
+              <template x-if="activeTooltip && tooltipCache[activeTooltip] && tooltipCache[activeTooltip] !== 'loading'">
+                <div>
+                  <div class="wh-tooltip-header">
+                    <template x-if="tooltipCache[activeTooltip].icon">
+                      <img class="wh-tooltip-icon"
+                        :src="'https://wow.zamimg.com/images/wow/icons/medium/' + tooltipCache[activeTooltip].icon + '.jpg'"
+                        :alt="tooltipCache[activeTooltip].name" @error="$el.style.display='none'"/>
+                    </template>
+                    <div>
+                      <div class="wh-tooltip-name" x-text="tooltipCache[activeTooltip].name"></div>
+                      <div class="wh-tooltip-school" x-show="tooltipCache[activeTooltip].school" x-text="tooltipCache[activeTooltip].school"></div>
+                    </div>
+                  </div>
+                  <div class="wh-tooltip-desc" x-show="tooltipCache[activeTooltip].description" x-text="tooltipCache[activeTooltip].description"></div>
+                  <a class="wh-tooltip-link" :href="'https://www.wowhead.com/spell=' + activeTooltip" target="_blank" rel="noopener">View on Wowhead &#8599;</a>
+                </div>
+              </template>
+            </div>
+
+            <div class="spinner-wrap" x-show="loading"><span class="spinner"></span></div>
+
+            <template x-if="!loading && result">
+              <div>
+                <!-- RESULT_PANEL -->
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Prawa: historia -->
+      <div class="panel" style="max-height:800px;display:flex;flex-direction:column">
+        <h2 x-text="$store.i18n.t('history.title')"></h2>
+        <template x-if="loadingHistory">
+          <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
+            <template x-for="i in [1,2,3,4,5]" :key="i">
+              <div style="display:flex;flex-direction:column;gap:.4rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+                <div class="skeleton skeleton-text" style="width:55%"></div>
+                <div class="skeleton skeleton-text" style="width:35%"></div>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div x-show="!loadingHistory && history.length === 0" class="char-card-empty" style="text-align:center;padding:1rem" x-text="$store.i18n.t('history.empty')"></div>
+        <div x-show="!loadingHistory && history.length > 0" class="history-list" style="flex:1">
+          <template x-for="entry in pagedHistory" :key="entry.job_id">
+            <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+              <div style="flex:1;min-width:0" @click="loadHistoryResult(entry.job_id)">
+                <div class="history-char">
+                  <span x-text="entry.character_name || 'Addon Export'"></span>
+                  <span x-show="entry.character_class" :style="{color: classColor(entry.character_class), fontWeight:'600', fontSize:'.8rem', marginLeft:'.3rem'}" x-text="(entry.character_spec ? entry.character_spec + ' ' : '') + entry.character_class"></span>
+                </div>
+                <div class="history-dps" x-text="formatDps(entry.dps)"></div>
+                <div class="history-time" x-text="formatTime(entry.created_at)"></div>
+                <div class="history-style" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+                  <span x-text="entry.fight_style"></span>
+                  <template x-if="entry.wow_build">
+                    <span style="background:rgba(0,180,255,.12);color:var(--accent);font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600" x-text="'WoW ' + entry.wow_build"></span>
+                  </template>
+                  <template x-if="entry.one_button_mode && oneButtonMode">
+                    <span style="background:rgba(255,160,0,.15);color:#ffa000;font-size:.68rem;padding:.08rem .35rem;border-radius:3px;font-weight:600">1-Button</span>
+                  </template>
+                </div>
+              </div>
+              <div style="display:flex;gap:.3rem;flex-shrink:0">
+                <button class="btn btn-accent2 btn-sm btn-icon"
+                  @click.stop="copyToClipboard(getShareUrl(entry.job_id), entry.job_id)"
+                  x-text="copiedJobId === entry.job_id ? '\u2713' : '&#128279;'"
+                ></button>
+                <a :href="'/result/' + entry.job_id" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="Otwórz">↗</a>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="pagination" x-show="historyPageCount > 1">
+          <button @click="historyPage > 1 && historyPage--" :disabled="historyPage === 1">&laquo;</button>
+          <template x-for="p in historyPages()" :key="p">
+            <button :class="{active: historyPage === p}" @click="historyPage = p" x-text="p"></button>
+          </template>
+          <button @click="historyPage < historyPageCount && historyPage++" :disabled="historyPage === historyPageCount">&raquo;</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+</div>
+
+<!-- ===== MAINTENANCE GUARD ===== -->
+<script>
+(function () {
+  fetch('/api/maintenance')
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.enabled) return;
+      var overlay = document.getElementById('maintenance-overlay');
+      var main    = document.getElementById('sim-main');
+      var msgEl   = document.getElementById('maintenance-overlay-msg');
+      if (d.message && msgEl) msgEl.textContent = d.message;
+      if (main)    main.style.display = 'none';
+      if (overlay) {
+        overlay.removeAttribute('hidden');
+        overlay.style.display = 'flex';
+      }
+      var container = document.querySelector('.container');
+      if (container) {
+        container.removeAttribute('x-data');
+        container.removeAttribute('x-init');
+      }
+    })
+    .catch(function () {});
+})();
+</script>
+
+<script>
+function simPage() {
+  const state = {
+    sessionId:          localStorage.getItem('simcraft_session'),
+    characters:         [],
+    charFilter:         '',
+    selectedChar:       null,
+    job:                null,
+    simResult:          null,
+    simMode:            'armory',
+    simRole:            'auto',
+    addonText:          '',
+    simOptions:         { fight_style: 'Patchwerk', iterations: 1000, target_error: 0.5, one_button_mode: false },
+    loadingChars:       false,
+    loadingSim:         false,
+    errorChars:         null,
+    _pollInterval:      null,
+    history:            [],
+    loadingHistory:     false,
+    historyPage:        1,
+    historyPerPage:     5,
+    spellSort:          'total_dmg',
+    copiedJobId:        null,
+    rebuildBanner:      null,
+    oneButtonMode:      false,
+    publicHistoryLimit: 20,
+    userHistoryLimit:   20,
+    theme:              localStorage.getItem('simcraft_theme') || 'dark',
+
+    formatDps(v)                  { return Utils.formatDps(v); },
+    formatDmg(v)                  { return Utils.formatDmg(v); },
+    formatTime(ts)                { return Utils.formatTime(ts); },
+    getShareUrl(jobId)            { return Utils.getShareUrl(jobId); },
+    classColor(c)                 { return Utils.classColor(c); },
+    classTextColor(c)             { return Utils.classTextColor(c); },
+    armoryUrl(slug, name)         { return Utils.armoryUrl(slug, name); },
+    copyToClipboard(text, jobId)  { Utils.copyToClipboard(text, jobId, (v) => { this.copiedJobId = v; }); },
+
+    get filteredChars() {
+      const q = (this.charFilter || '').toLowerCase();
+      return (this.characters || []).filter(c => c.name.toLowerCase().includes(q) || c.realm.toLowerCase().includes(q));
+    },
+    get historyPageCount() {
+      return Math.max(1, Math.ceil((this.history || []).length / (this.historyPerPage || 5)));
+    },
+    get pagedHistory() {
+      const start = ((this.historyPage || 1) - 1) * (this.historyPerPage || 5);
+      return (this.history || []).slice(start, start + (this.historyPerPage || 5));
+    },
+
+    historyPages() {
+      return Array.from({ length: this.historyPageCount }, (_, i) => i + 1);
+    },
+    effectiveRole() {
+      if (this.simRole && this.simRole !== 'auto') return this.simRole;
+      if (this.selectedChar?.spec) {
+        const s = this.selectedChar.spec.toLowerCase();
+        if (s.includes('heal')) return 'heal';
+        if (s.includes('tank')) return 'tank';
+      }
+      return 'dps';
+    },
+
+    async init() {
+      document.documentElement.setAttribute('data-theme', this.theme === 'light' ? 'light' : 'dark');
+      const params = new URLSearchParams(window.location.search);
+      const sessionFromUrl = params.get('session');
+      if (sessionFromUrl) {
+        this.sessionId = sessionFromUrl;
+        localStorage.setItem('simcraft_session', sessionFromUrl);
+        history.replaceState({}, '', '/sim');
+      }
+
+      try {
+        const r = await fetch('/api/config/public');
+        if (r.ok) {
+          const cfg = await r.json();
+          const obm = !!cfg.one_button_mode_enabled;
+          this.oneButtonMode              = obm;
+          this.simOptions.one_button_mode = obm;
+          if (cfg.public_history_limit) this.publicHistoryLimit = cfg.public_history_limit;
+          if (cfg.user_history_limit)   this.userHistoryLimit   = cfg.user_history_limit;
+        }
+      } catch (e) {}
+
+      if (this.sessionId) {
+        this.loadCharacters();
+        this.loadHistory();
+      } else {
+        this.loadPublicHistory();
+      }
+    },
+  };
+
+  for (const mixin of [SimMixin, CharsMixin, HistoryMixin, SessionMixin]) {
+    for (const key of Object.keys(mixin)) {
+      if (!(key in state)) {
+        const desc = Object.getOwnPropertyDescriptor(mixin, key);
+        if (desc) Object.defineProperty(state, key, desc);
+      }
+    }
+  }
+
+  return state;
+}
+</script>
+</body>
+</html>

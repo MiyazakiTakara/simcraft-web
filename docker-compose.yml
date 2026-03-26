@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simcraft
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simcraft}
+      POSTGRES_DB: simcraft
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simcraft"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Jednorazowy kontener do pierwszego buildu simc lub manualnego rebuildu.
+  # Uruchom ręcznie: docker compose run --rm simc-builder
+  # Przy normalnym deploy NIE uruchamia się automatycznie (profiles: builder).
+  simc-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.builder
+    volumes:
+      - simc_bin:/simc_out
+    profiles:
+      - builder
+    restart: "no"
+
+  simcraft-web:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - BLIZZARD_CLIENT_ID=${BLIZZARD_CLIENT_ID}
+      - BLIZZARD_CLIENT_SECRET=${BLIZZARD_CLIENT_SECRET}
+      - REDIRECT_URI=${REDIRECT_URI}
+      - DATABASE_URL=postgresql://simcraft:${POSTGRES_PASSWORD:-simcraft}@db:5432/simcraft
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+      - KEYCLOAK_URL=${KEYCLOAK_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - ADMIN_REDIRECT_URI=${ADMIN_REDIRECT_URI}
+      - APP_BASE_URL=${APP_BASE_URL}
+      # SSH rebuild config
+      - REBUILD_SSH_HOST=${REBUILD_SSH_HOST:-172.17.0.1}
+      - REBUILD_SSH_USER=${REBUILD_SSH_USER:-root}
+      # Ścieżka klucza WEWNĄTRZ kontenera (stała)
+      - REBUILD_SSH_KEY_PATH=/run/secrets/rebuild_ssh_key
+      - REBUILD_SSH_SCRIPT=${REBUILD_SSH_SCRIPT:-/opt/scripts/rebuild-simc.sh}
+    volumes:
+      - ./results:/app/results
+      - ./frontend:/app/frontend
+      - ./backend:/app/backend
+      - ./docs:/app/docs
+      # Binarka simc — współdzielona z simc-builder przez named volume
+      - simc_bin:/app/SimulationCraft
+      # Klucz SSH do rebuildu — ścieżka na HOŚCIE przez env var, zawsze montowany pod stałą ścieżką w kontenerze
+      - ${REBUILD_SSH_HOST_KEY_PATH:-/root/.ssh/simcraft_rebuild}:/run/secrets/rebuild_ssh_key:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  simc_bin:
